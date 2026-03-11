@@ -18,7 +18,7 @@
 
 ```
 crawler/
-├── config/                    # 配置文件目录
+├── config_data/                    # 配置文件目录
 │   ├── browser.yaml          # 浏览器配置
 │   ├── crawler.yaml          # 爬虫通用配置
 │   └── websites/             # 网站特定配置

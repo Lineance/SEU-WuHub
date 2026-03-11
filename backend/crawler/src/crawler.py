@@ -23,7 +23,7 @@ class ConfigurableCrawler:
         
         # 2. 核心修复：如果用户没传路径，【强制】拼接脚本目录下的 config
         if config_dir is None:
-            self.config_dir = self.base_script_path.parent / "config"
+            self.config_dir = self.base_script_path.parent / "config_data"
         else:
             # 如果用户传了路径，我们才尊重用户的意愿
             self.config_dir = Path(config_dir).resolve()
@@ -142,7 +142,7 @@ class ConfigurableCrawler:
         加载网站特定配置
         
         Args:
-            website_name: 网站配置名称（对应config/websites/下的yaml文件名）
+            website_name: 网站配置名称（对应config_data/websites/下的yaml文件名）
             
         Returns:
             网站配置字典
