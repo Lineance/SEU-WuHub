@@ -1,0 +1,33 @@
+services:
+	backend:
+		build:
+			context: ./backend
+			dockerfile: Dockerfile
+		working_dir: /app
+		volumes:
+			- ./backend:/app
+			- ./config:/workspace-config:ro
+			- ./data:/workspace-data
+		environment:
+			PYTHONUNBUFFERED: "1"
+			PYTHONDONTWRITEBYTECODE: "1"
+		ports:
+			- "8000:8000"
+		command: sleep infinity
+
+	frontend:
+		build:
+			context: ./frontend
+			dockerfile: Dockerfile
+		working_dir: /app
+		volumes:
+			- ./frontend:/app
+			- frontend-node-modules:/app/node_modules
+		environment:
+			CHOKIDAR_USEPOLLING: "true"
+		ports:
+			- "5173:5173"
+		command: npm run dev -- --host 0.0.0.0 --port 5173
+
+volumes:
+	frontend-node-modules:

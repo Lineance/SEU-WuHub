@@ -1,0 +1,152 @@
+[project]
+name = "seu-wuhub-backend"
+version = "0.1.0"
+description = "SEU-WuHub AI Agent Backend"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.13"
+
+dependencies = [
+    # Core Framework
+    "fastapi>=0.135.0",
+    "uvicorn[standard]>=0.41.0",
+    "pydantic>=2.12.0",
+    "pydantic-settings>=2.13.0",
+    
+    # HTTP Client
+    "httpx[http2]>=0.28.1",
+    
+    # Vector DB & Data
+    "lancedb>=0.29.0",
+    "numpy>=2.4.0",
+    
+    # Logging & Utils
+    "structlog>=25.5.0",
+    "orjson>=3.11.0",
+    "PyYAML>=6.0.3",
+    "python-dotenv>=1.2.0",
+    "sse-starlette>=3.3.0",
+    
+    # LLM & AI
+    "litellm>=1.80.0",
+    "openai>=2.24.0",
+    
+    # Crawler
+    "crawl4ai>=0.8.0",
+    "aiofiles>=25.1.0",
+    "fake-useragent>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    # Testing
+    "pytest>=9.0.0",
+    "pytest-asyncio>=1.3.0",
+    "pytest-cov>=6.1.0",
+    
+    # Code Quality (CLI Tools)
+    "ruff>=0.15.0",
+    "mypy>=1.18.0",
+    "bandit>=1.8.0",
+    
+    # Dev Tools
+    "ipython>=9.0.0",
+]
+
+
+[tool.uv]
+package = false
+
+[[tool.uv.index]]
+url = "https://pypi.tuna.tsinghua.edu.cn/simple "
+default = true
+
+# =============================================================================
+# RUFF: 极速 Python Linter & Formatter (CLI 工具配置)
+# =============================================================================
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+indent-width = 4
+
+[tool.ruff.lint]
+select = [
+    "E", "W",    # pycodestyle
+    "F",        # Pyflakes
+    "I",        # isort
+    "N",        # pep8-naming
+    "B",        # flake8-bugbear
+    "C4",       # flake8-comprehensions
+    "UP",       # pyupgrade (Python 3.13+)
+    "ASYNC",    # flake8-async
+    "S",        # flake8-bandit (安全)
+    "SIM",      # flake8-simplify
+    "TCH",      # flake8-type-checking
+    "PERF",     # Perflint (性能)
+]
+ignore = [
+    "E501",     # 行长度由 formatter 处理
+    "D",        # 文档字符串 (MVP豁免)
+    "S101",     # assert 使用 (pytest需要)
+    "S311",     # 随机数 (非加密场景)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S"]
+"**/__init__.py" = ["F401"]  # 允许未使用导入 (API暴露)
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+# =============================================================================
+# PYTEST: 现代异步测试框架
+# =============================================================================
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = [
+    "--cov=app",
+    "--cov=agent", 
+    "--cov=ingestion",
+    "--cov=retrieval",
+    "--cov-report=term-missing",
+    "--cov-fail-under=60",
+    "-q",
+    "--strict-markers",
+]
+
+[tool.coverage.run]
+source = ["app", "agent", "ingestion", "retrieval"]
+branch = true
+omit = ["*/tests/*", "*/__pycache__/*", "*/.venv/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+
+# =============================================================================
+# MYPY: 静态类型检查
+# =============================================================================
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+disallow_untyped_defs = false
+check_untyped_defs = true
+show_error_codes = true
+pretty = true
+
+# =============================================================================
+# BANDIT: 安全漏洞扫描
+# =============================================================================
+[tool.bandit]
+exclude_dirs = ["tests", ".venv", "venv", "scripts"]
+skips = ["B101"]  # 允许 assert (pytest)
