@@ -1,0 +1,70 @@
+"use client"
+
+import { Search, Bot, Star, Settings } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import Image from "next/image"
+
+interface HeaderProps {
+  onAIToggle: () => void
+  onSettingsClick: () => void
+}
+
+export function Header({ onAIToggle, onSettingsClick }: HeaderProps) {
+  return (
+    <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-card/95 px-4 shadow-sm backdrop-blur-sm">
+      <div className="flex items-center gap-2">
+        <div className="relative h-8 w-8 overflow-hidden rounded-lg">
+          <Image
+            src="/logo.png"
+            alt="WuHub Logo"
+            fill
+            className="object-cover"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement
+              target.style.display = 'none'
+              target.parentElement!.innerHTML = '<span class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-base font-bold text-primary-foreground">W</span>'
+            }}
+          />
+        </div>
+        <span className="text-lg font-semibold text-foreground">SEU-WuHub</span>
+      </div>
+
+      <div className="flex flex-1 items-center justify-center px-4">
+        <div className="relative w-full max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="搜索文章、通知、资源..."
+            className="h-9 w-full rounded-full border-border bg-secondary pl-9 pr-4 text-sm placeholder:text-muted-foreground focus-visible:ring-primary"
+          />
+        </div>
+      </div>
+
+      <div className="flex items-center gap-1">
+        <Button variant="ghost" size="icon" className="rounded-full">
+          <Star className="h-5 w-5" />
+          <span className="sr-only">收藏夹</span>
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="rounded-full"
+          onClick={onAIToggle}
+        >
+          <Bot className="h-5 w-5" />
+          <span className="sr-only">AI 助手</span>
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="rounded-full"
+          onClick={onSettingsClick}
+        >
+          <Settings className="h-5 w-5" />
+          <span className="sr-only">设置</span>
+        </Button>
+      </div>
+    </header>
+  )
+}
