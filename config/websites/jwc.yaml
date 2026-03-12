@@ -1,0 +1,37 @@
+# JWC list incremental crawling config
+
+website:
+  name: "SEU JWC"
+  base_url: "https://jwc.seu.edu.cn"
+
+  # Multiple list channels under the same site; each list will keep independent incremental state.
+  start_urls:
+    - "https://jwc.seu.edu.cn/jwxx/list.htm"
+    - "https://jwc.seu.edu.cn/zxdt/list.htm"
+
+  list_incremental:
+    enabled: true
+    max_pages: 31
+    state_file: "tmp/jwc_seen_urls.json"
+    cache_base_directory: "tmp/crawl4ai_jwc_cache"
+
+    # Keep article detail pages and exclude list/navigation pages
+    include_patterns:
+      - "jwc\\.seu\\.edu\\.cn/.+/\\d+\\.htm$"
+    exclude_patterns:
+      - "/list\\d*\\.htm$"
+      - "javascript:"
+      - "_upload/tpl/"
+
+  overrides:
+    crawler:
+      cache_mode: "ENABLED"
+      check_cache_freshness: true
+      cache_validation_timeout: 3600
+      word_count_threshold: 20
+      page_timeout: 45000
+      remove_overlay_elements: true
+      exclude_external_links: true
+    browser:
+      headless: true
+      light_mode: true
