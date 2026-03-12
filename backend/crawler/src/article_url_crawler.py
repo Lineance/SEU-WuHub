@@ -4,8 +4,13 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from crawl4ai import AsyncWebCrawler, BrowserConfig, CacheMode, CrawlerRunConfig
+from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig
 from crawl4ai.deep_crawling.bfs_strategy import BFSDeepCrawlStrategy
+
+try:
+    from .crawl4ai_config_utils import normalize_crawler_overrides
+except ImportError:
+    from crawl4ai_config_utils import normalize_crawler_overrides
 
 
 class ArticleUrlCrawler:
@@ -71,13 +76,7 @@ class ArticleUrlCrawler:
             return yaml.safe_load(f)
 
     def _create_crawler_config(self, config_data: dict[str, Any]) -> CrawlerRunConfig:
-        config_data = dict(config_data)
-        if "cache_mode" in config_data:
-            cache_mode_str = config_data.pop("cache_mode")
-            try:
-                config_data["cache_mode"] = getattr(CacheMode, cache_mode_str)
-            except AttributeError:
-                self.logger.warning("Invalid cache mode: %s", cache_mode_str)
+        config_data = normalize_crawler_overrides(dict(config_data), self.logger)
 
         return CrawlerRunConfig(**config_data)
 
@@ -109,6 +108,7 @@ class ArticleUrlCrawler:
         overrides: dict[str, Any],
     ) -> CrawlerRunConfig:
         merged_config = base_config.clone()
+        overrides = normalize_crawler_overrides(dict(overrides), self.logger)
         deep_crawl_config = overrides.get("deep_crawl_strategy")
 
         for key, value in overrides.items():
@@ -221,28 +221,47 @@ class ArticleUrlCrawler:
                 result.setdefault(key, value)
             return result
 
-        markdown_content = ""
-        if hasattr(result, "markdown_v2") and result.markdown_v2:
-            markdown_content = getattr(result.markdown_v2, "raw_markdown", "") or ""
-        elif hasattr(result, "markdown"):
-            markdown_content = result.markdown or ""
+        markdown_raw = ""
+        markdown_fit = ""
+        markdown_citations = ""
+        markdown_refs = ""
+
+        markdown_obj = getattr(result, "markdown", None)
+        if markdown_obj:
+            markdown_raw = getattr(markdown_obj, "raw_markdown", "") or ""
+            markdown_fit = getattr(markdown_obj, "fit_markdown", "") or ""
+            markdown_citations = getattr(markdown_obj, "markdown_with_citations", "") or ""
+            markdown_refs = getattr(markdown_obj, "references_markdown", "") or ""
+
+        if not markdown_raw and hasattr(result, "markdown_v2") and result.markdown_v2:
+            markdown_raw = getattr(result.markdown_v2, "raw_markdown", "") or ""
+        if not markdown_raw and isinstance(markdown_obj, str):
+            markdown_raw = markdown_obj
 
         url = getattr(result, "url", "")
         success = getattr(result, "success", False)
         error_msg = getattr(result, "error_message", None)
+        selected_markdown = markdown_fit.strip() if markdown_fit else ""
+        if len(selected_markdown) < 80:
+            selected_markdown = markdown_raw
 
         formatted = {
             "success": success,
             "url": url,
             "title": getattr(result, "title", "") or "",
-            "content": getattr(result, "cleaned_html", ""),
-            "markdown": markdown_content,
+            "content": getattr(markdown_obj, "fit_html", "") or getattr(result, "cleaned_html", ""),
+            "markdown": selected_markdown,
+            "raw_markdown": markdown_raw,
+            "fit_markdown": markdown_fit,
+            "markdown_with_citations": markdown_citations,
+            "references_markdown": markdown_refs,
             "metadata": {
                 "crawled_at": datetime.now().isoformat(),
                 "word_count": getattr(result, "word_count", 0) or 0,
                 "is_pdf": getattr(result, "pdf", None) is not None
                 or (url and url.lower().endswith(".pdf")),
                 "depth": getattr(result, "depth", 0) or 0,
+                "cache_status": getattr(result, "cache_status", ""),
             },
             "pdf_size": len(result.pdf) if getattr(result, "pdf", None) else 0,
         }

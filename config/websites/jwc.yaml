@@ -24,7 +24,8 @@ website:
       - "_upload/tpl/"
 
   overrides:
-    crawler:
+    # List-page crawling stage overrides
+    list_crawler:
       cache_mode: "ENABLED"
       check_cache_freshness: true
       cache_validation_timeout: 3600
@@ -32,6 +33,42 @@ website:
       page_timeout: 45000
       remove_overlay_elements: true
       exclude_external_links: true
+
+    # Article crawling stage overrides
+    article_crawler:
+      cache_mode: "ENABLED"
+      check_cache_freshness: true
+      cache_validation_timeout: 3600
+      word_count_threshold: 20
+      page_timeout: 45000
+      remove_overlay_elements: true
+      exclude_external_links: true
+      css_selector: ".wp_articlecontent, .Article_Content"
+      excluded_tags:
+        - "nav"
+        - "header"
+        - "footer"
+        - "script"
+        - "style"
+      target_elements:
+        - ".News-title"
+        - ".date1"
+        - ".wp_articlecontent"
+        - ".Article_Content"
+      markdown_generator:
+        type: "default"
+        content_source: "cleaned_html"
+        options:
+          ignore_images: true
+          skip_internal_links: true
+          body_width: 0
+        content_filter:
+          type: "pruning"
+          params:
+            threshold: 0.5
+            threshold_type: "dynamic"
+            min_word_threshold: 20
+
     browser:
       headless: true
       light_mode: true

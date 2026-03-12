@@ -3,8 +3,7 @@ import asyncio
 import json
 import os
 import time
-
-from crawl4ai import CacheMode
+from typing import Any
 
 try:
     from .article_url_crawler import ArticleUrlCrawler
@@ -29,6 +28,21 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--cache-dir", default=None, help="Crawl4ai cache base directory")
     parser.add_argument("--output", default=None, help="Optional output json file")
     parser.add_argument(
+        "--list-crawler-overrides",
+        default=None,
+        help="JSON object overrides for list crawl CrawlerRunConfig",
+    )
+    parser.add_argument(
+        "--article-crawler-overrides",
+        default=None,
+        help="JSON object overrides for article crawl CrawlerRunConfig",
+    )
+    parser.add_argument(
+        "--browser-overrides",
+        default=None,
+        help="JSON object overrides for BrowserConfig",
+    )
+    parser.add_argument(
         "--include-pattern",
         action="append",
         default=None,
@@ -43,8 +57,28 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def _parse_json_overrides(raw: str | None, arg_name: str) -> dict[str, Any]:
+    if not raw:
+        return {}
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Invalid JSON for {arg_name}: {exc}") from exc
+
+    if not isinstance(data, dict):
+        raise ValueError(f"{arg_name} must be a JSON object")
+    return data
+
+
 async def run_e2e(args: argparse.Namespace) -> dict:
     start = time.time()
+    list_crawler_overrides = _parse_json_overrides(
+        args.list_crawler_overrides, "--list-crawler-overrides"
+    )
+    article_crawler_overrides = _parse_json_overrides(
+        args.article_crawler_overrides, "--article-crawler-overrides"
+    )
+    browser_overrides = _parse_json_overrides(args.browser_overrides, "--browser-overrides")
 
     source_mode = "website" if args.website else "list_url"
     lists_summary: list[dict] = []
@@ -61,10 +95,13 @@ async def run_e2e(args: argparse.Namespace) -> dict:
                 max_pages=args.max_pages,
                 include_patterns=args.include_pattern,
                 exclude_patterns=args.exclude_pattern,
+                list_crawler_overrides=list_crawler_overrides,
+                article_crawler_overrides=article_crawler_overrides,
+                browser_overrides=browser_overrides,
             )
             incremental_urls = batch_result["incremental_urls"]
             lists_summary = batch_result["lists"]
-            website_overrides = batch_result.get("overrides", {})
+            website_overrides = batch_result.get("article_overrides", {})
         else:
             incremental_urls = await list_crawler.crawl_list_incremental(
                 list_url=args.list_url,
@@ -80,6 +117,10 @@ async def run_e2e(args: argparse.Namespace) -> dict:
                     "incremental_urls": incremental_urls,
                 }
             ]
+            website_overrides = {
+                "crawler": article_crawler_overrides,
+                "browser": browser_overrides,
+            }
 
     async with ArticleUrlCrawler(
         config_dir=args.config_dir,
@@ -87,10 +128,8 @@ async def run_e2e(args: argparse.Namespace) -> dict:
     ) as article_crawler:
         _, run_config, _ = article_crawler.load_config(
             target=incremental_urls,
-            override_config=website_overrides if args.website else None,
+            override_config=website_overrides,
         )
-        run_config.cache_mode = CacheMode.BYPASS
-        run_config.check_cache_freshness = False
         results = await article_crawler.crawl_articles(incremental_urls, run_config=run_config)
 
     success_count = sum(1 for item in results if item.get("success"))
