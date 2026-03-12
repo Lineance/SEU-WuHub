@@ -15,6 +15,7 @@ website:
       page_timeout: 45000
       word_count_threshold: 30
       pdf: true
+      exclude_all_images: true
       scan_full_page: true
 
       deep_crawl_strategy:  # 深度爬取策略配置
