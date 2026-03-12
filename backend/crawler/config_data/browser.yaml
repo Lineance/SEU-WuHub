@@ -15,7 +15,7 @@ browser:
   
   # 用户代理
   user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-  user_agent_mode: ""  # 或 "random" 随机User-Agent
+  user_agent_mode: "random"  # 或 "random" 随机User-Agent
   
   # 代理配置
   proxy_config: null  # 示例: {"server": "http://proxy:8080", "username": "user", "password": "pass"}
@@ -66,4 +66,3 @@ browser:
   # Chrome通道
   chrome_channel: "chromium"  # chrome, msedge
   
-  # 备注：修改此文件后无需重启程序，配置会自动重新加载

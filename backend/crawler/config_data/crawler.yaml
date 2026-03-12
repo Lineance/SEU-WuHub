@@ -8,7 +8,7 @@ crawler:
   check_cache_freshness: true  # 检查缓存新鲜度
   
   # ==================== 内容处理配置 ====================
-  word_count_threshold: 50  # 跳过少于X词的文本块
+  word_count_threshold: 30  # 跳过少于X词的文本块
   css_selector: null  # 仅保留匹配此选择器的部分，如 "main.article-content"
   target_elements: null  # 目标元素列表，如 [".article", ".content"]
   excluded_tags: ["script", "style", "nav", "footer"]  # 排除的标签
@@ -21,7 +21,7 @@ crawler:
   parser_type: "lxml"  # HTML解析器: lxml, html.parser
   
   # ==================== 页面导航和等待配置 ====================
-  wait_until: "networkidle"  # 等待条件: domcontentloaded, networkidle, load
+  wait_until: "domcontentloaded"  # 等待条件: domcontentloaded, networkidle, load
   page_timeout: 30000  # 页面超时（毫秒）
   wait_for: null  # 等待条件，如 "css:.article-loaded" 或 "js:() => true"
   wait_for_timeout: null  # 等待超时（毫秒）
@@ -51,7 +51,7 @@ crawler:
   screenshot: false  # 截图
   screenshot_wait_for: null  # 截图前等待时间
   screenshot_height_threshold: 20000  # 截图高度阈值
-  pdf: false  # 生成PDF
+  pdf: false  # 爬取PDF
   capture_mhtml: false  # 捕获MHTML
   image_description_min_word_threshold: 50  # 图片描述最小词数
   image_score_threshold: 3  # 图片分数阈值
@@ -93,51 +93,9 @@ crawler:
   deep_crawl_strategy:  # 深度爬取策略配置
     enabled: false  # 是否启用深度爬取
     max_depth: 3  # 最大爬取深度
-    max_pages: 100  # 最大页面数
+    max_pages: 10  # 最大页面数
     same_domain_only: true  # 是否仅爬取相同域名
-    follow_links: true  # 是否跟随链接
-    respect_robots_txt: true  # 是否遵守robots.txt
-    delay_between_requests: 1.0  # 请求间延迟（秒）
-    
-    # PDF自动识别和处理
-    auto_detect_pdf: true  # 自动识别PDF链接
-    pdf_processing:  # PDF处理配置
-      enabled: true  # 是否处理PDF文件
-      convert_to_markdown: true  # 是否转换为Markdown
-      save_pdf_files: false  # 是否保存PDF文件
-      pdf_output_path: "./output/pdf_files/{timestamp}_{filename}.pdf"
-      extract_metadata: true  # 是否提取PDF元数据
-      max_pdf_size_mb: 50  # 最大PDF文件大小（MB）
-      
-    # URL过滤规则
-    url_filters:  # URL过滤配置
-      include_patterns:  # 包含模式
-        - "\\.pdf$"  # PDF文件
-        - "\\.html?$"  # HTML文件
-        - "\\.txt$"  # 文本文件
-      exclude_patterns:  # 排除模式
-        - "/private/"  # 私有目录
-        - "/admin/"  # 管理后台
-        - "/api/"  # API接口
-        - "\\.(jpg|jpeg|png|gif|mp4|mp3)$"  # 媒体文件
-      domain_whitelist: []  # 域名白名单（空表示允许所有）
-      domain_blacklist: []  # 域名黑名单
-      
-    # 内容过滤规则
-    content_filters:  # 内容过滤配置
-      min_word_count: 100  # 最小词数
-      required_keywords: []  # 必需关键词
-      excluded_keywords: []  # 排除关键词
-      language: "zh-CN"  # 内容语言
-      
-    # 性能优化
-    performance:  # 性能配置
-      concurrent_requests: 3  # 并发请求数
-      timeout_per_page: 30000  # 每页超时时间（毫秒）
-      retry_attempts: 2  # 重试次数
-      use_cache: true  # 使用缓存
-      cache_ttl: 86400  # 缓存生存时间（秒）
-      
+     
   link_preview_config: null  # 链接预览配置
   experimental: null  # 实验性功能
   
@@ -153,10 +111,5 @@ crawler:
   
   # ==================== 会话配置 ====================
   session_id: null  # 会话ID
-  bypass_cache: false  # 绕过缓存（已弃用，使用cache_mode）
-  disable_cache: false  # 禁用缓存（已弃用，使用cache_mode）
-  no_cache_read: false  # 不读取缓存（已弃用，使用cache_mode）
-  no_cache_write: false  # 不写入缓存（已弃用，使用cache_mode）
   shared_data: null  # 共享数据
   
-  # 备注：修改此文件后无需重启程序，配置会自动重新加载
