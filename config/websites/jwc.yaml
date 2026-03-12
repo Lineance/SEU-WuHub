@@ -17,7 +17,7 @@ website:
 
     # Keep article detail pages and exclude list/navigation pages
     include_patterns:
-      - "jwc\\.seu\\.edu\\.cn/.+/\\d+\\.htm$"
+      - "jwc\\.seu\\.edu\\.cn/\\d{4}/\\d{4}/c\\d+a\\d+/page\\.htm$"
     exclude_patterns:
       - "/list\\d*\\.htm$"
       - "javascript:"

@@ -4,13 +4,15 @@ import json
 import textwrap
 from pathlib import Path
 
+import list_incremental_crawler as lic
 import pytest
 from conftest import _AsyncWebCrawler, _FakeResult
 from list_incremental_crawler import ListIncrementalCrawler
 
 
 @pytest.fixture
-def crawler(tmp_path: Path) -> ListIncrementalCrawler:
+def crawler(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> ListIncrementalCrawler:
+    monkeypatch.setattr(lic, "AsyncWebCrawler", _AsyncWebCrawler)
     state_file = tmp_path / "state" / "seen.json"
     instance = ListIncrementalCrawler(
         config_dir=str(tmp_path / "config_data"),

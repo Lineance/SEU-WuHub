@@ -245,9 +245,11 @@ class ListIncrementalCrawler:
 
         if run_config is None:
             run_config = self.crawler_config.clone() if self.crawler_config else CrawlerRunConfig()
-        run_config.cache_mode = CacheMode.ENABLED
-        run_config.check_cache_freshness = True
-        run_config.prefetch = True
+        # Crawl4AI 0.8.0 has a cache serialization bug for MarkdownGenerationResult.
+        # Bypass cache to avoid runtime validation errors during list-page crawling.
+        run_config.cache_mode = CacheMode.BYPASS
+        run_config.check_cache_freshness = False
+        run_config.prefetch = False
 
         crawler = self._crawler_instance
         if crawler is None:

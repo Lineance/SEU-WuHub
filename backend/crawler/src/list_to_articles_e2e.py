@@ -89,8 +89,8 @@ async def run_e2e(args: argparse.Namespace) -> dict:
             target=incremental_urls,
             override_config=website_overrides if args.website else None,
         )
-        run_config.cache_mode = CacheMode.ENABLED
-        run_config.check_cache_freshness = True
+        run_config.cache_mode = CacheMode.BYPASS
+        run_config.check_cache_freshness = False
         results = await article_crawler.crawl_articles(incremental_urls, run_config=run_config)
 
     success_count = sum(1 for item in results if item.get("success"))
@@ -131,10 +131,10 @@ def main() -> None:
     )
 
 
-if __name__ == "__main__":
-    main()
-
-
 def _write_output(path: str, payload: str) -> None:
     with open(path, "w", encoding="utf-8") as f:
         f.write(payload)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import sys
 import types
 from dataclasses import dataclass, field
@@ -100,11 +99,41 @@ def _install_fake_crawl4ai() -> None:
     sys.modules["crawl4ai.deep_crawling.bfs_strategy"] = bfs_strategy
 
 
-def pytest_configure():
-    use_real_crawl4ai = os.getenv("CRAWLER_TEST_USE_REAL_CRAWL4AI", "0") == "1"
+def pytest_addoption(parser):
+    parser.addoption(
+        "--run-real-web",
+        action="store_true",
+        default=False,
+        help="Run real network crawler integration tests marked as real_web.",
+    )
+
+
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers", "real_web: marks tests that require real network and real crawl4ai"
+    )
+
+    use_real_crawl4ai = config.getoption("--run-real-web")
     if not use_real_crawl4ai:
         _install_fake_crawl4ai()
     repo_root = Path(__file__).resolve().parents[3]
     crawler_src = repo_root / "backend" / "crawler" / "src"
     if str(crawler_src) not in sys.path:
         sys.path.insert(0, str(crawler_src))
+
+
+def pytest_collection_modifyitems(config, items):
+    if config.getoption("--run-real-web"):
+        return
+
+    selected = []
+    deselected = []
+    for item in items:
+        if item.get_closest_marker("real_web"):
+            deselected.append(item)
+        else:
+            selected.append(item)
+
+    if deselected:
+        config.hook.pytest_deselected(items=deselected)
+        items[:] = selected

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from typing import TYPE_CHECKING
 
 import httpx
@@ -17,10 +16,7 @@ REAL_ARTICLE_URL = "https://jwc.seu.edu.cn/2026/0228/c21678a556262/page.htm"
 REAL_ARTICLE_PATH = "/2026/0228/c21678a556262/page.htm"
 
 
-pytestmark = pytest.mark.skipif(
-    os.getenv("CRAWLER_TEST_USE_REAL_CRAWL4AI", "0") != "1",
-    reason="Set CRAWLER_TEST_USE_REAL_CRAWL4AI=1 to run real network integration tests.",
-)
+pytestmark = pytest.mark.real_web
 
 
 @pytest.mark.asyncio
