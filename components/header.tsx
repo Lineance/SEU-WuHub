@@ -1,5 +1,7 @@
 "use client"
 
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Search, Bot, Star, Settings } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -7,26 +9,35 @@ import Image from "next/image"
 
 interface HeaderProps {
   onAIToggle: () => void
-  onSettingsClick: () => void
 }
 
-export function Header({ onAIToggle, onSettingsClick }: HeaderProps) {
+export function Header({ onAIToggle }: HeaderProps) {
+  const [logoError, setLogoError] = useState(false)
+  const router = useRouter()
+
+  const handleSettingsClick = () => {
+    router.push('/settings')
+  }
+
   return (
     <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-card/95 px-4 shadow-sm backdrop-blur-sm">
       <div className="flex items-center gap-2">
-        <div className="relative h-8 w-8 overflow-hidden rounded-lg">
-          <Image
-            src="/logo.png"
-            alt="WuHub Logo"
-            fill
-            className="object-cover"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement
-              target.style.display = 'none'
-              target.parentElement!.innerHTML = '<span class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-base font-bold text-primary-foreground">W</span>'
-            }}
-          />
+        <div className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg">
+          {logoError ? (
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-base font-bold text-primary-foreground">
+              W
+            </span>
+          ) : (
+            <Image
+              src="/logo.png"
+              alt="WuHub Logo"
+              fill
+              className="object-cover"
+              onError={() => setLogoError(true)}
+            />
+          )}
         </div>
+
         <span className="text-lg font-semibold text-foreground">SEU-WuHub</span>
       </div>
 
@@ -46,6 +57,7 @@ export function Header({ onAIToggle, onSettingsClick }: HeaderProps) {
           <Star className="h-5 w-5" />
           <span className="sr-only">收藏夹</span>
         </Button>
+
         <Button
           variant="ghost"
           size="icon"
@@ -55,11 +67,12 @@ export function Header({ onAIToggle, onSettingsClick }: HeaderProps) {
           <Bot className="h-5 w-5" />
           <span className="sr-only">AI 助手</span>
         </Button>
+
         <Button
           variant="ghost"
           size="icon"
           className="rounded-full"
-          onClick={onSettingsClick}
+          onClick={handleSettingsClick}
         >
           <Settings className="h-5 w-5" />
           <span className="sr-only">设置</span>

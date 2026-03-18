@@ -1,8 +1,9 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
-import { Moon, Sun, Monitor, MessageSquare, Send, ChevronRight } from "lucide-react"
+import { Moon, Sun, MessageSquare, Send, ChevronRight, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
@@ -11,6 +12,7 @@ import { cn } from "@/lib/utils"
 
 export function SettingsPage() {
   const { theme, setTheme } = useTheme()
+  const router = useRouter()
   const [feedbackType, setFeedbackType] = useState<"bug" | "feature" | "other">("bug")
   const [feedbackTitle, setFeedbackTitle] = useState("")
   const [feedbackContent, setFeedbackContent] = useState("")
@@ -30,9 +32,8 @@ export function SettingsPage() {
   }
 
   const themeOptions = [
-    { value: "light", label: "浅色", icon: Sun },
-    { value: "dark", label: "深色", icon: Moon },
-    { value: "system", label: "跟随系统", icon: Monitor },
+    { value: "light", label: "浅色模式", icon: Sun },
+    { value: "dark", label: "深色模式", icon: Moon },
   ]
 
   const feedbackTypes = [
@@ -43,6 +44,17 @@ export function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6">
+      {/* 返回按钮 */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => router.push('/')}
+        className="gap-2"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        返回首页
+      </Button>
+
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold text-foreground">设置</h1>
         <p className="text-muted-foreground">管理您的偏好设置和反馈</p>
@@ -58,7 +70,7 @@ export function SettingsPage() {
           <CardDescription>选择您喜欢的界面主题</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             {themeOptions.map((option) => {
               const Icon = option.icon
               return (
@@ -66,7 +78,7 @@ export function SettingsPage() {
                   key={option.value}
                   onClick={() => setTheme(option.value)}
                   className={cn(
-                    "flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all",
+                    "flex items-center justify-center gap-3 rounded-xl border-2 p-4 transition-all",
                     theme === option.value
                       ? "border-primary bg-primary/10"
                       : "border-border hover:border-primary/50 hover:bg-secondary"
@@ -74,17 +86,17 @@ export function SettingsPage() {
                 >
                   <div
                     className={cn(
-                      "flex h-12 w-12 items-center justify-center rounded-full",
+                      "flex h-10 w-10 items-center justify-center rounded-full",
                       theme === option.value
                         ? "bg-primary text-primary-foreground"
                         : "bg-muted text-muted-foreground"
                     )}
                   >
-                    <Icon className="h-6 w-6" />
+                    <Icon className="h-5 w-5" />
                   </div>
                   <span
                     className={cn(
-                      "text-sm font-medium",
+                      "text-base font-medium",
                       theme === option.value ? "text-primary" : "text-foreground"
                     )}
                   >
