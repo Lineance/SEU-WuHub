@@ -5,19 +5,13 @@ import { Header } from "@/components/header"
 import { Sidebar } from "@/components/sidebar"
 import { HeroSection } from "@/components/hero-section"
 import { AIAssistant } from "@/components/ai-assistant"
-import { useRouter } from "next/navigation"
 
 export default function HomePage() {
   const [isAIOpen, setIsAIOpen] = useState(false)
-  const router = useRouter()
-
-  const handleSettingsClick = () => {
-    router.push('/settings')
-  }
 
   return (
     <div className="flex h-screen flex-col bg-background">
-      <Header onAIToggle={() => setIsAIOpen(!isAIOpen)} onSettingsClick={handleSettingsClick} />
+      <Header onAIToggle={() => setIsAIOpen(!isAIOpen)} />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
         <main className="flex-1 overflow-auto">
