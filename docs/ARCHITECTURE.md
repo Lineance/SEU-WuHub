@@ -167,7 +167,7 @@
 ## 4. 详细目录架构
 
 ```text
-campus-assistant/
+SEU-WuHub/
 ├── README.md                          # 项目说明与快速启动
 ├── Makefile                           # 常用命令: make dev, make deploy
 ├── docker-compose.yml                 # 单容器部署 (FastAPI + Nginx)
@@ -640,9 +640,322 @@ LanceDB SQL 查询 (SELECT * ORDER BY created_at DESC)
 
 ---
 
-## 7. Week 1 接口冻结契约
+## 7. LanceDB 存储引擎详细设计
 
-### 7.1 数据 Schema (Pydantic)
+### 7.1 功能特性
+
+#### 数据结构设计
+- **完整字段支持**：包含 14 个字段，涵盖新闻元数据、内容、向量和版本控制
+- **双向量模型**：标题使用 384 维向量，正文使用 1024 维向量
+- **版本控制**：支持增量更新和版本追踪
+- **标签系统集成**：支持预定义标签的向量匹配和自动分配
+
+#### Markdown 文本处理
+- **智能提取**：从 Markdown 中提取纯文本内容用于向量化
+- **格式保留**：同时保留原始 Markdown 内容
+- **内容清洗**：支持 HTML 标签移除、Unicode 规范化等
+
+#### 数据向量化
+- **双模型策略**：
+  - 标题：`paraphrase-multilingual-MiniLM-L12-v2` (384 维)
+  - 正文：`BAAI/bge-large-zh` (1024 维)
+- **批量处理**：支持批量向量化，提高处理效率
+- **查询优化**：为 BGE 模型自动添加检索前缀
+
+#### 数据插入与更新
+- **智能去重**：基于 URL 哈希和 SimHash 的重复检测
+- **版本控制**：支持 `crawl_version` 递增更新
+- **原子操作**：使用 LanceDB 的 `merge_insert` 确保数据一致性
+- **标签自动匹配**：基于向量相似度的自动标签分配
+
+#### 混合检索
+- **向量搜索**：基于余弦相似度的语义检索
+- **全文搜索**：基于 Tantivy 的关键词匹配
+- **混合搜索**：向量和关键词结果的智能融合
+- **高级过滤**：支持时间范围、来源、作者、标签等多维度过滤
+
+### 7.2 模块结构
+
+```
+backend/
+├── data/                    # 数据层
+│   ├── schema.py           # 数据结构定义
+│   ├── connection.py       # LanceDB 连接管理
+│   ├── repository.py       # CRUD 操作
+│   ├── guard.py           # SQL 安全验证
+│   ├── tag_schema.py      # 标签数据结构
+│   └── tag_repository.py  # 标签数据存储
+├── ingestion/              # 数据摄取层
+│   ├── normalizers.py     # 数据标准化
+│   ├── embedder.py        # 双模型向量化
+│   ├── validators.py      # 数据验证
+│   ├── dedup.py           # 去重逻辑
+│   ├── pipeline.py        # ETL 主流程
+│   ├── tag_initializer.py # 标签系统初始化
+│   ├── tag_matcher.py     # 标签匹配引擎
+│   └── adapters/          # 数据源适配器
+│       └── crawler.py     # 爬虫数据适配
+└── retrieval/             # 检索层
+    ├── schema/article.py  # LanceModel 定义
+    ├── utils/embedding.py # 查询向量化
+    ├── store.py           # 表操作封装
+    └── engine.py          # 混合检索引擎
+```
+
+### 7.3 数据流
+
+1. **数据准备**：爬虫数据 → CrawlerAdapter → 标准化数据
+2. **ETL 处理**：验证 → 标准化 → 去重 → 向量化 → 标签匹配 → 写入
+3. **索引构建**：向量索引 (IVF-PQ) + 全文索引 (Tantivy) + 标签索引
+4. **检索服务**：查询 → 向量化 → 混合搜索 → 结果融合 → 标签过滤
+
+### 7.4 核心组件使用示例
+
+#### IngestionPipeline (ETL 管道)
+```python
+from ingestion import IngestionPipeline
+
+# 创建管道
+pipeline = IngestionPipeline(
+    db_path="data/campus.lance",
+    skip_validation=False,
+    skip_dedup=False,
+)
+
+# 批量处理
+result = pipeline.process_batch(documents, batch_size=32)
+print(result.summary())
+```
+
+#### RetrievalEngine (检索引擎)
+```python
+from retrieval import create_engine
+
+# 创建引擎
+engine = create_engine("data/campus.lance")
+
+# 混合搜索
+results = engine.search(
+    query="人工智能",
+    search_type="hybrid",
+    limit=10,
+    vector_weight=0.6,
+    keyword_weight=0.4,
+)
+
+# 高级搜索（带标签过滤）
+advanced_results = engine.advanced_search(
+    query="东南大学学术活动",
+    vector_weight=0.6,
+    keyword_weight=0.4,
+    title_weight=0.3,
+    content_weight=0.7,
+    limit=5,
+    source_site="计算机科学与工程学院",
+    tags=["学术讲座", "科研项目"]
+)
+```
+
+#### LanceStore (表操作)
+```python
+from retrieval import create_store
+
+# 创建存储
+store = create_store("data/campus.lance", create_indices=True)
+
+# 索引管理
+store.create_vector_index("content_embedding")
+store.create_fulltext_index()
+
+# 搜索操作
+vector_results = store.vector_search(query_vector, limit=10)
+text_results = store.fulltext_search("关键词", limit=10)
+```
+
+### 7.5 配置说明
+
+#### 模型配置
+```python
+# 在 embedder.py 中配置
+TITLE_MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
+CONTENT_MODEL_NAME = "BAAI/bge-large-zh"
+TAG_MODEL_NAME = "BAAI/bge-large-zh"  # 标签使用与正文相同的模型
+```
+
+#### 数据库配置
+```python
+# 在 connection.py 中配置
+DEFAULT_DB_PATH = "data/campus.lance"
+ARTICLE_TABLE_NAME = "articles"
+TAG_TABLE_NAME = "tags"
+```
+
+#### 索引配置
+```python
+# 在 store.py 中配置
+VECTOR_INDEX_CONFIG = {
+    "index_type": "IVF_PQ",
+    "num_partitions": 256,
+    "num_sub_vectors": 96,
+    "metric": "cosine",
+}
+```
+
+#### 标签匹配配置
+```yaml
+# 在 config/tags.yaml 中配置
+matching:
+  strict_threshold: 0.75      # 严格模式阈值 (0.0-1.0)
+  relaxed_threshold: 0.5      # 宽松模式阈值 (0.0-1.0)
+  max_tags_per_article: 5     # 每篇文章最大标签数
+  similarity_method: "cosine" # 相似度计算方法
+  enable_cache: true          # 启用标签缓存
+  cache_ttl: 3600            # 缓存TTL（秒）
+```
+
+### 7.6 性能优化
+
+#### 批量处理
+- **向量化**：支持批量处理，减少模型加载次数
+- **写入**：使用 LanceDB 的批量插入接口
+- **索引**：异步构建索引，不影响写入性能
+- **标签匹配**：批量计算相似度，优化计算效率
+
+#### 缓存策略
+- **模型缓存**：SentenceTransformer 模型单例模式
+- **连接池**：LanceDB 连接复用
+- **结果缓存**：热门查询结果缓存
+- **标签缓存**：标签向量和元数据缓存
+
+#### 内存管理
+- **流式处理**：支持大文件流式读取
+- **分块处理**：大数据集分块处理
+- **内存监控**：自动监控内存使用
+- **向量分块**：大型向量数据分块存储和检索
+
+### 7.7 错误处理
+
+#### 验证错误
+- **字段验证**：必填字段检查
+- **格式验证**：URL、日期格式验证
+- **内容验证**：内容长度、编码检查
+- **向量验证**：向量维度一致性检查
+
+#### 处理错误
+- **向量化错误**：模型加载失败处理
+- **写入错误**：数据库连接异常处理
+- **索引错误**：索引构建失败处理
+- **标签匹配错误**：相似度计算异常处理
+
+#### 恢复机制
+- **断点续传**：支持从失败点恢复
+- **数据回滚**：写入失败时自动回滚
+- **索引重建**：索引损坏时自动重建
+- **日志记录**：详细的操作日志
+
+### 7.8 监控与维护
+
+#### 监控指标
+- **导入统计**：成功/失败/重复计数
+- **搜索性能**：响应时间、召回率、准确率
+- **标签统计**：标签使用频率、匹配准确率
+- **系统资源**：CPU、内存、磁盘使用
+
+#### 维护任务
+- **索引优化**：定期优化索引
+- **数据清理**：清理过期数据
+- **备份恢复**：定期备份数据库
+- **标签更新**：定期更新标签向量
+
+#### 日志系统
+- **操作日志**：记录所有关键操作
+- **错误日志**：记录系统错误
+- **性能日志**：记录性能指标
+- **标签日志**：记录标签匹配结果
+
+### 7.9 扩展开发
+
+#### 添加新数据源
+```python
+# 实现新的适配器
+from ingestion.adapters.crawler import CrawlerAdapter
+
+class CustomAdapter(CrawlerAdapter):
+    def convert_one(self, raw_data):
+        # 自定义转换逻辑
+        pass
+```
+
+#### 添加新搜索功能
+```python
+# 扩展检索引擎
+from retrieval.engine import RetrievalEngine
+
+class CustomEngine(RetrievalEngine):
+    def semantic_search_with_filters(self, query, filters, **kwargs):
+        # 自定义语义搜索逻辑
+        pass
+```
+
+#### 集成外部系统
+```python
+# 集成到 Web 服务
+from fastapi import FastAPI
+from retrieval import create_engine
+
+app = FastAPI()
+engine = create_engine()
+
+@app.get("/search")
+async def search(query: str, limit: int = 10, tags: list[str] = None):
+    results = engine.search(
+        query=query, 
+        limit=limit,
+        tags=tags  # 支持标签过滤
+    )
+    return results
+```
+
+### 7.10 故障排除
+
+#### 常见问题
+- **模型下载失败**：检查网络连接，使用镜像源
+- **内存不足**：减小批量大小，增加内存
+- **索引构建慢**：调整索引参数，使用 SSD
+- **标签匹配不准确**：调整相似度阈值，优化标签描述
+
+#### 调试方法
+```python
+# 启用调试日志
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
+# 检查数据库状态
+from data import get_article_repository, get_tag_repository
+article_repo = get_article_repository()
+tag_repo = get_tag_repository()
+print(f"文章记录数: {article_repo.count()}")
+print(f"标签记录数: {tag_repo.count()}")
+
+# 检查标签匹配
+from ingestion.tag_matcher import TagMatcher
+matcher = TagMatcher()
+test_text = "学术讲座通知"
+matches = matcher.match_tags(test_text)
+print(f"测试文本标签匹配结果: {matches}")
+```
+
+#### 性能调优
+- **向量维度**：根据需求调整向量维度
+- **索引参数**：优化 IVF-PQ 参数
+- **批处理大小**：根据内存调整批处理大小
+- **缓存策略**：调整缓存大小和TTL
+
+---
+
+## 8. Week 1 接口冻结契约
+
+### 8.1 数据 Schema (Pydantic)
 
 ```python
 # 用于 API 文档和前后端契约
@@ -659,6 +972,7 @@ class ArticleOut(BaseModel):
     url: str                      # 原文链接
     created_at: datetime
     score: Optional[float] = None # 搜索相关性分数
+    tags: Optional[list[str]] = None # 标签列表
 
 class ChatRequest(BaseModel):
     """聊天请求 (Query 参数，因使用 SSE)"""
@@ -673,14 +987,15 @@ class ChatStreamChunk(BaseModel):
     sources: Optional[list] = None # 引用来源 (最后一条推送包含)
 ```
 
-### 7.2 API 契约 (Week 1 冻结)
+### 8.2 API 契约 (Week 1 冻结)
 
 | 端点 | 方法 | 说明 |
 |------|------|------|
-| `/api/v1/articles` | GET | 最近文章，支持 `?source=` 和 `?limit=` |
-| `/api/v1/articles/{id}` | GET | 详情，返回完整 content |
-| `/api/v1/search` | GET | 混合检索，`?q=` 查询词，`?source=` 筛选 |
+| `/api/v1/articles` | GET | 最近文章，支持 `?source=`、`?tags=` 和 `?limit=` |
+| `/api/v1/articles/{id}` | GET | 详情，返回完整 content 和 tags |
+| `/api/v1/search` | GET | 混合检索，`?q=` 查询词，`?source=`、`?tags=` 筛选 |
 | `/api/v1/chat/stream` | GET | SSE 流式对话，`?q=` 问题 |
+| `/api/v1/tags` | GET | 获取所有标签列表 |
 | `/api/health` | GET | 健康检查，返回 LanceDB 连接状态 |
 | `/api/metrics` | GET | 监控数据 (Prometheus 格式，可选) |
 
@@ -691,3 +1006,115 @@ if ($request_method !~ ^(GET|HEAD|OPTIONS)$) {
     return 405;
 }
 ```
+
+---
+
+## 9. 标签系统设计
+
+### 9.1 标签架构
+
+标签系统是 SEU-WuHub 的核心特性之一，支持：
+
+1. **预定义标签**：通过配置文件定义的固定标签
+2. **向量匹配**：基于描述文本的向量相似度匹配
+3. **自动分配**：文章入库时自动分配相关标签
+4. **过滤搜索**：支持按标签过滤搜索结果
+
+### 9.2 标签数据结构
+
+```python
+# backend/data/tag_schema.py
+@dataclass
+class TagRecord:
+    """标签记录的数据类"""
+    tag_id: str                    # 标签唯一标识符
+    name: str                     # 标签名称
+    description: str              # 详细描述（用于向量匹配）
+    embedding: list[float]        # 向量表示（1024维）
+    category: str | None = None   # 分类
+    created_at: datetime          # 创建时间
+    updated_at: datetime          # 更新时间
+```
+
+### 9.3 标签匹配流程
+
+1. **初始化阶段**：从 `config/tags.yaml` 加载标签配置，生成向量嵌入
+2. **匹配阶段**：计算文章内容与标签描述的余弦相似度
+3. **筛选阶段**：根据阈值筛选匹配的标签
+4. **分配阶段**：为文章分配符合条件的标签
+
+### 9.4 标签配置示例
+
+```yaml
+# config/tags.yaml
+tags:
+  - id: "tag_academic_lecture"
+    name: "学术讲座"
+    description: "学术讲座、学术报告、专家讲坛"
+    category: "academic"
+    priority: 1
+    
+  - id: "tag_research_project"
+    name: "科研项目"
+    description: "科研项目、课题研究、基金项目"
+    category: "academic"
+    priority: 1
+```
+
+### 9.5 标签系统集成
+
+标签系统深度集成到数据流的各个环节：
+
+1. **数据摄取**：文章入库时自动匹配标签
+2. **检索过滤**：支持按标签过滤搜索结果
+3. **内容分类**：基于标签实现内容智能分类
+4. **用户界面**：前端展示文章标签，支持标签导航
+
+---
+
+## 10. 部署与运维
+
+### 10.1 环境要求
+- Python 3.13+
+- Node.js 22+
+- Docker & Docker Compose
+- 足够磁盘空间（建议 > 10GB）
+
+### 10.2 部署步骤
+1. **环境准备**：安装依赖和配置环境变量
+2. **数据库初始化**：初始化 LanceDB 数据库和标签系统
+3. **服务启动**：启动后端 API 和前端应用
+4. **数据导入**：运行爬虫采集初始数据
+5. **监控配置**：配置日志收集和性能监控
+
+### 10.3 运维指南
+- **数据备份**：定期备份 `data/campus.lance` 目录
+- **日志管理**：监控系统日志，及时处理异常
+- **性能监控**：监控 API 响应时间和系统资源使用
+- **版本升级**：遵循版本兼容性指南进行升级
+
+---
+
+## 11. 扩展与定制
+
+### 11.1 添加新数据源
+1. 在 `config/websites/` 中添加新的网站配置文件
+2. 配置爬虫规则和选择器
+3. 测试数据采集流程
+4. 集成到现有数据流
+
+### 11.2 定制标签系统
+1. 修改 `config/tags.yaml` 添加新标签
+2. 运行标签初始化脚本
+3. 测试标签匹配效果
+4. 调整匹配阈值和参数
+
+### 11.3 扩展检索功能
+1. 实现新的检索算法
+2. 集成到 `retrieval/engine.py`
+3. 添加相应的 API 端点
+4. 更新前端界面支持新功能
+
+---
+
+*本文档最后更新：2026年3月19日*

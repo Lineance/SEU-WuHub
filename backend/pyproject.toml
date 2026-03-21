@@ -19,6 +19,14 @@ dependencies = [
     # Vector DB & Data
     "lancedb>=0.29.0",
     "numpy>=2.4.0",
+    "pyarrow>=14.0.0",
+    
+    # Embedding & NLP
+    "sentence-transformers>=2.2.0",
+    
+    # Markdown & HTML Processing
+    "markdown>=3.5.0",
+    "beautifulsoup4>=4.12.0",
     
     # Logging & Utils
     "structlog>=25.5.0",

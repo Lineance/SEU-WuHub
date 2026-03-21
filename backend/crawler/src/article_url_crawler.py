@@ -1,9 +1,11 @@
 import logging
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import yaml
+from bs4 import BeautifulSoup
 from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig
 from crawl4ai.deep_crawling.bfs_strategy import BFSDeepCrawlStrategy
 
@@ -187,6 +189,9 @@ class ArticleUrlCrawler:
                     {
                         "success": False,
                         "url": url,
+                        "title": "",
+                        "publish_date": "",
+                        "author": "",
                         "error": str(exc),
                         "markdown": "",
                         "metadata": {
@@ -206,6 +211,8 @@ class ArticleUrlCrawler:
                 "success": False,
                 "url": "",
                 "title": "",
+                "publish_date": "",
+                "author": "",
                 "content": "",
                 "markdown": "",
                 "error": result.get("error", "Unknown internal error"),
@@ -249,6 +256,8 @@ class ArticleUrlCrawler:
             "success": success,
             "url": url,
             "title": getattr(result, "title", "") or "",
+            "publish_date": "",
+            "author": "",
             "content": getattr(markdown_obj, "fit_html", "") or getattr(result, "cleaned_html", ""),
             "markdown": selected_markdown,
             "raw_markdown": markdown_raw,
@@ -269,4 +278,136 @@ class ArticleUrlCrawler:
         if not success:
             formatted["error"] = error_msg or "Crawl failed without specific error message"
 
+        # Extract metadata using CSS selectors from raw HTML (which contains full page)
+        raw_html = getattr(result, "html", "") or ""
+        if raw_html:
+            metadata = self._extract_metadata(
+                raw_html,
+                title_selectors=[".Article_Title", ".News-title", "h1", ".article-title", "[class*=title]"],
+                date_selectors=[".Article_PublishDate", ".publish-date", ".date", "time"],
+                author_selectors=[".author", ".Article_Author", ".writer"],
+            )
+            # Only use extracted title if result.title is empty
+            if not formatted.get("title") and metadata.get("title"):
+                formatted["title"] = metadata.get("title")
+            # Use extracted date if available
+            if metadata.get("date"):
+                formatted["publish_date"] = metadata.get("date")
+            # Use extracted author if available
+            if metadata.get("author"):
+                formatted["author"] = metadata.get("author")
+
+        # If title is still empty, try to extract from markdown content
+        if not formatted.get("title") and formatted.get("markdown"):
+            title_from_content = self._extract_title_from_content(formatted["markdown"])
+            if title_from_content:
+                formatted["title"] = title_from_content
+
         return formatted
+
+    def _extract_metadata(
+        self,
+        html_content: str,
+        title_selectors: list[str] | None = None,
+        date_selectors: list[str] | None = None,
+        author_selectors: list[str] | None = None,
+    ) -> dict[str, str]:
+        """
+        Extract title, date, and author from HTML using CSS selectors.
+
+        Args:
+            html_content: Raw HTML content to parse
+            title_selectors: List of CSS selectors for title (tried in order)
+            date_selectors: List of CSS selectors for date (tried in order)
+            author_selectors: List of CSS selectors for author (tried in order)
+
+        Returns:
+            Dict with extracted title, date, author (empty string if not found)
+        """
+        if not html_content:
+            return {"title": "", "date": "", "author": ""}
+
+        soup = BeautifulSoup(html_content, "html.parser")
+        result_data = {"title": "", "date": "", "author": ""}
+
+        # Extract title
+        if title_selectors:
+            for selector in title_selectors:
+                elem = soup.select_one(selector)
+                if elem:
+                    text = elem.get_text(strip=True)
+                    if text:
+                        # Clean up the title - remove excessive whitespace
+                        text = re.sub(r"\s+", " ", text)
+                        result_data["title"] = text
+                        break
+
+        # Extract date
+        if date_selectors:
+            for selector in date_selectors:
+                elem = soup.select_one(selector)
+                if elem:
+                    text = elem.get_text(strip=True)
+                    if text:
+                        # Clean up the date
+                        text = re.sub(r"\s+", " ", text)
+                        result_data["date"] = text
+                        break
+
+        # Extract author
+        if author_selectors:
+            for selector in author_selectors:
+                elem = soup.select_one(selector)
+                if elem:
+                    text = elem.get_text(strip=True)
+                    if text:
+                        # Clean up the author
+                        text = re.sub(r"\s+", " ", text)
+                        result_data["author"] = text
+                        break
+
+        return result_data
+
+    def _extract_title_from_content(self, markdown_content: str) -> str:
+        """
+        Extract title from markdown content if not found via CSS selector.
+        Looks for patterns like 【报告题目】 or # heading at the start.
+
+        Args:
+            markdown_content: Markdown content
+
+        Returns:
+            Extracted title or empty string
+        """
+        if not markdown_content:
+            return ""
+
+        lines = markdown_content.strip().split("\n")
+
+        # Pattern 1: 【题目】标题 at the beginning (e.g., 【报告题目】完美神奇的数字6)
+        for line in lines[:5]:
+            line = line.strip()
+            # Match 【类别】标题 pattern - title is after the first 】
+            match = re.search(r"【[^】]+】(.+)", line)
+            if match:
+                title = match.group(1).strip()
+                if title and len(title) > 2:
+                    return title
+            # Also try simple 【】 pattern if no category
+            match2 = re.search(r"【(.+)】", line)
+            if match2:
+                title = match2.group(1).strip()
+                # Skip if it looks like a category (short) rather than a title
+                if title and len(title) > 3:
+                    return title
+
+        # Pattern 2: Markdown heading # at the beginning
+        for line in lines[:3]:
+            line = line.strip()
+            if line.startswith("#"):
+                # Remove markdown heading syntax
+                title = re.sub(r"^#+\s*", "", line).strip()
+                if title and len(title) > 2:
+                    return title
+
+        return ""

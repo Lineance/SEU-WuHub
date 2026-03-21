@@ -17,7 +17,7 @@ website:
 
     # Keep article detail pages and exclude list/navigation pages
     include_patterns:
-      - "jwc\\.seu\\.edu\\.cn/\\d{4}/\\d{4}/c\\d+a\\d+/page\\.htm$"
+      - "jwc\\.seu\\.edu\\.cn/\\d{4}/\\d{4}/c\\w+/page\\.htm$"
     exclude_patterns:
       - "/list\\d*\\.htm$"
       - "javascript:"
@@ -43,18 +43,28 @@ website:
       page_timeout: 45000
       remove_overlay_elements: true
       exclude_external_links: true
-      css_selector: ".wp_articlecontent, .Article_Content"
+      # CSS selectors for extracting metadata from article pages
+      # IMPORTANT: css_selector filters the HTML content, if title is outside
+      # the content area, it won't be found. Use broader selection or none.
+      # Content: .Article_Content or .wp_articlecontent (main article content)
+      # Not using css_selector for full page HTML access for metadata extraction
+      css_selector: ""  # Empty to get full HTML for metadata extraction
       excluded_tags:
         - "nav"
         - "header"
         - "footer"
         - "script"
         - "style"
+      # Metadata extraction selectors (used by ArticleUrlCrawler._extract_metadata)
+      # These are processed on FULL HTML to extract structured fields
       target_elements:
-        - ".News-title"
-        - ".date1"
-        - ".wp_articlecontent"
-        - ".Article_Content"
+        - ".Article_Title"      # Title selector (span element)
+        - ".News-title"         # Alternative title selector (table element)
+        - ".Article_PublishDate" # Date selector
+        - ".Article_Content"   # Content selector
+        - ".wp_articlecontent" # Alternative content selector
+      # Note: Author extraction is not available via CSS selector on JWC pages
+      # Author information is embedded within article content (e.g., under "报告人简介" section)
       markdown_generator:
         type: "default"
         content_source: "cleaned_html"

@@ -1,0 +1,295 @@
+# 预定义标签配置
+# 
+# 本文件包含 SEU-WuHub 系统的预定义标签。
+# 每个标签包含描述，向量嵌入将自动生成。
+# 
+# 结构：
+# - categories: 标签的逻辑分组
+# - tags: 标签定义列表
+# - manual_tags: 额外的手动分配标签
+
+categories:
+  academic:
+    name: "学术科研"
+    description: "学术研究、科研成果、学术活动"
+    color: "#4285F4"  # 谷歌蓝
+    
+  campus_life:
+    name: "校园生活"
+    description: "学生活动、社团组织、校园服务"
+    color: "#34A853"  # 谷歌绿
+    
+  administration:
+    name: "行政通知"
+    description: "学校通知、政策法规、管理规定"
+    color: "#FBBC05"  # 谷歌黄
+    
+  admissions:
+    name: "招生就业"
+    description: "招生信息、就业指导、招聘信息"
+    color: "#EA4335"  # 谷歌红
+    
+  department:
+    name: "院系动态"
+    description: "各院系新闻、专业发展、学科建设"
+    color: "#8E44AD"  # 紫色
+    
+  research:
+    name: "科学研究"
+    description: "研究项目、实验室建设、科研合作"
+    color: "#3498DB"  # 蓝色
+
+# 预定义标签 - 自动生成向量嵌入
+tags:
+  # 学术科研 category
+  - id: "tag_academic_lecture"
+    name: "学术讲座"
+    description: "学术讲座、学术报告、专家讲坛"
+    category: "academic"
+    priority: 1
+    
+  - id: "tag_academic_conference"
+    name: "学术会议"
+    description: "学术会议、研讨会、论坛"
+    category: "academic"
+    priority: 1
+    
+  - id: "tag_research_project"
+    name: "科研项目"
+    description: "科研项目、课题研究、基金项目"
+    category: "academic"
+    priority: 1
+    
+  - id: "tag_paper_publication"
+    name: "论文发表"
+    description: "学术论文、期刊发表、科研成果"
+    category: "academic"
+    priority: 2
+    
+  # 校园生活 category
+  - id: "tag_student_activity"
+    name: "学生活动"
+    description: "学生活动、社团活动、文体比赛"
+    category: "campus_life"
+    priority: 1
+    
+  - id: "tag_campus_service"
+    name: "校园服务"
+    description: "后勤服务、校园设施、信息服务"
+    category: "campus_life"
+    priority: 2
+    
+  - id: "tag_art_culture"
+    name: "文化艺术"
+    description: "文化艺术活动、艺术展览、文艺演出"
+    category: "campus_life"
+    priority: 2
+    
+  # 行政通知 category
+  - id: "tag_notification"
+    name: "通知公告"
+    description: "学校通知、官方公告、重要通知"
+    category: "administration"
+    priority: 1
+    
+  - id: "tag_policy_announcement"
+    name: "政策发布"
+    description: "政策文件、管理规定、制度公告"
+    category: "administration"
+    priority: 1
+    
+  - id: "tag_holiday_arrangement"
+    name: "假期安排"
+    description: "假期安排、调休通知、节假日安排"
+    category: "administration"
+    priority: 2
+    
+  # 招生就业 category
+  - id: "tag_admission_info"
+    name: "招生信息"
+    description: "本科招生、研究生招生、招生简章"
+    category: "admissions"
+    priority: 1
+    
+  - id: "tag_employment"
+    name: "就业信息"
+    description: "招聘信息、就业指导、职业规划"
+    category: "admissions"
+    priority: 1
+    
+  - id: "tag_internship"
+    name: "实习机会"
+    description: "实习信息、实习岗位、实践机会"
+    category: "admissions"
+    priority: 2
+    
+  # 院系动态 category
+  - id: "tag_department_news"
+    name: "院系新闻"
+    description: "各院系动态、院系活动、专业建设"
+    category: "department"
+    priority: 1
+    
+  - id: "tag_major_development"
+    name: "专业发展"
+    description: "专业建设、课程设置、专业评估"
+    category: "department"
+    priority: 2
+    
+  - id: "tag_discipline_construction"
+    name: "学科建设"
+    description: "学科建设、学科评估、学科发展"
+    category: "department"
+    priority: 2
+    
+  # 科学研究 category
+  - id: "tag_lab_construction"
+    name: "实验室建设"
+    description: "实验室建设、实验设备、实验平台"
+    category: "research"
+    priority: 1
+    
+  - id: "tag_scientific_achievement"
+    name: "科研成果"
+    description: "科研成果、技术突破、创新成果"
+    category: "research"
+    priority: 1
+    
+  - id: "tag_academic_exchange"
+    name: "学术交流"
+    description: "国内外交流、访问学者、合作研究"
+    category: "research"
+    priority: 2
+
+# 手动标签 - 这些不进行向量匹配，而是手动分配
+manual_tags:
+  - id: "tag_urgent"
+    name: "紧急"
+    description: "紧急通知、重要紧急事项"
+    category: "administration"
+    priority: 0
+    
+  - id: "tag_important"
+    name: "重要"
+    description: "重要通知、重大事项"
+    category: "administration"
+    priority: 0
+    
+  - id: "tag_new"
+    name: "最新"
+    description: "最新消息、最新动态"
+    category: "general"
+    priority: 0
+    
+  - id: "tag_hot"
+    name: "热点"
+    description: "热点新闻、关注度高"
+    category: "general"
+    priority: 0
+
+# 标签匹配配置
+matching:
+  # 严格模式阈值 (0.0-1.0)
+  strict_threshold: 0.75
+  
+  # 宽松模式阈值 (0.0-1.0)
+  relaxed_threshold: 0.5
+  
+  # 每篇文章最大标签数
+  max_tags_per_article: 5
+  
+  # 相似度计算方法
+  similarity_method: "cosine"  # 余弦或欧几里得距离
+  
+  # 启用标签缓存
+  enable_cache: true
+  
+  # 缓存TTL（秒）
+  cache_ttl: 3600
+
+# 标签初始化选项
+initialization:
+  # 为预定义标签自动生成嵌入向量
+  auto_generate_embeddings: true
+  
+  # 初始化后创建向量索引
+  create_index: true
+  
+  # 初始化前清除现有标签（用于测试）
+  clear_existing: false
+  
+  # 用于生成嵌入向量的示例文本
+  sample_texts:
+    - "学术讲座通知：本周三下午2点在教三楼101教室举行人工智能前沿讲座，特邀清华大学教授主讲，欢迎师生参加。"
+    - "校园招聘会：东南大学2026届毕业生校园招聘会将于下周在体育馆举行，届时将有百家知名企业参会，提供数千个工作岗位。"
+    - "科研项目申报：国家重点研发计划项目申报开始，请各学院积极组织申报，截止日期为2026年4月30日。"
+    - "学生活动预告：校学生会将举办校园文化节系列活动，包括文艺演出、体育比赛、学术竞赛等，丰富学生课余生活。"
+    - "教学改革通知：学校将推进本科教学改革，优化课程体系，加强实践教学环节，提升人才培养质量。"
+
+# 标签统计和监控
+monitoring:
+  # 启用标签使用追踪
+  enable_tracking: true
+  
+  # 追踪频率（天）
+  track_frequency: 7
+  
+  # 生成标签统计报告
+  generate_reports: true
+  
+  # 报告输出目录
+  report_directory: "logs/tag_statistics"
+
+# 标签建议
+suggestions:
+  # 启用自动标签建议
+  enable_suggestions: true
+  
+  # 建议的最小置信度 (0.0-1.0)
+  min_confidence: 0.6
+  
+  # 每篇文章最大建议数
+  max_suggestions: 3
+  
+  # 建议审核工作流
+  review_workflow: "auto"  # 自动、手动或混合
+  
+  # 反馈收集
+  collect_feedback: true
+
+# 标签验证规则
+validation:
+  # 标签名称验证正则表达式
+  name_pattern: "^[a-zA-Z0-9\u4e00-\u9fa5_\\-\\.]+$"
+  
+  # 最小名称长度
+  min_name_length: 2
+  
+  # 最大名称长度
+  max_name_length: 50
+  
+  # 最大描述长度
+  max_description_length: 200
+  
+  # 标签创建必需字段
+  required_fields: ["id", "name", "category"]
+  
+  # 允许的类别值
+  allowed_categories: ["academic", "campus_life", "administration", "admissions", "department", "research", "general"]
+
+# 标签导入/导出
+export:
+  # 导出格式选项
+  formats: ["json", "csv", "yaml"]
+  
+  # 导出时包含嵌入向量
+  include_embeddings: true
+  
+  # 导出目录
+  directory: "data/tags/exports"
+  
+  # 自动备份
+  auto_backup: true
+  
+  # 备份频率（天）
+  backup_frequency: 30
