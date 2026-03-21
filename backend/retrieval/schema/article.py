@@ -245,7 +245,7 @@ class ArticleQuery(LanceModel):
 
     # 向量搜索
     vector_query: list[float] | None = None
-    vector_field: str = "both_embedding"  # 同时搜索标题和正文
+    vector_field: str = "content_embedding"  # 向量字段: title_embedding 或 content_embedding
     similarity_threshold: float = 0.7
 
     # 过滤条件
@@ -263,8 +263,8 @@ class ArticleQuery(LanceModel):
     order_desc: bool = True
 
     # 混合搜索权重
-    keyword_weight: float = 0.5
-    vector_weight: float = 0.5
+    keyword_weight: float = 0.3  # 全文搜索权重
+    vector_weight: float = 0.7   # 向量搜索权重（语义相似度更重要）
 
     def build_where_clause(self) -> str:
         """

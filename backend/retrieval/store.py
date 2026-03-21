@@ -526,8 +526,18 @@ class LanceStore:
         if query_obj.vector_query or query_obj.keyword:
             keyword = query_obj.keyword or ""
 
-            if query_obj.vector_field == "both_embedding":
-                # 同时搜索标题和正文
+            # 混合搜索默认同时搜索标题和正文向量
+            # 只有明确指定 vector_query（预计算向量）时才单字段搜索
+            if query_obj.vector_query:
+                # 预计算向量，单字段搜索
+                vector_results = self.vector_search(
+                    query_vector=query_obj.vector_query,
+                    vector_field=query_obj.vector_field,
+                    limit=query_obj.limit * 2,
+                    where=query_obj.build_where_clause(),
+                )
+            elif query_obj.keyword:
+                # 关键词搜索，同时搜索标题和正文
                 title_vec, content_vec = self._embedder.embed_query(
                     keyword,
                     field="both",
@@ -556,33 +566,6 @@ class LanceStore:
                 vector_results = self._merge_vector_results(
                     title_vector_results, content_vector_results,
                     title_weight=0.3, content_weight=0.7
-                )
-            else:
-                # 单字段搜索（保持向后兼容）
-                if query_obj.vector_query:
-                    vector_query = query_obj.vector_query
-                else:
-                    field_str = query_obj.vector_field.replace("_embedding", "")
-                    if field_str == "title":
-                        field: Literal["title", "content", "both"] = "title"
-                    elif field_str == "content":
-                        field: Literal["title", "content", "both"] = "content"
-                    else:
-                        field = "content"
-
-                    vector_query = self._embedder.embed_query(keyword, field=field)
-
-                if isinstance(vector_query, tuple):
-                    if query_obj.vector_field == "title_embedding":
-                        vector_query = vector_query[0]
-                    else:
-                        vector_query = vector_query[1] if len(vector_query) > 1 else vector_query[0]
-
-                vector_results = self.vector_search(
-                    query_vector=vector_query,
-                    vector_field=query_obj.vector_field,
-                    limit=query_obj.limit * 2,
-                    where=query_obj.build_where_clause(),
                 )
 
         # 全文搜索
@@ -688,19 +671,25 @@ class LanceStore:
         scores = {}
 
         # 处理向量结果
+        # 使用倒数排名分数，距离越近（排名越高）分数越高
         for i, doc in enumerate(vector_results):
             doc_id = doc.get(ArticleFields.NEWS_ID)
             if doc_id:
                 # 基于排名计算分数 (排名越靠前分数越高)
+                # 第1名得1.0，第2名得0.5，第3名得0.33...
                 rank_score = 1.0 / (i + 1)
-                scores[doc_id] = scores.get(doc_id, 0) + rank_score * vector_weight
+                # 同时考虑位置衰减：前10个结果占主导
+                position_boost = max(0.5, 1.0 - (i / 20))
+                scores[doc_id] = scores.get(doc_id, 0) + rank_score * vector_weight * position_boost
 
         # 处理文本结果
         for i, doc in enumerate(text_results):
             doc_id = doc.get(ArticleFields.NEWS_ID)
             if doc_id:
                 rank_score = 1.0 / (i + 1)
-                scores[doc_id] = scores.get(doc_id, 0) + rank_score * text_weight
+                # 文本分数权重衰减：全文搜索作为辅助
+                text_weight_adjusted = text_weight * max(0.3, 1.0 - (i / 15))
+                scores[doc_id] = scores.get(doc_id, 0) + rank_score * text_weight_adjusted
 
         # 合并结果
         all_docs = {doc.get(ArticleFields.NEWS_ID): doc for doc in vector_results + text_results}
