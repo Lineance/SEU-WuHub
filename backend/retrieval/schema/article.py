@@ -11,13 +11,13 @@ Responsibilities:
 
 import contextlib
 import datetime
-from typing import Any
+from typing import Any, cast
 
 import pyarrow as pa
 from lancedb.pydantic import LanceModel, Vector
 
 
-class Article(LanceModel):
+class Article(LanceModel):  # type: ignore[misc]
     """
     新闻文章 LanceDB 模型
 
@@ -54,10 +54,10 @@ class Article(LanceModel):
     content_text: str = ""
 
     # 向量字段
-     # paraphrase-multilingual-MiniLM-L12-v2
+    # paraphrase-multilingual-MiniLM-L12-v2
     title_embedding: Vector(384)  # type: ignore
     # BAAI/bge-large-zh
-    content_embedding: Vector(1024)   # type: ignore
+    content_embedding: Vector(1024)  # type: ignore
 
     # 版本控制
     crawl_version: int = 1
@@ -98,6 +98,7 @@ class Article(LanceModel):
         # 处理元数据
         if "metadata" in data and isinstance(data["metadata"], dict):
             import json
+
             data["metadata"] = json.dumps(data["metadata"], ensure_ascii=False)
 
         return cls(**data)
@@ -109,7 +110,7 @@ class Article(LanceModel):
         Returns:
             包含 Article 字段的字典
         """
-        result = self.dict()
+        result = cast("dict[str, Any]", self.dict())
 
         # 处理日期字段
         if result["publish_date"]:
@@ -121,6 +122,7 @@ class Article(LanceModel):
         # 处理元数据
         if result["metadata"]:
             import json
+
             with contextlib.suppress(BaseException):
                 result["metadata"] = json.loads(result["metadata"])
 
@@ -210,6 +212,7 @@ class Article(LanceModel):
         # 检查 URL 格式
         if self.url:
             from urllib.parse import urlparse
+
             try:
                 parsed = urlparse(self.url)
                 if not parsed.scheme or not parsed.netloc:
@@ -219,10 +222,14 @@ class Article(LanceModel):
 
         # 检查向量维度
         if self.title_embedding and len(self.title_embedding) != 384:
-            errors.append(f"title_embedding dimension mismatch: expected 384, got {len(self.title_embedding)}")
+            errors.append(
+                f"title_embedding dimension mismatch: expected 384, got {len(self.title_embedding)}"
+            )
 
         if self.content_embedding and len(self.content_embedding) != 1024:
-            errors.append(f"content_embedding dimension mismatch: expected 1024, got {len(self.content_embedding)}")
+            errors.append(
+                f"content_embedding dimension mismatch: expected 1024, got {len(self.content_embedding)}"
+            )
 
         return len(errors) == 0, errors
 
@@ -232,7 +239,7 @@ class Article(LanceModel):
 # =============================================================================
 
 
-class ArticleQuery(LanceModel):
+class ArticleQuery(LanceModel):  # type: ignore[misc]
     """
     文章查询模型
 
@@ -264,7 +271,7 @@ class ArticleQuery(LanceModel):
 
     # 混合搜索权重
     keyword_weight: float = 0.3  # 全文搜索权重
-    vector_weight: float = 0.7   # 向量搜索权重（语义相似度更重要）
+    vector_weight: float = 0.7  # 向量搜索权重（语义相似度更重要）
 
     def build_where_clause(self) -> str:
         """
@@ -315,7 +322,9 @@ class ArticleQuery(LanceModel):
             errors.append("keyword_weight + vector_weight must equal 1.0")
 
         if self.vector_query and self.vector_field not in ["title_embedding", "content_embedding"]:
-            errors.append(f"vector_field must be 'title_embedding' or 'content_embedding', got {self.vector_field}")
+            errors.append(
+                f"vector_field must be 'title_embedding' or 'content_embedding', got {self.vector_field}"
+            )
 
         if self.vector_query:
             if self.vector_field == "title_embedding":
@@ -327,6 +336,8 @@ class ArticleQuery(LanceModel):
             else:
                 expected_dim = 1024
             if len(self.vector_query) != expected_dim:
-                errors.append(f"vector_query dimension mismatch: expected {expected_dim}, got {len(self.vector_query)}")
+                errors.append(
+                    f"vector_query dimension mismatch: expected {expected_dim}, got {len(self.vector_query)}"
+                )
 
         return len(errors) == 0, errors

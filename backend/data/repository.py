@@ -12,7 +12,7 @@ Responsibilities:
 
 import logging
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 from .connection import init_database
 from .guard import SQLGuard, sanitize
@@ -49,7 +49,7 @@ class ArticleRepository:
         >>> results = repo.find_by_source("教务处", limit=10)
     """
 
-    def __init__(self, table=None, db_path: str | None = None):
+    def __init__(self, table: Any = None, db_path: str | None = None) -> None:
         """
         初始化仓库
 
@@ -68,12 +68,12 @@ class ArticleRepository:
         logger.info(f"ArticleRepository initialized for table: {self._table.name}")
 
     @property
-    def table(self):
+    def table(self) -> Any:
         """获取底层表对象"""
         return self._table
 
     @property
-    def schema(self):
+    def schema(self) -> Any:
         """获取表结构"""
         return self._table.schema
 
@@ -201,7 +201,9 @@ class ArticleRepository:
         try:
             # LanceDB 不支持直接删除，需要过滤查询
             # 这里使用覆盖写入的方式实现"软删除"
-            logger.warning(f"LanceDB doesn't support direct deletion, article {news_id} marked for cleanup")
+            logger.warning(
+                f"LanceDB doesn't support direct deletion, article {news_id} marked for cleanup"
+            )
             return False
         except Exception as e:
             logger.error(f"Failed to delete article {news_id}: {e}")
@@ -223,13 +225,10 @@ class ArticleRepository:
             文章数据列表
         """
         try:
-            results = (
-                self._table.search()
-                .limit(limit)
-                .offset(offset)
-                .to_list()
+            results = self._table.search().limit(limit).offset(offset).to_list()
+            return sorted(
+                results, key=lambda x: x.get(ArticleFields.PUBLISH_DATE, ""), reverse=True
             )
-            return sorted(results, key=lambda x: x.get(ArticleFields.PUBLISH_DATE, ""), reverse=True)
         except Exception as e:
             logger.error(f"Failed to find all articles: {e}")
             return []
@@ -253,7 +252,9 @@ class ArticleRepository:
                 .limit(limit)
                 .to_list()
             )
-            return sorted(results, key=lambda x: x.get(ArticleFields.PUBLISH_DATE, ""), reverse=True)
+            return sorted(
+                results, key=lambda x: x.get(ArticleFields.PUBLISH_DATE, ""), reverse=True
+            )
         except Exception as e:
             logger.error(f"Failed to find articles by source {source_site}: {e}")
             return []
@@ -277,7 +278,9 @@ class ArticleRepository:
                 .limit(limit)
                 .to_list()
             )
-            return sorted(results, key=lambda x: x.get(ArticleFields.PUBLISH_DATE, ""), reverse=True)
+            return sorted(
+                results, key=lambda x: x.get(ArticleFields.PUBLISH_DATE, ""), reverse=True
+            )
         except Exception as e:
             logger.error(f"Failed to find articles by author {author}: {e}")
             return []
@@ -304,13 +307,10 @@ class ArticleRepository:
                 f"{ArticleFields.PUBLISH_DATE} >= '{start_date.isoformat()}' "
                 f"AND {ArticleFields.PUBLISH_DATE} <= '{end_date.isoformat()}'"
             )
-            results = (
-                self._table.search()
-                .where(where_clause)
-                .limit(limit)
-                .to_list()
+            results = self._table.search().where(where_clause).limit(limit).to_list()
+            return sorted(
+                results, key=lambda x: x.get(ArticleFields.PUBLISH_DATE, ""), reverse=True
             )
-            return sorted(results, key=lambda x: x.get(ArticleFields.PUBLISH_DATE, ""), reverse=True)
         except Exception as e:
             logger.error(f"Failed to find articles by date range: {e}")
             return []
@@ -337,13 +337,10 @@ class ArticleRepository:
                 tag_conditions.append(f"'{safe_tag}' = ANY({ArticleFields.TAGS})")
 
             where_clause = " OR ".join(tag_conditions)
-            results = (
-                self._table.search()
-                .where(where_clause)
-                .limit(limit)
-                .to_list()
+            results = self._table.search().where(where_clause).limit(limit).to_list()
+            return sorted(
+                results, key=lambda x: x.get(ArticleFields.PUBLISH_DATE, ""), reverse=True
             )
-            return sorted(results, key=lambda x: x.get(ArticleFields.PUBLISH_DATE, ""), reverse=True)
         except Exception as e:
             logger.error(f"Failed to find articles by tags {tags}: {e}")
             return []
@@ -361,11 +358,8 @@ class ArticleRepository:
         """
         try:
             safe_query = sanitize(query)
-            return (
-                self._table.search(query=safe_query, query_type="fts")
-                .limit(limit)
-                .to_list()
-            )
+            results = self._table.search(query=safe_query, query_type="fts").limit(limit).to_list()
+            return cast("list[dict[str, Any]]", results)
         except Exception as e:
             logger.error(f"Failed to search text '{query}': {e}")
             return []
@@ -377,7 +371,7 @@ class ArticleRepository:
     def count(self) -> int:
         """获取总记录数"""
         try:
-            return self._table.count_rows()
+            return int(self._table.count_rows())
         except Exception as e:
             logger.error(f"Failed to count articles: {e}")
             return 0
@@ -386,7 +380,7 @@ class ArticleRepository:
         """按来源统计记录数"""
         try:
             results = self._table.search().select([ArticleFields.SOURCE_SITE]).to_list()
-            counts = {}
+            counts: dict[str, int] = {}
             for doc in results:
                 source = doc.get(ArticleFields.SOURCE_SITE, "未知")
                 counts[source] = counts.get(source, 0) + 1
@@ -407,7 +401,7 @@ class ArticleRepository:
         """
         try:
             results = self._table.search().select([ArticleFields.PUBLISH_DATE]).to_list()
-            counts = {}
+            counts: dict[str, int] = {}
 
             for doc in results:
                 date = doc.get(ArticleFields.PUBLISH_DATE)
@@ -486,10 +480,7 @@ class ArticleRepository:
         try:
             safe_url = sanitize(url)
             results = (
-                self._table.search()
-                .where(f"{ArticleFields.URL} = '{safe_url}'")
-                .limit(1)
-                .to_list()
+                self._table.search().where(f"{ArticleFields.URL} = '{safe_url}'").limit(1).to_list()
             )
             return len(results) > 0
         except Exception as e:
@@ -503,12 +494,10 @@ class ArticleRepository:
     def get_oldest(self, limit: int = 10) -> list[dict[str, Any]]:
         """获取最旧的记录"""
         try:
-            results = (
-                self._table.search()
-                .limit(limit)
-                .to_list()
+            results = self._table.search().limit(limit).to_list()
+            return sorted(
+                results, key=lambda x: x.get(ArticleFields.PUBLISH_DATE, ""), reverse=False
             )
-            return sorted(results, key=lambda x: x.get(ArticleFields.PUBLISH_DATE, ""), reverse=False)
         except Exception as e:
             logger.error(f"Failed to get oldest articles: {e}")
             return []
@@ -532,7 +521,7 @@ def get_article_repository(db_path: str | None = None) -> ArticleRepository:
     return ArticleRepository(db_path=db_path)
 
 
-def create_article_repository(table=None) -> ArticleRepository:
+def create_article_repository(table: Any = None) -> ArticleRepository:
     """
     创建 ArticleRepository 实例
 

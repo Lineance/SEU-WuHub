@@ -12,7 +12,7 @@ Responsibilities:
 import hashlib
 import logging
 import re
-from typing import Any
+from typing import Any, Protocol
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +93,7 @@ class SimHash:
     汉明距离小于阈值的文档被视为重复或近似重复。
     """
 
-    def __init__(self, bits: int = SIMHASH_BITS):
+    def __init__(self, bits: int = SIMHASH_BITS) -> None:
         """
         初始化 SimHash
 
@@ -171,7 +171,9 @@ class SimHash:
             哈希值
         """
         h = hashlib.md5(token.encode("utf-8")).hexdigest()  # noqa: S324
-        return int(h, 16) % (2**self._bits)
+        raw_value = int(h, 16)
+        modulus = 2 ** int(self._bits)
+        return int(raw_value % modulus)
 
     @staticmethod
     def hamming_distance(hash1: int, hash2: int) -> int:
@@ -233,7 +235,7 @@ class DuplicateDetector:
         self,
         simhash_bits: int = SIMHASH_BITS,
         similarity_threshold: int = SIMHASH_DISTANCE_THRESHOLD,
-    ):
+    ) -> None:
         """
         初始化去重检测器
 
@@ -297,7 +299,7 @@ class DuplicateDetector:
         documents: list[dict[str, Any]],
         url_key: str = "url",
         content_key: str = "content_text",
-    ) -> tuple[list[dict], list[dict]]:
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         """
         从文档列表中找出重复和非重复文档
 
@@ -345,6 +347,12 @@ class DuplicateDetector:
 # =============================================================================
 
 
+class _RepositoryLike(Protocol):
+    def exists_by_url(self, url: str) -> bool: ...
+
+    def exists(self, news_id: str) -> bool: ...
+
+
 class RepositoryDedup:
     """
     与 LanceDB Repository 集成的去重检测器
@@ -352,7 +360,7 @@ class RepositoryDedup:
     在写入前检查数据库中是否已存在相同记录
     """
 
-    def __init__(self, repository=None):
+    def __init__(self, repository: _RepositoryLike | None = None) -> None:
         """
         初始化
 
@@ -362,7 +370,7 @@ class RepositoryDedup:
         self._repository = repository
         self._detector = DuplicateDetector()
 
-    def set_repository(self, repository):
+    def set_repository(self, repository: _RepositoryLike | None) -> None:
         """设置 Repository"""
         self._repository = repository
 
@@ -378,7 +386,7 @@ class RepositoryDedup:
         """
         if not self._repository:
             return False
-        return self._repository.exists_by_url(url)
+        return bool(self._repository.exists_by_url(url))
 
     def exists_by_id(self, news_id: str) -> bool:
         """
@@ -392,13 +400,13 @@ class RepositoryDedup:
         """
         if not self._repository:
             return False
-        return self._repository.exists(news_id)
+        return bool(self._repository.exists(news_id))
 
     def filter_new_documents(
         self,
         documents: list[dict[str, Any]],
         id_key: str = "news_id",
-    ) -> tuple[list[dict], list[dict]]:
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         """
         过滤出新文档和已存在的文档
 
@@ -419,9 +427,7 @@ class RepositoryDedup:
             else:
                 new_docs.append(doc)
 
-        logger.info(
-            f"Filter result: {len(new_docs)} new, {len(existing_docs)} existing"
-        )
+        logger.info(f"Filter result: {len(new_docs)} new, {len(existing_docs)} existing")
         return new_docs, existing_docs
 
 

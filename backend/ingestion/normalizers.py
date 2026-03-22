@@ -275,7 +275,7 @@ def format_datetime(dt: datetime | None, fmt: str = "%Y-%m-%dT%H:%M:%S%z") -> st
 # =============================================================================
 
 
-def normalize_unicode(text: str, form: Literal['NFC', 'NFD', 'NFKC', 'NFKD'] = 'NFC') -> str:
+def normalize_unicode(text: str, form: Literal["NFC", "NFD", "NFKC", "NFKD"] = "NFC") -> str:
     """
     Unicode 规范化
 
@@ -381,7 +381,7 @@ def extract_first_sentence(
     # 如果是Markdown，先尝试提取标题
     if is_markdown:
         # 查找第一个标题（#开头的行）
-        title_match = re.search(r'^#+\s*(.+?)$', text, re.MULTILINE)
+        title_match = re.search(r"^#+\s*(.+?)$", text, re.MULTILINE)
         if title_match:
             title = title_match.group(1).strip()
             if title:
@@ -392,49 +392,42 @@ def extract_first_sentence(
                 if len(title) > max_title_length:
                     return truncate_text(title, max_title_length)
                 return title
-    
+
     # 如果没有找到标题，或者不是Markdown，转换为纯文本
-    if is_markdown:
-        content = markdown_to_text(text)
-    else:
-        content = strip_html(text)
-    
+    content = markdown_to_text(text) if is_markdown else strip_html(text)
+
     # HTML实体解码
     content = unescape_html(content)
-    
+
     # 空白规范化
     content = normalize_whitespace(content)
-    
+
     if not content:
         return ""
-    
+
     # 中文句子分隔符：句号、问号、感叹号、省略号
-    sentence_delimiters = r'[。！？?!\.…]+'
-    
+    sentence_delimiters = r"[。！？?!\.…]+"
+
     # 查找第一个句子分隔符
     match = re.search(sentence_delimiters, content)
-    
-    if match:
-        # 提取到第一个分隔符之前的内容
-        first_sentence = content[:match.end()]
-    else:
-        # 如果没有找到句子分隔符，使用整个文本
-        first_sentence = content
-    
+
+    # 提取到第一个分隔符之前的内容；未匹配时使用整个文本
+    first_sentence = content[: match.end()] if match else content
+
     # 清理空白
     first_sentence = normalize_whitespace(first_sentence)
-    
+
     # 如果句子太长，截断
     if len(first_sentence) > max_title_length:
         # 尝试在标点处截断
-        for delimiter in ['。', '！', '？', '!', '?', '.', '，', ',', '；', ';']:
+        for delimiter in ["。", "！", "？", "!", "?", ".", "，", ",", "；", ";"]:
             idx = first_sentence.rfind(delimiter, 0, max_title_length)
             if idx != -1:
-                return first_sentence[:idx + len(delimiter)]
-        
+                return first_sentence[: idx + len(delimiter)]
+
         # 没有找到合适的截断点，直接截断
         return first_sentence[:max_title_length] + "..."
-    
+
     return first_sentence
 
 

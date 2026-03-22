@@ -56,7 +56,8 @@ class TagConfigLoader:
         """
         try:
             with open(config_path, encoding="utf-8") as f:
-                config = yaml.safe_load(f)
+                loaded = yaml.safe_load(f)
+                config = loaded if isinstance(loaded, dict) else {}
                 logger.info(f"Loaded tag config from {config_path}")
                 return config
         except Exception as e:
@@ -74,11 +75,13 @@ class TagConfigLoader:
         Returns:
             标签定义列表
         """
-        tags = config.get("tags", [])
-        manual_tags = config.get("manual_tags", [])
+        tags_raw = config.get("tags", [])
+        manual_tags_raw = config.get("manual_tags", [])
+        tags = tags_raw if isinstance(tags_raw, list) else []
+        manual_tags = manual_tags_raw if isinstance(manual_tags_raw, list) else []
 
         # 合并自动和手动标签
-        all_tags = tags + manual_tags
+        all_tags = [t for t in (tags + manual_tags) if isinstance(t, dict)]
         logger.info(f"Parsed {len(all_tags)} tags ({len(tags)} auto, {len(manual_tags)} manual)")
         return all_tags
 
@@ -178,7 +181,7 @@ class TagInitializer:
 
             # LanceDB 不支持直接清空，我们可以通过删除并重建表来实现
             # 或者使用标记删除策略
-            success = self._repository.clear_all()
+            success = bool(self._repository.clear_all())
 
             if success:
                 logger.info(f"Successfully cleared {existing_count} tags")
@@ -257,7 +260,7 @@ class TagInitializer:
 
         try:
             # 批量添加标签
-            saved_count = self._repository.add_batch(tag_records)
+            saved_count = int(self._repository.add_batch(tag_records))
 
             if saved_count == len(tag_records):
                 logger.info(f"Successfully saved all {saved_count} tags")
@@ -272,7 +275,7 @@ class TagInitializer:
     def _create_indices(self) -> bool:
         """创建标签表的索引"""
         try:
-            success = self._repository.create_indices()
+            success = bool(self._repository.create_indices())
 
             if success:
                 logger.info("Successfully created tag indices")

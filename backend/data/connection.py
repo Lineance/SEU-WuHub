@@ -14,16 +14,11 @@ import logging
 import os
 import threading
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import lancedb
 
-from .schema import (
-    ARTICLES_TABLE_NAME,
-    ArticleFields,
-    IndexConfig,
-    get_article_schema,
-)
+from .schema import ARTICLES_TABLE_NAME, ArticleFields, IndexConfig, get_article_schema
 
 if TYPE_CHECKING:
     from lancedb.db import DBConnection
@@ -63,6 +58,9 @@ class LanceDBConnection:
 
     _instance: "LanceDBConnection | None" = None
     _lock = threading.Lock()
+    _initialized: bool
+    _db_path: str
+    _db: "DBConnection"
 
     def __new__(cls, db_path: str | None = None) -> "LanceDBConnection":
         """
@@ -82,17 +80,18 @@ class LanceDBConnection:
                     cls._instance = instance
         return cls._instance
 
-    def __init__(self, db_path: str | None = None):
+    def __init__(self, db_path: str | None = None) -> None:
         """
         初始化连接
 
         Args:
             db_path: 数据库路径，默认为 ./data/campus.lance
         """
-        if self._initialized:
+        if getattr(self, "_initialized", False):
             return
 
-        self._db_path = db_path or os.getenv("LANCE_DB_PATH", DEFAULT_DB_PATH)
+        resolved_db_path = db_path or os.getenv("LANCE_DB_PATH") or DEFAULT_DB_PATH
+        self._db_path = resolved_db_path
         self._ensure_db_directory()
 
         logger.info(f"Connecting to LanceDB at: {self._db_path}")
@@ -205,7 +204,9 @@ class LanceDBConnection:
                     num_sub_vectors=IndexConfig.PQ_SUBQUANTIZERS,
                     replace=True,
                 )
-                logger.info(f"Vector index created on '{ArticleFields.CONTENT_EMBEDDING}' (row_count={row_count} >= 256)")
+                logger.info(
+                    f"Vector index created on '{ArticleFields.CONTENT_EMBEDDING}' (row_count={row_count} >= 256)"
+                )
             except Exception as e:
                 logger.warning(f"Failed to create vector index: {e}")
         else:
@@ -246,7 +247,7 @@ class LanceDBConnection:
         with self._table_lock:
             self._tables.pop(name, None)
 
-    def health_check(self) -> dict:
+    def health_check(self) -> dict[str, Any]:
         """
         执行健康检查
 

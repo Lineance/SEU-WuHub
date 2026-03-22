@@ -17,7 +17,7 @@ from typing import Any
 
 from backend.data import ArticleFields
 
-from ..normalizers import normalize_datetime, extract_first_sentence
+from ..normalizers import extract_first_sentence, normalize_datetime
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +111,9 @@ class CrawlerAdapter:
             content_markdown = result.get(ArticleFields.CONTENT_MARKDOWN, "")
             if content_markdown:
                 # 从markdown内容中提取第一句作为标题
-                fallback_title = extract_first_sentence(content_markdown, is_markdown=True, max_title_length=100)
+                fallback_title = extract_first_sentence(
+                    content_markdown, is_markdown=True, max_title_length=100
+                )
                 if fallback_title:
                     result[ArticleFields.TITLE] = fallback_title
                     logger.info(f"使用回退标题: {fallback_title[:50]}...")
@@ -163,7 +165,9 @@ class CrawlerAdapter:
                 # 如果是单个对象，包装成列表
                 raw_data = [raw_data]
             elif not isinstance(raw_data, list):
-                raise ValueError(f"Invalid JSON format: expected list or dict, got {type(raw_data)}")
+                raise ValueError(
+                    f"Invalid JSON format: expected list or dict, got {type(raw_data)}"
+                )
 
             return self.convert_batch(raw_data)
 
@@ -210,36 +214,41 @@ class CrawlerAdapter:
             新闻 ID (16字符MD5哈希)
         """
         import hashlib
-        
+
         url = data.get(ArticleFields.URL, "")
         if not url:
             # 如果URL为空，使用标题作为备选
             title = data.get(ArticleFields.TITLE, "")
             url = title or str(datetime.now().timestamp())
-        
+
         # 直接使用URL的MD5哈希，截取前16个字符
         return hashlib.md5(url.encode("utf-8")).hexdigest()[:16]  # noqa: S324
 
     def validate_conversion(self, raw_data: dict[str, Any]) -> tuple[bool, list[str]]:
         """
-        验证转换是否成功
+                验证转换是否成功
 
-        Args:
-1
-            raw_data: 原始爬虫数据
+                Args:
+        1
+                    raw_data: 原始爬虫数据
 
-        Returns:
-            (是否成功, 错误信息列表)
+                Returns:
+                    (是否成功, 错误信息列表)
         """
         errors = []
 
         # 检查必填字段
         required_fields = ["title", "url", "content"]
-        errors = [f"Missing required field: {field}" for field in required_fields if field not in raw_data or not raw_data[field]]
+        errors = [
+            f"Missing required field: {field}"
+            for field in required_fields
+            if field not in raw_data or not raw_data[field]
+        ]
 
         # 检查 URL 格式
         if "url" in raw_data:
             from ..validators import validate_url
+
             if not validate_url(raw_data["url"]):
                 errors.append("Invalid URL format")
 

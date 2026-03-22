@@ -148,6 +148,7 @@ python_version = "3.13"
 warn_return_any = true
 warn_unused_configs = true
 ignore_missing_imports = true
+disable_error_code = ["import-untyped"]
 disallow_untyped_defs = false
 check_untyped_defs = true
 show_error_codes = true

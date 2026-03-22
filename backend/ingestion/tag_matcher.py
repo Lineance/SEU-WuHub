@@ -408,7 +408,7 @@ class TagMatcher:
                 all_matched_tags.append(tag_ids)
 
             # 构建完整结果（包含无效输入的空结果）
-            final_results = [[] for _ in range(len(content_embeddings))]
+            final_results: list[list[str]] = [[] for _ in range(len(content_embeddings))]
             for idx, tags in zip(valid_indices, all_matched_tags, strict=False):
                 final_results[idx] = tags
 
@@ -477,7 +477,9 @@ class TagMatcher:
                 all_matched_tags.append(matched_tags[: self._max_tags])
 
             # 构建完整结果（包含无效输入的空结果）
-            final_results = [[] for _ in range(len(content_embeddings))]
+            final_results: list[list[tuple[str, float]]] = [
+                [] for _ in range(len(content_embeddings))
+            ]
             for idx, tags in zip(valid_indices, all_matched_tags, strict=False):
                 final_results[idx] = tags
 

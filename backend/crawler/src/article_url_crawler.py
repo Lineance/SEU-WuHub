@@ -1,3 +1,4 @@
+import importlib
 import logging
 import re
 from datetime import datetime
@@ -9,10 +10,12 @@ from bs4 import BeautifulSoup
 from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig
 from crawl4ai.deep_crawling.bfs_strategy import BFSDeepCrawlStrategy
 
-try:
-    from .crawl4ai_config_utils import normalize_crawler_overrides
-except ImportError:
-    from crawl4ai_config_utils import normalize_crawler_overrides
+if __package__:
+    _crawl4ai_config_utils = importlib.import_module(".crawl4ai_config_utils", __package__)
+else:
+    _crawl4ai_config_utils = importlib.import_module("crawl4ai_config_utils")
+
+normalize_crawler_overrides = _crawl4ai_config_utils.normalize_crawler_overrides
 
 
 class ArticleUrlCrawler:
@@ -45,7 +48,7 @@ class ArticleUrlCrawler:
     async def __aenter__(self) -> "ArticleUrlCrawler":
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         await self.close()
 
     async def start(self) -> None:
@@ -75,7 +78,8 @@ class ArticleUrlCrawler:
 
     def _load_yaml_config(self, filepath: Path) -> dict[str, Any]:
         with open(filepath, encoding="utf-8") as f:
-            return yaml.safe_load(f)
+            data = yaml.safe_load(f)
+        return data if isinstance(data, dict) else {}
 
     def _create_crawler_config(self, config_data: dict[str, Any]) -> CrawlerRunConfig:
         config_data = normalize_crawler_overrides(dict(config_data), self.logger)
@@ -144,6 +148,8 @@ class ArticleUrlCrawler:
         browser_config = self.browser_config.clone() if self.browser_config else BrowserConfig()
 
         if is_website_config:
+            if not isinstance(target, str):
+                raise TypeError("target must be website name str when is_website_config=True")
             website_cfg = self.load_website_config(target).get("website", {})
             urls_to_crawl = website_cfg.get("start_urls", [])
             overrides = website_cfg.get("overrides", {})
@@ -171,7 +177,11 @@ class ArticleUrlCrawler:
         if not self._crawler_instance:
             await self.start()
 
-        res = await self._crawler_instance.arun(url=url, config=run_config)
+        crawler = self._crawler_instance
+        if crawler is None:
+            raise RuntimeError("Crawler instance is not initialized")
+
+        res = await crawler.arun(url=url, config=run_config)
         return self._format_result(res)
 
     async def crawl_articles(
@@ -283,7 +293,13 @@ class ArticleUrlCrawler:
         if raw_html:
             metadata = self._extract_metadata(
                 raw_html,
-                title_selectors=[".Article_Title", ".News-title", "h1", ".article-title", "[class*=title]"],
+                title_selectors=[
+                    ".Article_Title",
+                    ".News-title",
+                    "h1",
+                    ".article-title",
+                    "[class*=title]",
+                ],
                 date_selectors=[".Article_PublishDate", ".publish-date", ".date", "time"],
                 author_selectors=[".author", ".Article_Author", ".writer"],
             )
@@ -299,7 +315,8 @@ class ArticleUrlCrawler:
 
         # If title is still empty, try to extract from markdown content
         if not formatted.get("title") and formatted.get("markdown"):
-            title_from_content = self._extract_title_from_content(formatted["markdown"])
+            markdown_text = str(formatted.get("markdown", ""))
+            title_from_content = self._extract_title_from_content(markdown_text)
             if title_from_content:
                 formatted["title"] = title_from_content
 

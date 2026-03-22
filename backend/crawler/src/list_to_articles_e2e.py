@@ -1,16 +1,20 @@
 import argparse
 import asyncio
+import importlib
 import json
 import os
 import time
 from typing import Any
 
-try:
-    from .article_url_crawler import ArticleUrlCrawler
-    from .list_incremental_crawler import ListIncrementalCrawler
-except ImportError:
-    from article_url_crawler import ArticleUrlCrawler
-    from list_incremental_crawler import ListIncrementalCrawler
+if __package__:
+    _article_mod = importlib.import_module(".article_url_crawler", __package__)
+    _list_mod = importlib.import_module(".list_incremental_crawler", __package__)
+else:
+    _article_mod = importlib.import_module("article_url_crawler")
+    _list_mod = importlib.import_module("list_incremental_crawler")
+
+ArticleUrlCrawler = _article_mod.ArticleUrlCrawler
+ListIncrementalCrawler = _list_mod.ListIncrementalCrawler
 
 
 def parse_args() -> argparse.Namespace:
@@ -70,7 +74,7 @@ def _parse_json_overrides(raw: str | None, arg_name: str) -> dict[str, Any]:
     return data
 
 
-async def run_e2e(args: argparse.Namespace) -> dict:
+async def run_e2e(args: argparse.Namespace) -> dict[str, Any]:
     start = time.time()
     list_crawler_overrides = _parse_json_overrides(
         args.list_crawler_overrides, "--list-crawler-overrides"
@@ -81,8 +85,8 @@ async def run_e2e(args: argparse.Namespace) -> dict:
     browser_overrides = _parse_json_overrides(args.browser_overrides, "--browser-overrides")
 
     source_mode = "website" if args.website else "list_url"
-    lists_summary: list[dict] = []
-    website_overrides: dict = {}
+    lists_summary: list[dict[str, Any]] = []
+    website_overrides: dict[str, Any] = {}
 
     async with ListIncrementalCrawler(
         config_dir=args.config_dir,

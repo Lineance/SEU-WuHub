@@ -9,16 +9,17 @@ Responsibilities:
     - 向量归一化和相似度计算
 """
 
+import importlib
 import logging
-from typing import Literal, cast
+from typing import Any, Literal, cast
 
-# 尝试不同的导入方式
 try:
-    # 在backend目录中运行时
-    from ingestion.embedder import Embedder, get_embedder
+    _embedder_mod = importlib.import_module("ingestion.embedder")
 except ImportError:
-    # 在其他环境中运行时
-    from backend.ingestion.embedder import Embedder, get_embedder
+    _embedder_mod = importlib.import_module("backend.ingestion.embedder")
+
+Embedder = _embedder_mod.Embedder
+get_embedder = _embedder_mod.get_embedder
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,7 @@ class RetrievalEmbedder:
     - 多字段向量化 (标题/正文)
     """
 
-    def __init__(self, embedder: Embedder | None = None):
+    def __init__(self, embedder: Any | None = None) -> None:
         """
         初始化检索向量化器
 
@@ -86,12 +87,12 @@ class RetrievalEmbedder:
 
         if field == "title":
             # 标题查询通常不需要特殊前缀
-            return self._embedder.embed_titles([query])[0]
+            return cast("list[float]", self._embedder.embed_titles([query])[0])
         elif field == "content":
-            return self._embedder.embed_contents([query_with_prefix])[0]
+            return cast("list[float]", self._embedder.embed_contents([query_with_prefix])[0])
         else:  # both
-            title_vec = self._embedder.embed_titles([query])[0]
-            content_vec = self._embedder.embed_contents([query_with_prefix])[0]
+            title_vec = cast("list[float]", self._embedder.embed_titles([query])[0])
+            content_vec = cast("list[float]", self._embedder.embed_contents([query_with_prefix])[0])
             return title_vec, content_vec
 
     def embed_queries(
@@ -126,9 +127,9 @@ class RetrievalEmbedder:
             processed = queries
 
         if field == "title":
-            return self._embedder.embed_titles(processed, batch_size)
+            return cast("list[list[float]]", self._embedder.embed_titles(processed, batch_size))
         else:  # content
-            return self._embedder.embed_contents(processed, batch_size)
+            return cast("list[list[float]]", self._embedder.embed_contents(processed, batch_size))
 
     def embed_hybrid_query(
         self,
@@ -154,10 +155,11 @@ class RetrievalEmbedder:
 
         # 明确告知类型检查器返回值应为 list[float]
         title_vec = cast("list[float]", self.embed_query(query, field="title", normalize=normalize))
-        content_vec = cast("list[float]", self.embed_query(query, field="content", normalize=normalize))
+        content_vec = cast(
+            "list[float]", self.embed_query(query, field="content", normalize=normalize)
+        )
 
         return title_vec, content_vec
-
 
     # =========================================================================
     # 相似度计算
@@ -244,7 +246,7 @@ class RetrievalEmbedder:
         if norm == 0:
             return vec
 
-        return (v / norm).tolist()
+        return cast("list[float]", (v / norm).tolist())
 
     @staticmethod
     def combine_vectors(
@@ -275,7 +277,7 @@ class RetrievalEmbedder:
             raise ValueError(f"Vector dimension mismatch: {len(v1)} != {len(v2)}")
 
         combined = weight1 * v1 + weight2 * v2
-        return combined.tolist()
+        return cast("list[float]", combined.tolist())
 
 
 # =============================================================================

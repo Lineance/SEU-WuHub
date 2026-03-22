@@ -44,7 +44,7 @@ class RetrievalEngine:
         embedder: RetrievalEmbedder | None = None,
         db_path: str = "data/lancedb",
         table_name: str = "articles",
-    ):
+    ) -> None:
         """
         初始化检索引擎
 
@@ -57,16 +57,16 @@ class RetrievalEngine:
         if store is None:
             # 确保 create_store 返回 LanceStore 实例
             store = create_store(db_path, table_name)
-        
+
         # 检查 store 类型
         if isinstance(store, str):
             logger.error(f"create_store returned a string: {store}")
             raise TypeError(f"Expected LanceStore but got string: {store}")
-        
-        if not hasattr(store, 'hybrid_search'):
-            logger.error(f"store object missing hybrid_search method")
-            raise TypeError(f"store object is not a LanceStore instance")
-            
+
+        if not hasattr(store, "hybrid_search"):
+            logger.error("store object missing hybrid_search method")
+            raise TypeError("store object is not a LanceStore instance")
+
         self._store = store
         self._embedder = embedder or get_retrieval_embedder()
 
@@ -82,7 +82,7 @@ class RetrievalEngine:
         search_type: str = "hybrid",
         limit: int = 10,
         offset: int = 0,
-        **filters,
+        **filters: Any,
     ) -> dict[str, Any]:
         """
         通用搜索接口
@@ -119,7 +119,7 @@ class RetrievalEngine:
             results = self._hybrid_search(query_obj)
 
         # 应用分页
-        paginated_results = results[offset:offset + limit]
+        paginated_results = results[offset : offset + limit]
 
         return {
             "query": query,
@@ -134,6 +134,7 @@ class RetrievalEngine:
     def _vector_search(self, query_obj: ArticleQuery) -> list[dict[str, Any]]:
         """向量搜索"""
         # 生成查询向量
+        vector: list[float] | tuple[list[float], list[float]]
         if query_obj.vector_query:
             vector = query_obj.vector_query
         else:
@@ -142,13 +143,14 @@ class RetrievalEngine:
             # 确保 field 参数类型正确
             field_str = query_obj.vector_field.replace("_embedding", "")
             # 将 field_str 转换为 Literal['title', 'content', 'both'] 类型
+            field: Literal["title", "content", "both"]
             if field_str == "title":
-                field: Literal["title", "content", "both"] = "title"
+                field = "title"
             elif field_str == "content":
-                field: Literal["title", "content", "both"] = "content"
+                field = "content"
             else:
                 # 默认使用 content
-                field: Literal["title", "content", "both"] = "content"
+                field = "content"
 
             vector = self._embedder.embed_query(
                 keyword,
@@ -192,10 +194,10 @@ class RetrievalEngine:
     def semantic_search(
         self,
         query: str,
-        field: Literal['title', 'content', 'both'] = "content",
+        field: Literal["title", "content", "both"] = "content",
         similarity_threshold: float = 0.7,
         limit: int = 10,
-        **filters,
+        **filters: Any,
     ) -> dict[str, Any]:
         """
         语义搜索 (纯向量)
@@ -249,7 +251,7 @@ class RetrievalEngine:
         fields: list[str] | None = None,
         match_type: str = "any",  # any, all, phrase
         limit: int = 10,
-        **filters,
+        **filters: Any,
     ) -> dict[str, Any]:
         """
         关键词搜索 (纯全文)
@@ -281,18 +283,14 @@ class RetrievalEngine:
             keywords = query.lower().split()
             filtered = []
             for result in results:
-                text = " ".join(
-                    str(result.get(field, "")) for field in fields
-                ).lower()
+                text = " ".join(str(result.get(field, "")) for field in fields).lower()
                 if all(keyword in text for keyword in keywords):
                     filtered.append(result)
             results = filtered
         elif match_type == "phrase":
             filtered = []
             for result in results:
-                text = " ".join(
-                    str(result.get(field, "")) for field in fields
-                ).lower()
+                text = " ".join(str(result.get(field, "")) for field in fields).lower()
                 if query.lower() in text:
                     filtered.append(result)
             results = filtered
@@ -314,7 +312,7 @@ class RetrievalEngine:
         title_weight: float = 0.3,
         content_weight: float = 0.7,
         limit: int = 10,
-        **filters,
+        **filters: Any,
     ) -> dict[str, Any]:
         """
         高级混合搜索
@@ -353,9 +351,7 @@ class RetrievalEngine:
                 title_vec = self._embedder.embed_query(query, field="title")
                 if isinstance(title_vec, tuple):
                     title_vec = title_vec[0]
-                title_sim = self._embedder.cosine_similarity(
-                    title_vec, result["title_embedding"]
-                )
+                title_sim = self._embedder.cosine_similarity(title_vec, result["title_embedding"])
 
             if "content_embedding" in result:
                 content_vec = self._embedder.embed_query(query, field="content")
@@ -366,14 +362,12 @@ class RetrievalEngine:
                 )
 
             # 综合分数
-            vector_score = (title_sim * title_weight + content_sim * content_weight)
+            vector_score = title_sim * title_weight + content_sim * content_weight
             keyword_score = result.get("_score", 0.5)  # 从混合搜索获取
 
             result["_vector_score"] = vector_score
             result["_keyword_score"] = keyword_score
-            result["_final_score"] = (
-                vector_score * vector_weight + keyword_score * keyword_weight
-            )
+            result["_final_score"] = vector_score * vector_weight + keyword_score * keyword_weight
 
         # 按最终分数排序
         results.sort(key=lambda x: x.get("_final_score", 0), reverse=True)
@@ -459,7 +453,7 @@ class RetrievalEngine:
             info = self._store.info()
 
             # 获取来源分布
-            sources = {}
+            sources: dict[str, int] = {}
             try:
                 results = self._store.table.search().select(["source_site"]).to_list()
                 for doc in results:
@@ -473,7 +467,9 @@ class RetrievalEngine:
             time_range = {}
             try:
                 results = self._store.table.search().select(["publish_date"]).to_list()
-                dates = [doc["publish_date"] for doc in results if doc.get("publish_date") is not None]
+                dates = [
+                    doc["publish_date"] for doc in results if doc.get("publish_date") is not None
+                ]
                 if dates:
                     time_range["min"] = min(dates)
                     time_range["max"] = max(dates)

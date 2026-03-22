@@ -137,8 +137,7 @@ class URLValidator:
         # 验证协议
         if parsed.scheme not in self._allowed_schemes:
             result.add_error(
-                f"Invalid scheme '{parsed.scheme}', "
-                f"allowed: {', '.join(self._allowed_schemes)}"
+                f"Invalid scheme '{parsed.scheme}', allowed: {', '.join(self._allowed_schemes)}"
             )
 
         # 验证域名
@@ -148,8 +147,7 @@ class URLValidator:
             domain = parsed.netloc.lower()
             if not any(domain.endswith(d) for d in self._allowed_domains):
                 result.add_error(
-                    f"Domain '{domain}' not in whitelist: "
-                    f"{', '.join(self._allowed_domains)}"
+                    f"Domain '{domain}' not in whitelist: {', '.join(self._allowed_domains)}"
                 )
 
         return result
@@ -211,13 +209,9 @@ class ContentValidator:
         # 检查长度
         content_length = len(content)
         if content_length < self._min_length:
-            result.add_error(
-                f"Content too short: {content_length} < {self._min_length}"
-            )
+            result.add_error(f"Content too short: {content_length} < {self._min_length}")
         elif content_length > self._max_length:
-            result.add_error(
-                f"Content too long: {content_length} > {self._max_length}"
-            )
+            result.add_error(f"Content too long: {content_length} > {self._max_length}")
 
         # 检查编码
         if self._check_encoding:
@@ -315,9 +309,7 @@ class DocumentValidator:
         if "news_id" in document and document["news_id"]:
             news_id = document["news_id"]
             if not re.match(r"^[a-zA-Z0-9_\-]+$", news_id):
-                result.add_warning(
-                    f"news_id contains special characters: {news_id}"
-                )
+                result.add_warning(f"news_id contains special characters: {news_id}")
 
         return result
 

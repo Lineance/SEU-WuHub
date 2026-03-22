@@ -16,7 +16,12 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
-from backend.data import ArticleFields, ArticleRepository, get_article_repository, init_database
+from backend.data import (
+    ArticleFields,
+    ArticleRepository,
+    get_article_repository,
+    init_database,
+)
 
 from .dedup import DuplicateDetector, RepositoryDedup
 from .embedder import Embedder, get_embedder
@@ -357,7 +362,7 @@ class IngestionPipeline:
 
         # 必填字段
         result[ArticleFields.NEWS_ID] = data.get("news_id", "")
-        
+
         # 标题处理：如果标题为空，尝试从内容中提取第一句作为标题
         raw_title = data.get("title", "")
         if not raw_title:
@@ -365,11 +370,14 @@ class IngestionPipeline:
             content_markdown = data.get("content_markdown", "")
             if content_markdown:
                 from .normalizers import extract_first_sentence
-                extracted_title = extract_first_sentence(content_markdown, is_markdown=True, max_title_length=100)
+
+                extracted_title = extract_first_sentence(
+                    content_markdown, is_markdown=True, max_title_length=100
+                )
                 if extracted_title:
                     raw_title = extracted_title
                     logger.debug(f"从内容中提取标题: {extracted_title[:50]}...")
-        
+
         result[ArticleFields.TITLE] = raw_title
         result[ArticleFields.URL] = data.get("url", "")
 
@@ -493,7 +501,7 @@ class IngestionPipeline:
 
     def _write(self, data: dict[str, Any]) -> bool:
         """写入数据库"""
-        return self._repository.add_one(data)
+        return bool(self._repository.add_one(data))
 
 
 # =============================================================================

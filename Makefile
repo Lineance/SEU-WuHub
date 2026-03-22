@@ -5,7 +5,7 @@ RUFF ?= ruff
 BANDIT ?= bandit
 MYPY ?= mypy
 
-.PHONY: backend-install backend-lint backend-format backend-typecheck backend-security backend-test frontend-install frontend-lint frontend-format frontend-test lint format typecheck security test docker-build docker-up docker-down
+.PHONY: backend-install backend-lint backend-format backend-typecheck backend-typecheck-strict backend-security backend-test frontend-install frontend-lint frontend-format frontend-test lint format typecheck security test docker-build docker-up docker-down
 
 # Backend
 backend-install:
@@ -20,11 +20,14 @@ backend-format:
 backend-typecheck:
 	$(MYPY) backend
 
+backend-typecheck-strict:
+	cd backend && uv run python -m mypy --strict --explicit-package-bases .
+
 backend-security:
 	$(BANDIT) -c backend/pyproject.toml -r backend
 
 backend-test:
-	cd backend && uv run pytest tests
+	uv run --project backend python -m pytest backend/tests
 
 # Frontend
 frontend-install:

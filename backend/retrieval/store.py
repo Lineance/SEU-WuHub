@@ -12,7 +12,7 @@ Responsibilities:
 
 import logging
 import re
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import pyarrow as pa
 
@@ -50,7 +50,7 @@ class LanceStore:
         embedder: RetrievalEmbedder | None = None,
         db_path: str | None = None,
         table_name: str = "articles",
-    ):
+    ) -> None:
         """
         初始化 LanceStore
 
@@ -101,7 +101,7 @@ class LanceStore:
 
     def count(self) -> int:
         """获取记录数"""
-        return self.table.count_rows()
+        return int(self.table.count_rows())
 
     def schema(self) -> pa.Schema:
         """获取表结构"""
@@ -133,11 +133,11 @@ class LanceStore:
         min_partitions: int = 4,
         max_partitions: int = 256,
         enable_brute_force_fallback: bool = True,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """
         创建向量索引（支持暴力检索回退）
-        
+
         Args:
             field: 向量字段名
             index_type: 索引类型 (IVF_FLAT, IVF_SQ, IVF_PQ, IVF_HNSW_SQ, IVF_HNSW_PQ, IVF_RQ)
@@ -162,40 +162,45 @@ class LanceStore:
 
             # 获取当前数据量
             data_count = self.count()
-            
+
             # 数据量不足256条时，回退到暴力检索
             if enable_brute_force_fallback and data_count < 256:
                 logger.info(f"数据量不足256条 ({data_count} < 256)，回退到暴力向量检索")
-                logger.info(f"  说明：IVF-PQ索引需要至少256条数据进行训练")
-                logger.info(f"  暴力检索：使用线性扫描，计算查询向量与所有向量的相似度")
+                logger.info("  说明：IVF-PQ索引需要至少256条数据进行训练")
+                logger.info("  暴力检索：使用线性扫描，计算查询向量与所有向量的相似度")
                 logger.info(f"  性能：{data_count}条数据，毫秒级响应")
                 return  # 跳过索引创建，让LanceDB使用暴力检索
-            
+
             # 自适应参数调整
             final_num_partitions = num_partitions
             final_index_type = index_type
-            
+
             if adaptive:
                 if data_count < min_data_for_training:
                     logger.info(f"数据量不足({data_count} < {min_data_for_training})，跳过索引创建")
-                    logger.info(f"    注意：少量数据时IVF-PQ索引需要训练，建议积累数据后重试")
+                    logger.info("    注意：少量数据时IVF-PQ索引需要训练，建议积累数据后重试")
                     return
                 else:
                     # 动态计算分区数：sqrt(n) 但不超过max_partitions
                     import math
+
                     calculated_partitions = int(min(max_partitions, math.sqrt(data_count) * 2))
                     calculated_partitions = max(min_partitions, calculated_partitions)
-                    
+
                     # 确保分区数不超过数据量
                     calculated_partitions = min(calculated_partitions, data_count)
-                    
+
                     if calculated_partitions != num_partitions:
-                        logger.info(f"自适应调整参数: {data_count}条数据 -> {calculated_partitions}个分区")
+                        logger.info(
+                            f"自适应调整参数: {data_count}条数据 -> {calculated_partitions}个分区"
+                        )
                         final_num_partitions = calculated_partitions
 
             # 创建索引
-            logger.info(f"创建{final_index_type}索引 for {field} (数据量: {data_count}, 分区数: {final_num_partitions})")
-            
+            logger.info(
+                f"创建{final_index_type}索引 for {field} (数据量: {data_count}, 分区数: {final_num_partitions})"
+            )
+
             self.table.create_index(
                 vector_column_name=field,
                 index_type=final_index_type,
@@ -206,14 +211,14 @@ class LanceStore:
                 **kwargs,
             )
             logger.info(f"成功创建 {final_index_type} 索引 for {field}")
-            
+
         except Exception as e:
             error_msg = str(e)
             if "KMeans cannot train" in error_msg or "Not enough rows to train PQ" in error_msg:
                 logger.warning(f"向量索引训练失败（数据量不足）: {error_msg}")
-                logger.warning(f"建议：积累更多数据（至少256条）或使用暴力检索")
+                logger.warning("建议：积累更多数据（至少256条）或使用暴力检索")
                 if enable_brute_force_fallback:
-                    logger.info(f"已启用暴力检索回退，向量搜索将使用线性扫描")
+                    logger.info("已启用暴力检索回退，向量搜索将使用线性扫描")
             else:
                 logger.error(f"创建向量索引失败: {e}")
                 raise
@@ -221,7 +226,7 @@ class LanceStore:
     def create_fulltext_index(
         self,
         fields: list[str] | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """
         创建全文索引
@@ -251,7 +256,9 @@ class LanceStore:
                     # 这种情况下索引已经存在，不需要处理
                     error_str = str(e).lower()
                     if "already exists" in error_str and "index" in error_str:
-                        logger.info(f"FTS index for field '{field}' already exists, skipping creation")
+                        logger.info(
+                            f"FTS index for field '{field}' already exists, skipping creation"
+                        )
                     else:
                         raise  # 其他错误继续抛出
         except Exception as e:
@@ -294,7 +301,7 @@ class LanceStore:
         vector_field: str = "content_embedding",
         limit: int = 10,
         where: str | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> list[dict[str, Any]]:
         """
         向量搜索
@@ -318,7 +325,7 @@ class LanceStore:
             if where:
                 results = results.where(where)
 
-            return results.to_list()
+            return cast("list[dict[str, Any]]", results.to_list())
         except Exception as e:
             logger.error(f"Vector search failed: {e}")
             raise
@@ -329,7 +336,7 @@ class LanceStore:
         fields: list[str] | None = None,
         limit: int = 10,
         where: str | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> list[dict[str, Any]]:
         """
         全文搜索
@@ -357,7 +364,7 @@ class LanceStore:
             if where:
                 results = results.where(where)
 
-            return results.to_list()
+            return cast("list[dict[str, Any]]", results.to_list())
         except Exception as e:
             # 检查是否是倒排索引未创建的错误
             error_msg = str(e)
@@ -441,7 +448,7 @@ class LanceStore:
             logger.error(f"Simple text search failed: {e}")
             return []
 
-    def _apply_simple_where(self, docs: list[dict], where: str) -> list[dict]:
+    def _apply_simple_where(self, docs: list[dict[str, Any]], where: str) -> list[dict[str, Any]]:
         """
         应用简单的 where 条件
 
@@ -462,7 +469,7 @@ class LanceStore:
             logger.warning(f"Failed to apply where condition: {e}")
             return docs
 
-    def _evaluate_simple_condition(self, doc: dict, condition: str) -> bool:
+    def _evaluate_simple_condition(self, doc: dict[str, Any], condition: str) -> bool:
         """
         评估简单的条件
 
@@ -497,7 +504,7 @@ class LanceStore:
         self,
         query: str,
         query_obj: ArticleQuery | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> list[dict[str, Any]]:
         """
         混合搜索 (向量 + 全文)
@@ -519,9 +526,9 @@ class LanceStore:
             raise ValueError(f"Invalid query: {errors}")
 
         # 向量搜索 - 同时搜索标题和正文
-        vector_results = []
-        title_vector_results = []
-        content_vector_results = []
+        vector_results: list[dict[str, Any]] = []
+        title_vector_results: list[dict[str, Any]] = []
+        content_vector_results: list[dict[str, Any]] = []
 
         if query_obj.vector_query or query_obj.keyword:
             keyword = query_obj.keyword or ""
@@ -544,8 +551,16 @@ class LanceStore:
                 )
 
                 # 确保是 list[float] 类型
-                title_vec = list[float](title_vec) if isinstance(title_vec, (list, tuple)) else [float(title_vec)]
-                content_vec = list[float](content_vec) if isinstance(content_vec, (list, tuple)) else [float(content_vec)]
+                title_vec = (
+                    list[float](title_vec)
+                    if isinstance(title_vec, (list, tuple))
+                    else [float(title_vec)]
+                )
+                content_vec = (
+                    list[float](content_vec)
+                    if isinstance(content_vec, (list, tuple))
+                    else [float(content_vec)]
+                )
 
                 # 并行搜索两个向量字段
                 title_vector_results = self.vector_search(
@@ -564,8 +579,10 @@ class LanceStore:
 
                 # 合并标题和正文向量搜索结果
                 vector_results = self._merge_vector_results(
-                    title_vector_results, content_vector_results,
-                    title_weight=0.3, content_weight=0.7
+                    title_vector_results,
+                    content_vector_results,
+                    title_weight=0.3,
+                    content_weight=0.7,
                 )
 
         # 全文搜索
@@ -589,11 +606,11 @@ class LanceStore:
 
     def _merge_vector_results(
         self,
-        title_results: list[dict],
-        content_results: list[dict],
+        title_results: list[dict[str, Any]],
+        content_results: list[dict[str, Any]],
         title_weight: float = 0.3,
         content_weight: float = 0.7,
-    ) -> list[dict]:
+    ) -> list[dict[str, Any]]:
         """
         合并标题和正文向量搜索结果
 
@@ -607,8 +624,8 @@ class LanceStore:
             合并后的结果
         """
         # 创建文档ID到分数的映射
-        scores = {}
-        all_docs = {}
+        scores: dict[str, float] = {}
+        all_docs: dict[str, dict[str, Any]] = {}
 
         # 处理标题结果
         for i, doc in enumerate(title_results):
@@ -635,25 +652,25 @@ class LanceStore:
         )
 
         # 返回排序后的文档
-        result = []
+        result: list[dict[str, Any]] = []
         for doc_id, score in sorted_docs:
-            doc = all_docs.get(doc_id)
-            if doc:
-                doc["_score"] = score
-                doc["_title_score"] = scores.get(doc_id, 0) * title_weight
-                doc["_content_score"] = scores.get(doc_id, 0) * content_weight
-                result.append(doc)
+            matched_doc = all_docs.get(doc_id)
+            if matched_doc is not None:
+                matched_doc["_score"] = score
+                matched_doc["_title_score"] = scores.get(doc_id, 0) * title_weight
+                matched_doc["_content_score"] = scores.get(doc_id, 0) * content_weight
+                result.append(matched_doc)
 
         return result
 
     def _fuse_results(
         self,
-        vector_results: list[dict],
-        text_results: list[dict],
+        vector_results: list[dict[str, Any]],
+        text_results: list[dict[str, Any]],
         text_weight: float,
         vector_weight: float,
         limit: int,
-    ) -> list[dict]:
+    ) -> list[dict[str, Any]]:
         """
         融合向量和全文搜索结果
 
@@ -668,7 +685,7 @@ class LanceStore:
             融合后的结果
         """
         # 创建文档ID到分数的映射
-        scores = {}
+        scores: dict[str, float] = {}
 
         # 处理向量结果
         # 使用倒数排名分数，距离越近（排名越高）分数越高
@@ -692,8 +709,11 @@ class LanceStore:
                 scores[doc_id] = scores.get(doc_id, 0) + rank_score * text_weight_adjusted
 
         # 合并结果
-        all_docs = {doc.get(ArticleFields.NEWS_ID): doc for doc in vector_results + text_results}
-        all_docs.pop(None, None)  # 移除 None 键
+        all_docs: dict[str, dict[str, Any]] = {}
+        for doc in vector_results + text_results:
+            doc_id = doc.get(ArticleFields.NEWS_ID)
+            if isinstance(doc_id, str):
+                all_docs[doc_id] = doc
 
         # 按分数排序
         sorted_docs = sorted(
@@ -703,12 +723,12 @@ class LanceStore:
         )[:limit]
 
         # 返回排序后的文档
-        result = []
+        result: list[dict[str, Any]] = []
         for doc_id, score in sorted_docs:
-            doc = all_docs.get(doc_id)
-            if doc:
-                doc["_score"] = score
-                result.append(doc)
+            matched_doc = all_docs.get(doc_id)
+            if matched_doc is not None:
+                matched_doc["_score"] = score
+                result.append(matched_doc)
 
         return result
 
@@ -829,7 +849,7 @@ def create_store(
                     logger.info("Created title vector index")
                 except Exception as e:
                     logger.warning(f"Failed to create title vector index: {e}")
-            
+
             # 总是尝试创建全文索引（即使表为空也可以创建）
             try:
                 store.create_fulltext_index()
@@ -839,7 +859,7 @@ def create_store(
                 # 如果是表为空的问题，记录信息稍后重试
                 if "empty" in str(e).lower():
                     logger.info("Table may be empty, will retry after adding data")
-            
+
             logger.info("Indices creation attempted")
         except Exception as e:
             logger.warning(f"Failed to create indices: {e}")

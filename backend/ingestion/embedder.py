@@ -17,7 +17,7 @@ Responsibilities:
 import logging
 import os
 import threading
-from typing import Literal, Self
+from typing import Any, Literal, Self, cast
 
 from huggingface_hub import snapshot_download, try_to_load_from_cache
 from sentence_transformers import SentenceTransformer
@@ -90,13 +90,13 @@ def _ensure_model_available(model_name: str) -> str:
 
     try:
         # 下载模型到本地缓存，使用线程超时
-        from threading import Thread
         import queue
+        from threading import Thread
 
-        result_queue: queue.Queue = queue.Queue()
-        error_queue: queue.Queue = queue.Queue()
+        result_queue: queue.Queue[str] = queue.Queue()
+        error_queue: queue.Queue[Exception] = queue.Queue()
 
-        def download_task():
+        def download_task() -> None:
             try:
                 local_path = snapshot_download(repo_id=model_name)
                 result_queue.put(local_path)
@@ -173,8 +173,11 @@ class Embedder:
 
     _instance: Self | None = None
     _lock = threading.Lock()
+    _initialized: bool
+    title_model: SentenceTransformer | None
+    content_model: SentenceTransformer | None
 
-    def __new__(cls, *args, **kwargs) -> Self:
+    def __new__(cls, *args: Any, **kwargs: Any) -> Self:
         """单例模式"""
         if cls._instance is None:
             with cls._lock:
@@ -184,9 +187,9 @@ class Embedder:
                     cls._instance = instance
         return cls._instance
 
-    def __init__(self):
+    def __init__(self) -> None:
         """初始化模型"""
-        if self._initialized:
+        if getattr(self, "_initialized", False):
             return
 
         logger.info("Loading embedding models...")
@@ -245,7 +248,7 @@ class Embedder:
                 show_progress_bar=False,
                 normalize_embeddings=True,
             )
-            return embeddings.tolist()
+            return cast("list[list[float]]", embeddings.tolist())
         except Exception as e:
             logger.error(f"Failed to embed titles: {e}")
             # 返回零向量作为降级方案
@@ -284,7 +287,7 @@ class Embedder:
                 show_progress_bar=False,
                 normalize_embeddings=True,
             )
-            return embeddings.tolist()
+            return cast("list[list[float]]", embeddings.tolist())
         except Exception as e:
             logger.error(f"Failed to embed contents: {e}")
             # 返回零向量作为降级方案
@@ -347,7 +350,7 @@ class Embedder:
 
         return title_vectors, content_vectors
 
-    def get_dimensions(self) -> dict:
+    def get_dimensions(self) -> dict[str, Any]:
         """
         获取向量维度信息
 
@@ -396,13 +399,15 @@ class Embedder:
             if quantization_type == "int8":
                 # INT8 动态量化 - 内存减少约 50-75%
                 if self.title_model is not None:
-                    self.title_model = torch.quantization.quantize_dynamic(
+                    quantize_dynamic = cast(Any, torch.quantization).quantize_dynamic
+                    self.title_model = quantize_dynamic(
                         self.title_model, {torch.nn.Linear}, dtype=torch.qint8
                     )
                     logger.info("Title model quantized to INT8")
 
                 if self.content_model is not None:
-                    self.content_model = torch.quantization.quantize_dynamic(
+                    quantize_dynamic = cast(Any, torch.quantization).quantize_dynamic
+                    self.content_model = quantize_dynamic(
                         self.content_model, {torch.nn.Linear}, dtype=torch.qint8
                     )
                     logger.info("Content model quantized to INT8")
@@ -451,7 +456,7 @@ class QuantizedEmbedder(Embedder):
         self,
         quantization_type: Literal["int8", "fp16", "none"] = "int8",
         quantize_on_init: bool = True,
-    ):
+    ) -> None:
         """
         初始化量化向量化器
 
@@ -482,7 +487,7 @@ class QuantizedEmbedder(Embedder):
         self.apply_quantization(new_type)
         logger.info(f"Quantization reapplied with type: {new_type}")
 
-    def get_memory_saving(self) -> dict:
+    def get_memory_saving(self) -> dict[str, Any]:
         """
         获取内存节省估计
 

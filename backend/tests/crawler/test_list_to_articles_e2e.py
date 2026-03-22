@@ -1,24 +1,29 @@
 from __future__ import annotations
 
 import argparse
+from typing import Any
 
 import list_to_articles_e2e as e2e
 import pytest
 
 
 class _FakeListIncrementalCrawler:
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         self.kwargs = kwargs
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "_FakeListIncrementalCrawler":
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         return None
 
     async def crawl_website_incremental(
-        self, website_name, max_pages, include_patterns, exclude_patterns
-    ):
+        self,
+        website_name: str,
+        max_pages: int,
+        include_patterns: list[str] | None,
+        exclude_patterns: list[str] | None,
+    ) -> dict[str, Any]:
         assert website_name == "jwc"
         assert max_pages == 31
         return {
@@ -45,16 +50,18 @@ class _FakeListIncrementalCrawler:
 
 
 class _FakeArticleCrawler:
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         self.kwargs = kwargs
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "_FakeArticleCrawler":
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         return None
 
-    def load_config(self, target, override_config=None):
+    def load_config(
+        self, target: list[str], override_config: dict[str, Any] | None = None
+    ) -> tuple[list[str], Any, None]:
         class _RunConfig:
             cache_mode = None
             check_cache_freshness = None
@@ -63,7 +70,7 @@ class _FakeArticleCrawler:
         assert override_config == {"crawler": {"word_count_threshold": 20}}
         return target, _RunConfig(), None
 
-    async def crawl_articles(self, urls, run_config):
+    async def crawl_articles(self, urls: list[str], run_config: Any) -> list[dict[str, Any]]:
         return [
             {"success": True, "url": urls[0]},
             {"success": True, "url": urls[1]},
@@ -71,7 +78,7 @@ class _FakeArticleCrawler:
 
 
 @pytest.mark.asyncio
-async def test_run_e2e_website_mode_smoke(monkeypatch):
+async def test_run_e2e_website_mode_smoke(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(e2e, "ListIncrementalCrawler", _FakeListIncrementalCrawler)
     monkeypatch.setattr(e2e, "ArticleUrlCrawler", _FakeArticleCrawler)
 

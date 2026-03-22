@@ -98,7 +98,7 @@ class TagRepository:
         return self._table
 
     @property
-    def schema(self):
+    def schema(self) -> Any:
         """获取表结构"""
         return self._table.schema
 
@@ -459,7 +459,7 @@ class TagRepository:
                 return False
 
             logger.info(f"Creating indices for tags table ({row_count} rows)")
-            
+
             indices_created = False
 
             # 1. 创建向量索引（仅在行数 >= 256 时创建）
@@ -473,7 +473,9 @@ class TagRepository:
                         num_sub_vectors=TagIndexConfig.PQ_SUBQUANTIZERS,
                         replace=True,
                     )
-                    logger.info(f"Vector index created on '{TagFields.EMBEDDING}' (row_count={row_count} >= 256)")
+                    logger.info(
+                        f"Vector index created on '{TagFields.EMBEDDING}' (row_count={row_count} >= 256)"
+                    )
                     indices_created = True
                 except Exception as e:
                     logger.error(f"Failed to create vector index: {e}")
@@ -507,7 +509,7 @@ class TagRepository:
     def count(self) -> int:
         """获取标签总数"""
         try:
-            return self._table.count_rows()
+            return int(self._table.count_rows())
         except Exception as e:
             logger.error(f"Failed to count tags: {e}")
             return 0
@@ -516,7 +518,7 @@ class TagRepository:
         """按分类统计标签数"""
         try:
             results = self._table.search().select([TagFields.CATEGORY]).to_list()
-            counts = {}
+            counts: dict[str, int] = {}
             for data in results:
                 category = data.get(TagFields.CATEGORY, "unknown")
                 counts[category] = counts.get(category, 0) + 1

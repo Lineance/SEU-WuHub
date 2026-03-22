@@ -1,3 +1,4 @@
+import importlib
 import json
 import logging
 import re
@@ -9,10 +10,12 @@ from urllib.parse import urlparse
 import yaml
 from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig
 
-try:
-    from .crawl4ai_config_utils import normalize_crawler_overrides
-except ImportError:
-    from crawl4ai_config_utils import normalize_crawler_overrides
+if __package__:
+    _crawl4ai_config_utils = importlib.import_module(".crawl4ai_config_utils", __package__)
+else:
+    _crawl4ai_config_utils = importlib.import_module("crawl4ai_config_utils")
+
+normalize_crawler_overrides = _crawl4ai_config_utils.normalize_crawler_overrides
 
 
 class ListIncrementalCrawler:
@@ -52,7 +55,7 @@ class ListIncrementalCrawler:
     async def __aenter__(self) -> "ListIncrementalCrawler":
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         await self.close()
 
     def _setup_logger(self) -> logging.Logger:
@@ -67,7 +70,8 @@ class ListIncrementalCrawler:
 
     def _load_yaml_config(self, filepath: Path) -> dict[str, Any]:
         with open(filepath, encoding="utf-8") as f:
-            return yaml.safe_load(f)
+            data = yaml.safe_load(f)
+        return data if isinstance(data, dict) else {}
 
     def _repo_root(self) -> Path:
         return self.base_script_path.parents[2]
