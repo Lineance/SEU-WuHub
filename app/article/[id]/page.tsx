@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { Loader2, AlertCircle, ArrowLeft, ExternalLink, Calendar, Tag } from "lucide-react"
+import { Loader2, AlertCircle, ArrowLeft, ExternalLink, Calendar, Tag, Star, Copy, Share2, Check, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { api } from "@/lib/api"
+import { isFavorite, toggleFavorite } from "@/lib/favorites"
 import type { ArticleDetail, Resource } from "@/lib/types"
+import { QRCodeSVG } from "qrcode.react"
 
 export default function ArticleDetailPage() {
   const params = useParams()
@@ -17,6 +19,9 @@ export default function ArticleDetailPage() {
   const [article, setArticle] = useState<ArticleDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isFav, setIsFav] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [showShareModal, setShowShareModal] = useState(false)
 
   useEffect(() => {
     async function loadArticle() {
@@ -25,6 +30,7 @@ export default function ArticleDetailPage() {
         setError(null)
         const response = await api.getArticleDetail(articleId)
         setArticle(response.data)
+        setIsFav(isFavorite(articleId))
       } catch (err) {
         console.error('加载文章失败:', err)
         setError(err instanceof Error ? err.message : '加载失败')
@@ -35,6 +41,27 @@ export default function ArticleDetailPage() {
 
     loadArticle()
   }, [articleId])
+
+  const handleToggleFavorite = () => {
+    if (!article) return
+    toggleFavorite({
+      id: article.id.toString(),
+      title: article.title,
+      source: article.source,
+      published_at: article.published_at
+    })
+    setIsFav(prev => !prev)
+  }
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error('复制失败:', err)
+    }
+  }
 
   if (loading) {
     return (
@@ -78,9 +105,37 @@ export default function ArticleDetailPage() {
 
       <article className="mx-auto max-w-4xl">
         <header className="mb-8">
-          <h1 className="mb-4 text-3xl font-bold text-foreground">
-            {article.title}
-          </h1>
+          <div className="mb-4 flex items-start justify-between gap-4">
+            <h1 className="flex-1 text-3xl font-bold text-foreground">
+              {article.title}
+            </h1>
+            <div className="flex gap-2">
+              <Button
+                variant={isFav ? "default" : "outline"}
+                size="icon"
+                onClick={handleToggleFavorite}
+                className="shrink-0"
+              >
+                <Star className={`h-5 w-5 ${isFav ? 'fill-current' : ''}`} />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleCopyLink}
+                className="shrink-0"
+              >
+                {copied ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setShowShareModal(true)}
+                className="shrink-0"
+              >
+                <Share2 className="h-5 w-5" />
+              </Button>
+            </div>
+          </div>
 
           <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
@@ -92,14 +147,14 @@ export default function ArticleDetailPage() {
             <div className="rounded bg-secondary px-2 py-1">
               {article.source}
             </div>
-            {article.updated_at !== article.published_at && (
+            {article.updated_at && article.updated_at !== article.published_at && (
               <span>
                 更新于 {new Date(article.updated_at).toLocaleDateString('zh-CN')}
               </span>
             )}
           </div>
 
-          {article.tags.length > 0 && (
+          {article.tags && article.tags.length > 0 && (
             <div className="mt-4 flex flex-wrap gap-2">
               {article.tags.map((tag) => (
                 <Badge key={tag} variant="secondary" className="gap-1">
@@ -152,6 +207,36 @@ export default function ArticleDetailPage() {
           </div>
         )}
       </article>
+
+      {showShareModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <Card className="w-full max-w-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+              <CardTitle className="text-lg">分享文章</CardTitle>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowShareModal(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center space-y-4">
+              <div className="rounded-lg bg-white p-4">
+                <QRCodeSVG
+                  value={window.location.href}
+                  size={200}
+                  level="M"
+                  includeMargin={false}
+                />
+              </div>
+              <p className="text-center text-sm text-muted-foreground">
+                扫描二维码查看文章
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }

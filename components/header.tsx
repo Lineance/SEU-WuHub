@@ -19,12 +19,6 @@ export function Header({ onAIToggle }: HeaderProps) {
     router.push('/settings')
   }
 
-<<<<<<< HEAD
-  return (
-    <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-card/95 px-4 shadow-sm backdrop-blur-sm">
-      <div className="flex items-center gap-2">
-        <div className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg">
-=======
   const handleFavoritesClick = () => {
     router.push('/favorites')
   }
@@ -33,10 +27,9 @@ export function Header({ onAIToggle }: HeaderProps) {
     <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-card/95 px-4 shadow-sm backdrop-blur-sm">
       <div className="flex items-center gap-2">
         <div
-          className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg cursor-pointer"
+          className="relative flex h-8 w-8 cursor-pointer items-center justify-center overflow-hidden rounded-lg"
           onClick={() => router.push('/')}
         >
->>>>>>> 0bcd3ad (feat: add API scaffold and initial settings/article routes)
           {logoError ? (
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-base font-bold text-primary-foreground">
               W
