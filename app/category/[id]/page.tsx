@@ -101,6 +101,7 @@ export default function CategoryPage() {
                 className="cursor-pointer"
               >
                 <ArticleCard
+                  id={article.id}
                   title={article.title}
                   summary={article.summary}
                   time={article.published_at}
@@ -139,5 +140,5 @@ export default function CategoryPage() {
         </div>
       )}
     </div>
-  )}
+  )
 }

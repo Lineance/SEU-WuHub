@@ -31,6 +31,14 @@ export function SettingsPage() {
     }
   }
 
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      router.back()
+    } else {
+      router.push('/')
+    }
+  }
+
   const themeOptions = [
     { value: "light", label: "浅色模式", icon: Sun },
     { value: "dark", label: "深色模式", icon: Moon },
@@ -48,11 +56,11 @@ export function SettingsPage() {
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => router.push('/')}
+        onClick={handleBack}
         className="gap-2"
       >
         <ArrowLeft className="h-4 w-4" />
-        返回首页
+        返回
       </Button>
 
       <div className="space-y-1">

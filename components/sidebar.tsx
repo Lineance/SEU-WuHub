@@ -133,8 +133,6 @@ export function Sidebar({}: SidebarProps) {
             <NavItemComponent
               key={item.id}
               item={item}
-              currentPage={currentPage}
-              onPageChange={onPageChange}
             />
           ))}
         </nav>

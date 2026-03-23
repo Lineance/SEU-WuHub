@@ -1,8 +1,15 @@
-import { Clock, Tag } from "lucide-react"
+"use client"
+
+import { useState } from "react"
+import { Clock, Tag, Star } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { isFavorite, toggleFavorite } from "@/lib/favorites"
+import type { FavoriteArticle } from "@/lib/favorites"
 
 interface ArticleCardProps {
+  id: string | number
   title: string
   summary: string
   time: string
@@ -10,14 +17,33 @@ interface ArticleCardProps {
   tags: string[]
 }
 
-export function ArticleCard({ title, summary, time, source, tags }: ArticleCardProps) {
+export function ArticleCard({ id, title, summary, time, source, tags }: ArticleCardProps) {
+  const [favorited, setFavorited] = useState(() => isFavorite(String(id)))
   return (
     <Card className="group cursor-pointer border-border bg-card transition-all hover:border-primary/30 hover:shadow-md">
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
-          <CardTitle className="line-clamp-2 text-base font-semibold text-card-foreground group-hover:text-primary">
+          <CardTitle className="flex-1 line-clamp-2 text-base font-semibold text-card-foreground group-hover:text-primary">
             {title}
           </CardTitle>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 shrink-0"
+            onClick={(e) => {
+              e.stopPropagation()
+              const article: FavoriteArticle = {
+                id: String(id),
+                title,
+                source,
+                published_at: time,
+              }
+              toggleFavorite(article)
+              setFavorited(isFavorite(String(id)))
+            }}
+          >
+            <Star className={`h-4 w-4 ${favorited ? 'fill-current text-yellow-500' : ''}`} />
+          </Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">

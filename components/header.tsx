@@ -13,6 +13,7 @@ interface HeaderProps {
 
 export function Header({ onAIToggle }: HeaderProps) {
   const [logoError, setLogoError] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const router = useRouter()
 
   const handleSettingsClick = () => {
@@ -21,6 +22,15 @@ export function Header({ onAIToggle }: HeaderProps) {
 
   const handleFavoritesClick = () => {
     router.push('/favorites')
+  }
+
+  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      const trimmedQuery = searchQuery.trim()
+      if (trimmedQuery) {
+        router.push(`/search?q=${encodeURIComponent(trimmedQuery)}`)
+      }
+    }
   }
 
   return (
@@ -54,6 +64,9 @@ export function Header({ onAIToggle }: HeaderProps) {
           <Input
             type="search"
             placeholder="搜索文章、通知、资源..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={handleSearch}
             className="h-9 w-full rounded-full border-border bg-secondary pl-9 pr-4 text-sm placeholder:text-muted-foreground focus-visible:ring-primary"
           />
         </div>

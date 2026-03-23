@@ -36,6 +36,14 @@ export default function FavoritesPage() {
     router.push(`/article/${articleId}`)
   }
 
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      router.back()
+    } else {
+      router.push('/')
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -57,11 +65,11 @@ export default function FavoritesPage() {
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => router.push('/')}
+        onClick={handleBack}
         className="mb-6 gap-2"
       >
         <ArrowLeft className="h-4 w-4" />
-        返回首页
+        返回
       </Button>
 
       <div className="mb-6">
