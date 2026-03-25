@@ -19,8 +19,8 @@ from app.core.constants import (
     MSG_LOAD_FAILED,
     MSG_LOAD_SUCCESS,
 )
-from app.data.repository import ArticleRepository
-from app.data.schema import ArticleFields
+from data.repository import ArticleRepository
+from data.schema import ArticleFields
 
 router = APIRouter()
 

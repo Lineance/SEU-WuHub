@@ -10,12 +10,13 @@ Responsibilities:
 import json
 import uuid
 from datetime import datetime
+from typing import Any
 
 from fastapi import APIRouter, Query
 from fastapi.responses import StreamingResponse
 
-from app.data.repository import ArticleRepository
-from app.data.schema import ArticleFields
+from data.repository import ArticleRepository
+from data.schema import ArticleFields
 
 router = APIRouter()
 

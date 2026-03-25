@@ -13,8 +13,8 @@ from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 
 from app.core.constants import DEFAULT_PAGE_SIZE, MSG_SEARCH_FAILED, MSG_SEARCH_SUCCESS
-from app.data.repository import ArticleRepository
-from app.data.schema import ArticleFields
+from data.repository import ArticleRepository
+from data.schema import ArticleFields
 
 router = APIRouter()
 

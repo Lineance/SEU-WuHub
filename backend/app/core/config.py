@@ -19,7 +19,11 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "SEU-WuHub"
 
     # LanceDB Settings
-    LANCE_DB_PATH: str = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "data", "lancedb")
+    LANCE_DB_PATH: str = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
+        "data",
+        "lancedb"
+    )
 
     # CORS Settings
     CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:5173"]
