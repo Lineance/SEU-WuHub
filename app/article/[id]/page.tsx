@@ -2,14 +2,16 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { Loader2, AlertCircle, ArrowLeft, ExternalLink, Calendar, Tag, Star, Copy, Share2, Check, X } from "lucide-react"
+import { Loader2, AlertCircle, ArrowLeft, ExternalLink, Calendar, Tag, Star, Copy, Share2, Check, X, Download, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { api } from "@/lib/api"
 import { isFavorite, toggleFavorite } from "@/lib/favorites"
-import type { ArticleDetail, Resource } from "@/lib/types"
+import type { ArticleDetail, Resource, Attachment } from "@/lib/types"
 import { QRCodeSVG } from "qrcode.react"
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 export default function ArticleDetailPage() {
   const params = useParams()
@@ -168,10 +170,14 @@ export default function ArticleDetailPage() {
 
         <Card>
           <CardContent className="prose prose-slate dark:prose-invert max-w-none">
-            <div
-              dangerouslySetInnerHTML={{ __html: article.content }}
-              className="article-content"
-            />
+            {article.content_md ? (
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{article.content_md}</ReactMarkdown>
+            ) : article.content ? (
+              <div
+                dangerouslySetInnerHTML={{ __html: article.content }}
+                className="article-content"
+              />
+            ) : null}
           </CardContent>
         </Card>
 
@@ -194,14 +200,14 @@ export default function ArticleDetailPage() {
           </div>
         )}
 
-        {article.resources && article.resources.length > 0 && (
+        {article.attachments && article.attachments.length > 0 && (
           <div className="mt-8">
             <h2 className="mb-4 text-xl font-semibold text-foreground">
-              附件资源
+              附件
             </h2>
             <div className="grid gap-3 md:grid-cols-2">
-              {article.resources.map((resource) => (
-                <ResourceCard key={resource.id} resource={resource} />
+              {article.attachments.map((attachment) => (
+                <AttachmentCard key={attachment.name} attachment={attachment} />
               ))}
             </div>
           </div>
@@ -241,33 +247,20 @@ export default function ArticleDetailPage() {
   )
 }
 
-function ResourceCard({ resource }: { resource: Resource }) {
-  const getIconByType = (type: string) => {
-    switch (type) {
-      case 'image':
-        return '🖼️'
-      case 'document':
-        return '📄'
-      case 'media':
-        return '🎬'
-      default:
-        return '📎'
-    }
-  }
-
+function AttachmentCard({ attachment }: { attachment: Attachment }) {
   return (
     <Card className="group cursor-pointer transition-all hover:shadow-md">
       <CardContent className="flex items-center gap-3 p-4">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-secondary text-2xl">
-          {getIconByType(resource.type)}
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-secondary text-xl">
+          <FileText className="h-5 w-5" />
         </div>
         <div className="flex-1 min-w-0">
           <p className="truncate text-sm font-medium text-foreground">
-            {resource.filename || resource.url.split('/').pop()}
+            {attachment.name}
           </p>
-          {resource.size && (
+          {attachment.type && (
             <p className="text-xs text-muted-foreground">
-              {formatFileSize(resource.size)}
+              {attachment.type.toUpperCase()}
             </p>
           )}
         </div>
@@ -275,26 +268,17 @@ function ResourceCard({ resource }: { resource: Resource }) {
           variant="ghost"
           size="sm"
           asChild
-          className="opacity-0 transition-opacity group-hover:opacity-100"
+          className="shrink-0"
         >
           <a
-            href={resource.url}
+            href={attachment.url}
             target="_blank"
             rel="noopener noreferrer"
-            download
           >
-            <ExternalLink className="h-4 w-4" />
+            <Download className="h-4 w-4" />
           </a>
         </Button>
       </CardContent>
     </Card>
   )
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`
 }

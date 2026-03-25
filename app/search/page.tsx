@@ -28,7 +28,7 @@ export default function SearchPage() {
         setLoading(true)
         setError(null)
         const response = await api.searchArticles({
-          q: query,
+          q: query || undefined,
           page: safePage,
           page_size: 20,
         })
