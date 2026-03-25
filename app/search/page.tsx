@@ -1,14 +1,14 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { Suspense, useState, useEffect } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
-import { Search, AlertCircle, FileText } from "lucide-react"
+import { Search, AlertCircle, FileText, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ArticleCard } from "@/components/article-card"
 import { api } from "@/lib/api"
 import type { Article } from "@/lib/types"
 
-export default function SearchPage() {
+function SearchContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const query = searchParams.get('q')
@@ -117,5 +117,21 @@ export default function SearchPage() {
         </div>
       )}
     </div>
+  )
+}
+
+function SearchLoading() {
+  return (
+    <div className="flex items-center justify-center py-12">
+      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+    </div>
+  )
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={<SearchLoading />}>
+      <SearchContent />
+    </Suspense>
   )
 }
