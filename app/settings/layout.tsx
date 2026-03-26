@@ -2,7 +2,7 @@
 
 import { AppShell } from "@/components/app-shell"
 
-export default function CategoryLayout({
+export default function SettingsLayout({
   children,
 }: {
   children: React.ReactNode
