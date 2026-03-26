@@ -5,7 +5,7 @@ RUFF ?= ruff
 BANDIT ?= bandit
 MYPY ?= mypy
 
-.PHONY: backend-install backend-lint backend-format backend-typecheck backend-typecheck-strict backend-security backend-test frontend-install frontend-lint frontend-format frontend-test lint format typecheck security test docker-build docker-up docker-down
+.PHONY: backend-install backend-lint backend-format backend-typecheck backend-typecheck-strict backend-security backend-test backend-dev frontend-install frontend-lint frontend-format frontend-test frontend-dev lint format typecheck security test docker-build docker-up docker-down dev
 
 # Backend
 backend-install:
@@ -29,6 +29,9 @@ backend-security:
 backend-test:
 	uv run --project backend python -m pytest backend/tests
 
+backend-dev:
+	cd backend && uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
 # Frontend
 frontend-install:
 	$(NPM) install --prefix frontend
@@ -42,12 +45,23 @@ frontend-format:
 frontend-test:
 	$(NPM) run --prefix frontend test -- --run
 
+frontend-dev:
+	$(NPM) run --prefix frontend dev
+
 # Combined
 lint: backend-lint frontend-lint
 format: backend-format frontend-format
 typecheck: backend-typecheck
 security: backend-security
 test: backend-test frontend-test
+
+dev:
+	@echo "Starting development servers..."
+	@echo "Backend: http://localhost:8000"
+	@echo "Frontend: http://localhost:3000"
+	@echo ""
+	make backend-dev &
+	make frontend-dev
 
 # Docker
 docker-build:

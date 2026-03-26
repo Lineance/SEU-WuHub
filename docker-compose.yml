@@ -1,33 +1,40 @@
-services:
-	backend:
-		build:
-			context: ./backend
-			dockerfile: Dockerfile
-		working_dir: /app
-		volumes:
-			- ./backend:/app
-			- ./config:/workspace-config:ro
-			- ./data:/workspace-data
-		environment:
-			PYTHONUNBUFFERED: "1"
-			PYTHONDONTWRITEBYTECODE: "1"
-		ports:
-			- "8000:8000"
-		command: sleep infinity
+version: '3.8'
 
-	frontend:
-		build:
-			context: ./frontend
-			dockerfile: Dockerfile
-		working_dir: /app
-		volumes:
-			- ./frontend:/app
-			- frontend-node-modules:/app/node_modules
-		environment:
-			CHOKIDAR_USEPOLLING: "true"
-		ports:
-			- "5173:5173"
-		command: npm run dev -- --host 0.0.0.0 --port 5173
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=true
+      - LANCEDB_PATH=/app/data/lancedb
+    volumes:
+      - ./backend:/app/backend
+      - ./config:/app/config
+      - lancedb_data:/app/data/lancedb
+    networks:
+      - wuhub-network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:8000
+    depends_on:
+      - backend
+    networks:
+      - wuhub-network
+    restart: unless-stopped
 
 volumes:
-	frontend-node-modules:
+  lancedb_data:
+
+networks:
+  wuhub-network:
+    driver: bridge
