@@ -1,0 +1,252 @@
+"use client"
+
+import { useState, useRef, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { Search, Bot, Star, Settings } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { DatePicker } from "@/components/date-picker"
+import Image from "next/image"
+
+interface HeaderProps {
+  onAIToggle: () => void
+}
+
+export function Header({ onAIToggle }: HeaderProps) {
+  const searchParams = useSearchParams()
+  const [logoError, setLogoError] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false)
+  const router = useRouter()
+  const searchContainerRef = useRef<HTMLDivElement>(null)
+  const filterPanelRef = useRef<HTMLDivElement>(null)
+
+  const handleSettingsClick = () => {
+    router.push('/settings')
+  }
+
+  const handleFavoritesClick = () => {
+    router.push('/favorites')
+  }
+
+  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      const trimmedQuery = searchQuery.trim()
+      if (trimmedQuery) {
+        const params = new URLSearchParams(searchParams.toString())
+        params.set('q', trimmedQuery)
+        router.push(`/search?${params.toString()}`)
+      }
+    }
+  }
+
+  const updateSearchParam = (key: string, value: string | null) => {
+    const params = new URLSearchParams(searchParams.toString())
+    
+    if (value) {
+      params.set(key, value)
+    } else {
+      params.delete(key)
+    }
+    
+    router.push(`/search?${params.toString()}`)
+  }
+
+  const handleSourceChange = (source: string) => {
+    updateSearchParam('source', source === 'all' ? null : source)
+  }
+
+  const handleTagChange = (tag: string) => {
+    updateSearchParam('tag', tag === 'all' ? null : tag)
+  }
+
+  const handleTimeRangeChange = (range: string) => {
+    const params = new URLSearchParams(searchParams.toString())
+    
+    if (range) {
+      params.set('time', range)
+      params.delete('date')
+    } else {
+      params.delete('time')
+      params.delete('date')
+    }
+    
+    router.push(`/search?${params.toString()}`)
+  }
+
+  const handleDateChange = (date: string) => {
+    const params = new URLSearchParams(searchParams.toString())
+    
+    if (date) {
+      params.set('date', date)
+      params.delete('time')
+    } else {
+      params.delete('date')
+      params.delete('time')
+    }
+    
+    router.push(`/search?${params.toString()}`)
+  }
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchContainerRef.current && filterPanelRef.current) {
+        const isClickInsideSearch = searchContainerRef.current.contains(event.target as Node)
+        const isClickInsideFilter = filterPanelRef.current.contains(event.target as Node)
+        
+        if (!isClickInsideSearch && !isClickInsideFilter) {
+          setIsSearchExpanded(false)
+        }
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
+
+  return (
+    <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-card/95 px-4 shadow-sm backdrop-blur-sm">
+      <div className="flex items-center gap-2">
+        <div
+          className="relative flex h-8 w-8 cursor-pointer items-center justify-center overflow-hidden rounded-lg"
+          onClick={() => router.push('/')}
+        >
+          {logoError ? (
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-base font-bold text-primary-foreground">
+              W
+            </span>
+          ) : (
+            <Image
+              src="/logo.png"
+              alt="WuHub Logo"
+              fill
+              className="object-cover"
+              onError={() => setLogoError(true)}
+            />
+          )}
+        </div>
+
+        <span className="text-lg font-semibold text-foreground">SEU-WuHub</span>
+      </div>
+
+      <div className="flex flex-1 items-center justify-center px-4">
+        <div className="relative w-full max-w-md">
+          <div ref={searchContainerRef}>
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground z-10" />
+            <Input
+              type="search"
+              placeholder="搜索文章、通知、资源..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleSearch}
+              onFocus={() => setIsSearchExpanded(true)}
+              className="h-9 w-full rounded-full border-border bg-secondary pl-9 pr-4 text-sm placeholder:text-muted-foreground focus-visible:ring-primary"
+            />
+          </div>
+          
+          {isSearchExpanded && (
+            <div 
+              ref={filterPanelRef}
+              className="absolute left-0 right-0 mt-2 rounded-xl border border-border bg-background p-4 shadow-lg z-50"
+            >
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-2 block">来源</label>
+                  <div className="flex flex-wrap gap-2">
+                    {['all', 'news', 'notice', 'resource'].map((source) => (
+                      <Button
+                        key={source}
+                        variant={searchParams.get('source') === (source === 'all' ? null : source) ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => handleSourceChange(source)}
+                        className="h-7 text-xs"
+                      >
+                        {source === 'all' ? '全部' : source === 'news' ? '新闻' : source === 'notice' ? '通知' : '资源'}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-2 block">标签</label>
+                  <div className="flex flex-wrap gap-2">
+                    {['all', 'academic', 'activity', 'job', 'other'].map((tag) => (
+                      <Button
+                        key={tag}
+                        variant={searchParams.get('tag') === (tag === 'all' ? null : tag) ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => handleTagChange(tag)}
+                        className="h-7 text-xs"
+                      >
+                        {tag === 'all' ? '全部' : tag === 'academic' ? '学术' : tag === 'activity' ? '活动' : tag === 'job' ? '招聘' : '其他'}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-2 block">时间范围</label>
+                  <div className="flex flex-wrap gap-2">
+                    {['', 'today', '7days', '30days', '6months', '1year'].map((range) => (
+                      <Button
+                        key={range}
+                        variant={searchParams.get('time') === (range === '' ? null : range) ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => handleTimeRangeChange(range)}
+                        className="h-7 text-xs"
+                      >
+                        {range === '' ? '不限' : range === 'today' ? '今天' : range === '7days' ? '近7天' : range === '30days' ? '近30天' : range === '6months' ? '近半年' : '近一年'}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-2 block">日期选择</label>
+                  <DatePicker
+                    selectedDate={searchParams.get('date')}
+                    onSelectDate={handleDateChange}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="rounded-full"
+          onClick={handleFavoritesClick}
+        >
+          <Star className="h-5 w-5" />
+          <span className="sr-only">收藏夹</span>
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className="rounded-full"
+          onClick={onAIToggle}
+        >
+          <Bot className="h-5 w-5" />
+          <span className="sr-only">AI 助手</span>
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className="rounded-full"
+          onClick={handleSettingsClick}
+        >
+          <Settings className="h-5 w-5" />
+          <span className="sr-only">设置</span>
+        </Button>
+      </div>
+    </header>
+  )
+}
