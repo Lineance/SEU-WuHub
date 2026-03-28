@@ -43,22 +43,13 @@ website:
       page_timeout: 45000
       remove_overlay_elements: true
       exclude_external_links: true
-      # Extract only article content using CSS selector
-      css_selector: ".Article_Content"
-      excluded_tags:
-        - "nav"
-        - "header"
-        - "footer"
-        - "script"
-        - "style"
-      # Metadata extraction selectors (used by ArticleUrlCrawler._extract_metadata)
-      # These are processed on FULL HTML to extract structured fields
+      # Select multiple elements to keep full HTML for metadata extraction
       target_elements:
-        - ".Article_Title"      # Title selector (span element)
-        - ".News-title"         # Alternative title selector (table element)
-        - ".Article_PublishDate" # Date selector
-        - ".Article_Content"   # Content selector
-        - ".wp_articlecontent" # Alternative content selector
+        - ".Article_Title"
+        - ".News-title"
+        - ".Article_PublishDate"
+        - ".Article_Content"
+        - ".wp_articlecontent"
       # Note: Author extraction is not available via CSS selector on JWC pages
       # Author information is embedded within article content (e.g., under "报告人简介" section)
       markdown_generator:

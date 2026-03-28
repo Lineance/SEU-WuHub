@@ -318,6 +318,18 @@ class ArticleUrlCrawler:
             if metadata.get("author"):
                 formatted["author"] = metadata.get("author")
 
+        # If we extracted title and/or date from HTML, clean the markdown
+        # to remove title/date prefix that appears when using target_elements
+        if formatted.get("title") or formatted.get("publish_date"):
+            markdown_text = str(formatted.get("markdown", ""))
+            cleaned_markdown = self._clean_markdown_content(
+                markdown_text,
+                title=formatted.get("title", ""),
+                date=formatted.get("publish_date", ""),
+            )
+            formatted["markdown"] = cleaned_markdown
+            formatted["content"] = cleaned_markdown
+
         # If title is still empty, try to extract from markdown content
         # This is more reliable when CSS selector filters out title elements
         if not formatted.get("title") and formatted.get("markdown"):
@@ -372,6 +384,15 @@ class ArticleUrlCrawler:
                         text = re.sub(r"\s+", " ", text)
                         result_data["title"] = text
                         break
+
+        # Fallback: try <title> tag if no title found via CSS selectors
+        if not result_data["title"]:
+            title_tag = soup.find("title")
+            if title_tag:
+                text = title_tag.get_text(strip=True)
+                if text:
+                    text = re.sub(r"\s+", " ", text)
+                    result_data["title"] = text
 
         # Extract date
         if date_selectors:
@@ -443,3 +464,84 @@ class ArticleUrlCrawler:
 
         return ""
 
+    def _clean_markdown_content(
+        self,
+        markdown_text: str,
+        title: str = "",
+        date: str = "",
+    ) -> str:
+        """
+        Clean markdown by removing title/date prefix and navigation tables.
+
+        When target_elements is used, the markdown includes title/date in table
+        format at the beginning, followed by navigation tables. This method
+        removes those and keeps only the article content.
+
+        Args:
+            markdown_text: The markdown text to clean
+            title: The title to remove (if present in markdown)
+            date: The date to remove (if present in markdown)
+
+        Returns:
+            Cleaned markdown text
+        """
+        if not markdown_text:
+            return markdown_text
+
+        lines = markdown_text.split("\n")
+        result_lines = []
+        skip_until_content = True
+        found_content = False
+
+        i = 0
+        while i < len(lines):
+            line = lines[i]
+            stripped = line.strip()
+
+            # Skip title/date prefix lines at the beginning
+            if skip_until_content:
+                # Check if this is a title/date line
+                if title and title in stripped:
+                    i += 1
+                    continue
+                if date and date in stripped and i <= 4:
+                    i += 1
+                    continue
+                # Skip separator lines
+                if re.match(r"^\s*[\|\-]+\s*$", stripped):
+                    i += 1
+                    continue
+                # Skip empty lines
+                if not stripped:
+                    i += 1
+                    continue
+                # Found first content line
+                skip_until_content = False
+                found_content = True
+
+            # After finding content, skip navigation tables (lines starting with | |)
+            if found_content:
+                # Check if this is a navigation-related table row
+                # Navigation tables typically have patterns like:
+                # "|  text  |" followed by list items
+                if stripped.startswith("|  |"):
+                    # Check if next few lines are list items (navigation)
+                    j = i + 1
+                    nav_count = 0
+                    while j < len(lines) and lines[j].strip().startswith("|"):
+                        nav_count += 1
+                        j += 1
+                    # If many consecutive table rows, it's navigation
+                    if nav_count > 3:
+                        i = j
+                        continue
+
+                # Skip lines that are just dates (duplicates)
+                if stripped == date or stripped == f"|  {date}  |":
+                    i += 1
+                    continue
+
+            result_lines.append(line)
+            i += 1
+
+        return "\n".join(result_lines).strip()
