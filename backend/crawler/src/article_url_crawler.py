@@ -73,6 +73,8 @@ class ArticleUrlCrawler:
             fmt = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
             console_handler = logging.StreamHandler()
             console_handler.setFormatter(fmt)
+            # Fix Windows GBK encoding issue with Unicode characters
+            console_handler.stream.reconfigure(encoding="utf-8", errors="replace")
             logger.addHandler(console_handler)
         return logger
 
@@ -153,7 +155,9 @@ class ArticleUrlCrawler:
             website_cfg = self.load_website_config(target).get("website", {})
             urls_to_crawl = website_cfg.get("start_urls", [])
             overrides = website_cfg.get("overrides", {})
-            run_config = self._merge_crawler_configs(run_config, overrides.get("crawler", {}))
+            # Try both "article_crawler" (website-specific) and "crawler" (generic) keys
+            article_overrides = overrides.get("article_crawler", overrides.get("crawler", {}))
+            run_config = self._merge_crawler_configs(run_config, article_overrides)
             for key, value in overrides.get("browser", {}).items():
                 if hasattr(browser_config, key):
                     setattr(browser_config, key, value)
@@ -258,9 +262,10 @@ class ArticleUrlCrawler:
         url = getattr(result, "url", "")
         success = getattr(result, "success", False)
         error_msg = getattr(result, "error_message", None)
-        selected_markdown = markdown_fit.strip() if markdown_fit else ""
-        if len(selected_markdown) < 80:
-            selected_markdown = markdown_raw
+
+        # Trust crawl4ai's markdown output - no need to re-process
+        markdown_result = getattr(result, "markdown", "") or ""
+        content_result = getattr(result, "content", "") or ""
 
         formatted = {
             "success": success,
@@ -268,8 +273,8 @@ class ArticleUrlCrawler:
             "title": getattr(result, "title", "") or "",
             "publish_date": "",
             "author": "",
-            "content": getattr(markdown_obj, "fit_html", "") or getattr(result, "cleaned_html", ""),
-            "markdown": selected_markdown,
+            "content": content_result,
+            "markdown": markdown_result,
             "raw_markdown": markdown_raw,
             "fit_markdown": markdown_fit,
             "markdown_with_citations": markdown_citations,
@@ -314,11 +319,20 @@ class ArticleUrlCrawler:
                 formatted["author"] = metadata.get("author")
 
         # If title is still empty, try to extract from markdown content
+        # This is more reliable when CSS selector filters out title elements
         if not formatted.get("title") and formatted.get("markdown"):
             markdown_text = str(formatted.get("markdown", ""))
             title_from_content = self._extract_title_from_content(markdown_text)
             if title_from_content:
                 formatted["title"] = title_from_content
+            else:
+                # Last resort: use first non-empty line of markdown as title
+                lines = [l.strip() for l in markdown_text.split("\n") if l.strip()]
+                if lines:
+                    first_line = lines[0]
+                    # Skip markdown headings and image links
+                    if not first_line.startswith("#") and not first_line.startswith("!["):
+                        formatted["title"] = first_line[:200] if len(first_line) > 200 else first_line
 
         return formatted
 
@@ -428,3 +442,4 @@ class ArticleUrlCrawler:
                     return title
 
         return ""
+

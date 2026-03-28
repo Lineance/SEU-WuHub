@@ -36,19 +36,15 @@ website:
 
     # Article crawling stage overrides
     article_crawler:
-      cache_mode: "ENABLED"
-      check_cache_freshness: true
+      cache_mode: "DISABLED"
+      check_cache_freshness: false
       cache_validation_timeout: 3600
       word_count_threshold: 20
       page_timeout: 45000
       remove_overlay_elements: true
       exclude_external_links: true
-      # CSS selectors for extracting metadata from article pages
-      # IMPORTANT: css_selector filters the HTML content, if title is outside
-      # the content area, it won't be found. Use broader selection or none.
-      # Content: .Article_Content or .wp_articlecontent (main article content)
-      # Not using css_selector for full page HTML access for metadata extraction
-      css_selector: ""  # Empty to get full HTML for metadata extraction
+      # Extract only article content using CSS selector
+      css_selector: ".Article_Content"
       excluded_tags:
         - "nav"
         - "header"
@@ -67,17 +63,11 @@ website:
       # Author information is embedded within article content (e.g., under "报告人简介" section)
       markdown_generator:
         type: "default"
-        content_source: "cleaned_html"
+        content_source: "fit_html"
         options:
-          ignore_images: true
+          ignore_images: false
           skip_internal_links: true
           body_width: 0
-        content_filter:
-          type: "pruning"
-          params:
-            threshold: 0.5
-            threshold_type: "dynamic"
-            min_word_threshold: 20
 
     browser:
       headless: true
