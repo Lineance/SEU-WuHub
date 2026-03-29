@@ -1,17 +1,6 @@
 """
-Admin Module - 管理员交互模块
-
-提供命令行界面用于:
-- 爬取网站数据
-- 查询文章
-- 查看统计信息
-
-Usage:
-    >>> from backend.admin import AdminCLI
-    >>> cli = AdminCLI()
-    >>> cli.run()
+Tests for database layer
 """
 
-from .cli import AdminCLI
-
-__all__ = ["AdminCLI"]
+# 注意: AdminCLI 已移至 backend.tests.database.cli
+# 需要时直接导入: from backend.tests.database.cli import AdminCLI

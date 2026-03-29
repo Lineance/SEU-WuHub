@@ -22,7 +22,7 @@ def test_validate_where_blocks_statement_separator_outside_literal() -> None:
     guard = SQLGuard()
     clause = "news_id = 'n1'; DROP TABLE articles"
 
-    with pytest.raises(ValueError, match="Multiple SQL statements not allowed"):
+    with pytest.raises(ValueError, match="SQL injection pattern detected"):
         guard.validate_where(clause)
 
 
@@ -30,7 +30,7 @@ def test_validate_where_blocks_copy_statement_keyword() -> None:
     guard = SQLGuard()
     clause = "title = 'safe' AND COPY = TRUE"
 
-    with pytest.raises(ValueError, match="Blocked SQL statement keyword detected"):
+    with pytest.raises(ValueError, match="SQL injection pattern detected"):
         guard.validate_where(clause)
 
 
@@ -38,5 +38,5 @@ def test_validate_where_blocks_execute_statement_keyword() -> None:
     guard = SQLGuard()
     clause = "title = 'safe' OR EXECUTE = TRUE"
 
-    with pytest.raises(ValueError, match="Blocked SQL statement keyword detected"):
+    with pytest.raises(ValueError, match="SQL injection pattern detected"):
         guard.validate_where(clause)

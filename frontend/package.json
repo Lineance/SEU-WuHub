@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node -e \"const s=Date.now();require('child_process').execSync('next build',{stdio:'inherit'});console.log('\\n⏱️ Build time: '+(Date.now()-s)+'ms')\"",
     "start": "next start",
     "lint": "eslint ."
   },

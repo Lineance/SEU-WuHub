@@ -12,8 +12,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
-# Add backend to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+# Add project root to path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
 from backend.crawler.src.article_url_crawler import ArticleUrlCrawler
 from backend.crawler.src.list_incremental_crawler import ListIncrementalCrawler

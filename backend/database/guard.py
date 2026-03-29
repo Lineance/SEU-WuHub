@@ -41,14 +41,15 @@ ALLOWED_FIELDS = frozenset(
 
 # 危险的 SQL 关键字模式
 DANGEROUS_PATTERNS = [
-    r";\s*(?:DROP|DELETE|TRUNCATE|ALTER|CREATE|INSERT|UPDATE)",
-    r"--",  # SQL 注释
+    r";\s*(?:DROP|DELETE|TRUNCATE|ALTER|CREATE|INSERT|UPDATE|COPY|EXECUTE)",
     r"/\*.*\*/",  # 块注释
     r"UNION\s+(?:ALL\s+)?SELECT",
     r"INTO\s+(?:OUTFILE|DUMPFILE)",
     r"LOAD_FILE",
     r"SLEEP\s*\(",
     r"BENCHMARK\s*\(",
+    r"\bCOPY\b",  # COPY 语句关键字
+    r"\bEXECUTE\b",  # EXECUTE 语句关键字
     r"0x[0-9a-fA-F]+",  # 十六进制值
 ]
 
@@ -99,17 +100,37 @@ class SQLGuard:
         if not where_clause:
             return True
 
-        # 检查危险模式
-        if DANGEROUS_REGEX.search(where_clause):
+        # 移除字符串字面量，避免字符串内容被误判为注入
+        # 将 'xxx' 替换为占位符，再检查危险模式
+        stripped_clause = self._strip_string_literals(where_clause)
+
+        # 检查危险模式（排除字符串内的内容）
+        if DANGEROUS_REGEX.search(stripped_clause):
             logger.warning(f"Dangerous SQL pattern detected: {where_clause}")
             raise ValueError("SQL injection pattern detected")
 
-        # 检查多语句
-        if ";" in where_clause:
+        # 检查多语句（只有在字符串外有分号才报错）
+        if ";" in stripped_clause:
             logger.warning(f"Multiple statements detected: {where_clause}")
             raise ValueError("Multiple SQL statements not allowed")
 
         return True
+
+    @staticmethod
+    def _strip_string_literals(clause: str) -> str:
+        """
+        移除 SQL 字符串字面量，用占位符替换
+
+        这样可以避免字符串内容被误判为 SQL 注入
+
+        Args:
+            clause: SQL 子句
+
+        Returns:
+            移除字符串字面量后的子句
+        """
+        # 匹配单引号字符串，包括转义的单引号
+        return re.sub(r"'(?:[^']|'')*'", "'__STR__'", clause)
 
     def validate_field(self, field_name: str) -> bool:
         """

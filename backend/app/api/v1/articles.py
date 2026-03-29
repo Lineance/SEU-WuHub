@@ -14,12 +14,16 @@ from pathlib import Path
 # 添加项目根目录到 Python 路径
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
+from backend.database.guard import SQLGuard
 from backend.database.repository import ArticleRepository
 from retrieval.store import LanceStore
 from retrieval.engine import RetrievalEngine
 
 from ...schemas.article import ArticleResponse, ArticleListResponse, ArticleCreate, ArticleUpdate
 from ...schemas.search import SearchRequest, SearchResponse, SearchResult
+
+# SQL 安全验证器
+_sql_guard = SQLGuard()
 
 router = APIRouter(prefix="/articles", tags=["articles"])
 
@@ -101,16 +105,14 @@ async def list_articles(
 
     offset = (page - 1) * page_size
 
-    # 构建查询条件
-    where_parts = []
+    # 构建查询条件 (使用 SQLGuard 防止注入)
+    conditions = {}
     if category:
-        where_parts.append(f"source_site = '{category}'")
+        conditions["source_site"] = category
     if tags:
-        tag_list = tags.split(",")
-        tags_str = ", ".join(f"'{tag.strip()}'" for tag in tag_list)
-        where_parts.append(f"tags IN ({tags_str})")
+        conditions["tags"] = [tag.strip() for tag in tags.split(",")]
 
-    where_clause = " AND ".join(where_parts) if where_parts else None
+    where_clause = _sql_guard.build_safe_where(conditions) if conditions else None
 
     # 执行查询
     try:
@@ -169,7 +171,8 @@ async def get_article(article_id: str):
     """
     try:
         table = get_table()
-        results = table.search().where(f"news_id = '{article_id}'").limit(1).to_list()
+        safe_where = _sql_guard.build_safe_where({"news_id": article_id})
+        results = table.search().where(safe_where).limit(1).to_list()
         if not results:
             raise HTTPException(status_code=404, detail="Article not found")
 
