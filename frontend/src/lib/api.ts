@@ -1,0 +1,275 @@
+/**
+ * API Client for SEU-WuHub Backend
+ *
+ * Provides typed API calls to the backend FastAPI service.
+ */
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api/v1'
+
+interface Article {
+  id: string
+  title: string
+  url: string
+  content?: string
+  summary?: string
+  author?: string
+  published_date?: string
+  tags: string[]
+  category?: string
+  attachments?: string[]
+}
+
+interface ArticleListResponse {
+  items: Article[]
+  total: number
+  page: number
+  page_size: number
+  total_pages: number
+}
+
+interface SearchResult {
+  id: string
+  title: string
+  url: string
+  summary?: string
+  score: number
+  category?: string
+  tags: string[]
+  published_date?: string
+}
+
+interface SearchResponse {
+  query: string
+  results: SearchResult[]
+  total: number
+}
+
+class ApiError extends Error {
+  constructor(public status: number, message: string) {
+    super(message)
+    this.name = 'ApiError'
+  }
+}
+
+async function fetchApi<T>(
+  endpoint: string,
+  options?: RequestInit
+): Promise<T> {
+  const url = `${API_BASE}${endpoint}`
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
+      ...options,
+    })
+
+    if (!response.ok) {
+      throw new ApiError(response.status, await response.text())
+    }
+
+    return response.json()
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error
+    }
+    throw new Error(`Network error: ${error}`)
+  }
+}
+
+// Article API
+export const articleApi = {
+  list: (params?: {
+    page?: number
+    page_size?: number
+    category?: string
+    tags?: string
+  }): Promise<ArticleListResponse> => {
+    const searchParams = new URLSearchParams()
+    if (params?.page) searchParams.set('page', String(params.page))
+    if (params?.page_size) searchParams.set('page_size', String(params.page_size))
+    if (params?.category) searchParams.set('category', params.category)
+    if (params?.tags) searchParams.set('tags', params.tags)
+
+    const query = searchParams.toString()
+    return fetchApi<ArticleListResponse>(`/articles/${query ? `?${query}` : ''}`)
+  },
+
+  get: (id: string): Promise<Article> => {
+    return fetchApi<Article>(`/articles/${id}`)
+  },
+
+  create: (data: Partial<Article>): Promise<Article> => {
+    return fetchApi<Article>('/articles/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+
+  update: (id: string, data: Partial<Article>): Promise<Article> => {
+    return fetchApi<Article>(`/articles/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  },
+
+  delete: (id: string): Promise<void> => {
+    return fetchApi<void>(`/articles/${id}`, {
+      method: 'DELETE',
+    })
+  },
+}
+
+// Search API
+export const searchApi = {
+  search: (params: {
+    query: string
+    limit?: number
+    category?: string
+    tags?: string[]
+    start_date?: string
+    end_date?: string
+  }): Promise<SearchResponse> => {
+    const searchParams = new URLSearchParams({ q: params.query })
+    if (params.limit) searchParams.set('limit', String(params.limit))
+    if (params.category) searchParams.set('category', params.category)
+    if (params.tags) searchParams.set('tags', params.tags.join(','))
+    if (params.start_date) searchParams.set('start_date', params.start_date)
+    if (params.end_date) searchParams.set('end_date', params.end_date)
+
+    return fetchApi<SearchResponse>(`/search/?${searchParams.toString()}`)
+  },
+}
+
+// Health check
+export const healthApi = {
+  check: (): Promise<{ status: string; version: string; database: string }> => {
+    return fetchApi<{ status: string; version: string; database: string }>('/health')
+  },
+}
+
+export type { Article, ArticleListResponse, SearchResult, SearchResponse }
+
+// Categories API - 从文章数据中提取分类
+export const categoriesApi = {
+  getCategories: async (): Promise<{ data: Array<{ id: string; name: string; count: number }> }> => {
+    // 从后端获取所有文章并提取分类
+    const response = await articleApi.list({ page_size: 100 })
+    const categoryMap = new Map<string, number>()
+
+    for (const article of response.items) {
+      const category = article.category || "未分类"
+      categoryMap.set(category, (categoryMap.get(category) || 0) + 1)
+    }
+
+    const data = Array.from(categoryMap.entries()).map(([name, count]) => ({
+      id: name,
+      name,
+      count,
+    }))
+
+    return { data }
+  },
+}
+
+// 默认导出
+export const api = {
+  article: articleApi,
+  search: searchApi,
+  health: healthApi,
+  getCategories: categoriesApi.getCategories,
+  getArticles: async (params: { category_id?: string; page?: number; page_size?: number }) => {
+    // 将 category_id 转换为 category 以匹配后端 API
+    const response = await articleApi.list({ page: params.page, page_size: params.page_size, category: params.category_id ? decodeURIComponent(params.category_id) : undefined })
+    // 转换格式以匹配前端期望的结构
+    const transformedItems = response.items.map(item => ({
+      id: item.id,
+      title: item.title,
+      summary: item.summary || item.content?.slice(0, 200) || "",
+      published_at: item.published_date,
+      source: item.category,
+      tags: item.tags || [],
+      url: item.url,
+    }))
+    return {
+      data: transformedItems,
+      pagination: {
+        total_pages: response.total_pages,
+        total: response.total,
+        page: response.page,
+      },
+    }
+  },
+  searchArticles: async (params: {
+    q?: string
+    page?: number
+    page_size?: number
+    time?: string
+    start_date?: string
+    end_date?: string
+  }) => {
+    // 将 time 转换为日期范围
+    let start_date = params.start_date
+    let end_date = params.end_date
+    if (params.time && !start_date && !end_date) {
+      const now = new Date()
+      const timeMap: Record<string, number> = {
+        today: 1,
+        '7days': 7,
+        '30days': 30,
+        '6months': 180,
+        '1year': 365,
+      }
+      const days = timeMap[params.time]
+      if (days) {
+        const d = new Date(now.getTime() - days * 24 * 60 * 60 * 1000)
+        start_date = d.toISOString().split('T')[0]
+        end_date = now.toISOString().split('T')[0]
+      }
+    }
+    const response = await searchApi.search({
+      query: params.q || "",
+      limit: params.page_size || 20,
+      start_date,
+      end_date,
+    })
+    // 去除 HTML 标签并映射字段
+    const stripHtml = (html: string) => html ? html.replace(/<[^>]*>/g, '').slice(0, 200) : ''
+    const data = response.results.map(r => ({
+      id: r.id,
+      title: r.title,
+      summary: stripHtml(r.summary || ''),
+      published_at: r.published_date,
+      source: r.category,
+      tags: r.tags || [],
+      url: r.url,
+    }))
+    return {
+      data,
+      pagination: {
+        total_pages: Math.ceil(response.total / (params.page_size || 20)),
+        total: response.total,
+        page: params.page || 1,
+      },
+    }
+  },
+  getArticleDetail: async (id: string) => {
+    const response = await articleApi.get(id)
+    return {
+      data: {
+        id: response.id,
+        title: response.title,
+        content_md: response.content || "",  // Markdown content for ReactMarkdown
+        summary: response.summary || "",
+        published_at: response.published_date,
+        source: response.category,
+        source_url: response.url,
+        tags: response.tags || [],
+        url: response.url,
+        attachments: (response as any).attachments || [],
+      },
+    }
+  },
+}
