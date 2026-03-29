@@ -9,17 +9,20 @@ Responsibilities:
     - 向量归一化和相似度计算
 """
 
-import importlib
 import logging
+import sys
+from pathlib import Path
 from typing import Any, Literal, cast
 
-try:
-    _embedder_mod = importlib.import_module("ingestion.embedder")
-except ImportError:
-    _embedder_mod = importlib.import_module("backend.ingestion.embedder")
+# 添加项目根目录到 Python 路径
+_root = Path(__file__).resolve().parents[3]
+if str(_root) not in sys.path:
+    sys.path.insert(0, str(_root))
 
-Embedder = _embedder_mod.Embedder
-get_embedder = _embedder_mod.get_embedder
+try:
+    from ingestion.embedder import Embedder, get_embedder
+except ImportError:
+    from backend.ingestion.embedder import Embedder, get_embedder
 
 logger = logging.getLogger(__name__)
 

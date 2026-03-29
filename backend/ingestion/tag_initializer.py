@@ -28,8 +28,8 @@ import yaml
 # 添加项目根目录到 Python 路径
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from backend.data.tag_repository import get_tag_repository
-from backend.data.tag_schema import TagRecord
+from backend.database.tag_repository import get_tag_repository
+from backend.database.tag_schema import TagRecord
 from backend.ingestion.embedder import get_embedder
 
 logger = logging.getLogger(__name__)

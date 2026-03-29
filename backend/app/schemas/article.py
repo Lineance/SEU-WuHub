@@ -9,9 +9,10 @@ class ArticleBase(BaseModel):
     content: Optional[str] = None
     summary: Optional[str] = None
     author: Optional[str] = None
-    published_date: Optional[datetime] = None
+    published_date: Optional[str] = None
     tags: List[str] = Field(default_factory=list)
     category: Optional[str] = None
+    attachments: List[str] = Field(default_factory=list)  # PDF等附件URL列表
 
 
 class ArticleCreate(ArticleBase):

@@ -4,6 +4,18 @@ SEU-WuHub FastAPI Application
 主应用入口，提供完整的 API 路由。
 """
 
+import sys
+from pathlib import Path
+
+# 添加项目根目录和 backend 目录到 Python 路径
+# 这样可以支持 `from backend.xxx` 的导入方式
+_root = Path(__file__).resolve().parents[2]
+_backend = Path(__file__).resolve().parents[1]
+if str(_root) not in sys.path:
+    sys.path.insert(0, str(_root))
+if str(_backend) not in sys.path:
+    sys.path.insert(0, str(_backend))
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 

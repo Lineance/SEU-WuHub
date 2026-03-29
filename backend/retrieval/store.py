@@ -17,8 +17,8 @@ from typing import Any, Literal, cast
 import pyarrow as pa
 
 # 导入数据层组件
-from backend.data import ArticleRepository, get_article_repository
-from backend.data.schema import ArticleFields
+from backend.database import ArticleRepository, get_article_repository
+from backend.database.schema import ArticleFields
 from lancedb.table import Table
 
 from .schema.article import Article, ArticleQuery
@@ -813,7 +813,7 @@ class LanceStore:
 
 
 def create_store(
-    db_path: str = "data/lancedb",
+    db_path: str = "../data/lancedb",
     table_name: str = "articles",
     create_indices: bool = True,
 ) -> LanceStore:
@@ -868,7 +868,7 @@ def create_store(
 
 
 def get_store(
-    db_path: str = "data/lancedb",
+    db_path: str = "../data/lancedb",
     table_name: str = "articles",
 ) -> LanceStore:
     """

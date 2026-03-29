@@ -42,7 +42,7 @@ class RetrievalEngine:
         self,
         store: LanceStore | None = None,
         embedder: RetrievalEmbedder | None = None,
-        db_path: str = "data/lancedb",
+        db_path: str = "../data/lancedb",
         table_name: str = "articles",
     ) -> None:
         """
@@ -51,7 +51,7 @@ class RetrievalEngine:
         Args:
             store: LanceStore 实例
             embedder: 检索向量化器
-            db_path: 数据库路径
+            db_path: 数据库路径（相对于 backend/ 目录）
             table_name: 表名
         """
         if store is None:
@@ -494,7 +494,7 @@ class RetrievalEngine:
 
 
 def create_engine(
-    db_path: str = "data/lancedb",
+    db_path: str = "../data/lancedb",
     table_name: str = "articles",
 ) -> RetrievalEngine:
     """

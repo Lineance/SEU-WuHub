@@ -293,10 +293,13 @@ class ArticleQuery(LanceModel):  # type: ignore[misc]
             conditions.append(f"tags IN ({tags_str})")
 
         if self.start_date:
-            conditions.append(f"publish_date >= '{self.start_date}'")
+            # 使用 ISO 格式让 LanceDB 能够解析
+            start_str = self.start_date.isoformat()
+            conditions.append(f"publish_date >= CAST('{start_str}' AS timestamp)")
 
         if self.end_date:
-            conditions.append(f"publish_date <= '{self.end_date}'")
+            end_str = self.end_date.isoformat()
+            conditions.append(f"publish_date <= CAST('{end_str}' AS timestamp)")
 
         if self.min_crawl_version:
             conditions.append(f"crawl_version >= {self.min_crawl_version}")

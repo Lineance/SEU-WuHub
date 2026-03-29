@@ -43,15 +43,8 @@ website:
       page_timeout: 45000
       remove_overlay_elements: true
       exclude_external_links: true
-      # Select multiple elements to keep full HTML for metadata extraction
-      target_elements:
-        - ".Article_Title"
-        - ".News-title"
-        - ".Article_PublishDate"
-        - ".Article_Content"
-        - ".wp_articlecontent"
-      # Note: Author extraction is not available via CSS selector on JWC pages
-      # Author information is embedded within article content (e.g., under "报告人简介" section)
+      # Use CSS selector for clean article content
+      css_selector: ".Article_Content"
       markdown_generator:
         type: "default"
         content_source: "fit_html"

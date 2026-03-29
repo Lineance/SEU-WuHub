@@ -6,10 +6,17 @@ Articles API Router
 
 from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
+import re
 
-from backend.data.repository import ArticleRepository
-from backend.retrieval.store import LanceStore
-from backend.retrieval.engine import RetrievalEngine
+import sys
+from pathlib import Path
+
+# 添加项目根目录到 Python 路径
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+
+from backend.database.repository import ArticleRepository
+from retrieval.store import LanceStore
+from retrieval.engine import RetrievalEngine
 
 from ...schemas.article import ArticleResponse, ArticleListResponse, ArticleCreate, ArticleUpdate
 from ...schemas.search import SearchRequest, SearchResponse, SearchResult
@@ -29,6 +36,20 @@ def get_repo() -> ArticleRepository:
     return _repo
 
 
+def get_table():
+    """直接获取 LanceDB 表"""
+    import sys
+    from pathlib import Path
+    # 获取项目根目录 (backend 的父目录的父目录)
+    # articles.py -> api/v1 -> app -> backend -> 项目根
+    project_root = Path(__file__).resolve().parents[4]
+    sys.path.insert(0, str(project_root))
+    import lancedb
+    db_path = project_root / "data" / "lancedb"
+    db = lancedb.connect(str(db_path))
+    return db.open_table("articles")
+
+
 def get_store() -> LanceStore:
     global _store
     if _store is None:
@@ -41,6 +62,24 @@ def get_engine() -> RetrievalEngine:
     if _engine is None:
         _engine = RetrievalEngine()
     return _engine
+
+
+def strip_html(text: str) -> str:
+    """去除 HTML 标签并返回纯文本"""
+    if not text:
+        return ""
+    text = re.sub(r'<[^>]*>', '', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text[:200]
+
+
+def format_date(dt) -> Optional[str]:
+    """将 datetime 转换为 YYYY-MM-DD 格式字符串"""
+    if dt is None:
+        return None
+    if hasattr(dt, 'strftime'):
+        return dt.strftime('%Y-%m-%d')
+    return str(dt)
 
 
 @router.get("/", response_model=ArticleListResponse)
@@ -75,26 +114,35 @@ async def list_articles(
 
     # 执行查询
     try:
-        if where_clause:
-            results = repo.find(where=where_clause, limit=page_size, offset=offset)
-        else:
-            results = repo.find(limit=page_size, offset=offset)
+        table = get_table()
 
-        total = repo.count()
+        # 使用原始 SQL 查询获取所有记录
+        if where_clause:
+            results = table.search().where(where_clause).limit(page_size).offset(offset).to_list()
+            # 获取过滤后的总数
+            total_results = table.search().where(where_clause).to_list()
+            total = len(total_results)
+        else:
+            # 使用空向量进行全量搜索（返回所有记录）
+            import numpy as np
+            dummy_vector = np.zeros(384, dtype=np.float32)
+            results = table.search(dummy_vector, vector_column_name="title_embedding").limit(page_size).offset(offset).to_list()
+            total = table.count_rows()
 
         items = [
             ArticleResponse(
-                id=r.news_id,
-                title=r.title,
-                url=r.url,
-                content=r.content_markdown,
-                summary=r.content_text[:200] if r.content_text else None,
-                author=r.author,
-                published_date=r.publish_date,
-                tags=r.tags,
-                category=r.source_site,
-                created_at=r.last_updated,
-                updated_at=r.last_updated,
+                id=r.get("news_id", ""),
+                title=r.get("title", ""),
+                url=r.get("url", ""),
+                content=r.get("content_markdown", ""),
+                summary=strip_html(r.get("content_text", "")) if r.get("content_text") else None,
+                author=r.get("author", ""),
+                published_date=format_date(r.get("publish_date")),
+                tags=r.get("tags", []),
+                category=r.get("source_site", ""),
+                attachments=r.get("attachments", []),
+                created_at=r.get("last_updated"),
+                updated_at=r.get("last_updated"),
             )
             for r in results
         ]
@@ -119,25 +167,26 @@ async def get_article(article_id: str):
 
     - **article_id**: 文章唯一标识
     """
-    repo = get_repo()
-
     try:
-        result = repo.get_by_id(article_id)
-        if not result:
+        table = get_table()
+        results = table.search().where(f"news_id = '{article_id}'").limit(1).to_list()
+        if not results:
             raise HTTPException(status_code=404, detail="Article not found")
 
+        r = results[0]
         return ArticleResponse(
-            id=result.news_id,
-            title=result.title,
-            url=result.url,
-            content=result.content_markdown,
-            summary=result.content_text[:200] if result.content_text else None,
-            author=result.author,
-            published_date=result.publish_date,
-            tags=result.tags,
-            category=result.source_site,
-            created_at=result.last_updated,
-            updated_at=result.last_updated,
+            id=r.get("news_id", ""),
+            title=r.get("title", ""),
+            url=r.get("url", ""),
+            content=r.get("content_markdown", ""),
+            summary=strip_html(r.get("content_text", "")) if r.get("content_text") else None,
+            author=r.get("author", ""),
+            published_date=format_date(r.get("publish_date")),
+            tags=r.get("tags", []),
+            category=r.get("source_site", ""),
+            attachments=r.get("attachments", []),
+            created_at=r.get("last_updated"),
+            updated_at=r.get("last_updated"),
         )
     except HTTPException:
         raise
@@ -206,7 +255,7 @@ async def update_article(article_id: str, article: ArticleUpdate):
     repo = get_repo()
 
     try:
-        existing = repo.get_by_id(article_id)
+        existing = repo.get(article_id)
         if not existing:
             raise HTTPException(status_code=404, detail="Article not found")
 
@@ -226,7 +275,7 @@ async def update_article(article_id: str, article: ArticleUpdate):
         if update_data:
             repo.update_one(article_id, update_data)
 
-        updated = repo.get_by_id(article_id)
+        updated = repo.get(article_id)
 
         return ArticleResponse(
             id=updated.news_id,
@@ -257,7 +306,7 @@ async def delete_article(article_id: str):
     repo = get_repo()
 
     try:
-        existing = repo.get_by_id(article_id)
+        existing = repo.get(article_id)
         if not existing:
             raise HTTPException(status_code=404, detail="Article not found")
 

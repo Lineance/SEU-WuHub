@@ -338,13 +338,26 @@ class ArticleUrlCrawler:
             if title_from_content:
                 formatted["title"] = title_from_content
             else:
-                # Last resort: use first non-empty line of markdown as title
-                lines = [l.strip() for l in markdown_text.split("\n") if l.strip()]
-                if lines:
-                    first_line = lines[0]
-                    # Skip markdown headings and image links
-                    if not first_line.startswith("#") and not first_line.startswith("!["):
-                        formatted["title"] = first_line[:200] if len(first_line) > 200 else first_line
+                # Last resort: use first sentence of markdown as title
+                # Split by Chinese period 。 or English period .
+                sentences = re.split(r'[。.]', markdown_text)
+                if sentences:
+                    first_sentence = sentences[0].strip()
+                    # Skip if it's just an image link or heading
+                    if first_sentence and not first_sentence.startswith("!["):
+                        # Limit title length to 100 chars
+                        if len(first_sentence) > 100:
+                            first_sentence = first_sentence[:100] + "..."
+                        formatted["title"] = first_sentence
+
+        # If date is empty, try to extract from markdown content
+        # JWC articles often have dates like "5月28日" in the content
+        if not formatted.get("publish_date") and formatted.get("markdown"):
+            markdown_text = str(formatted.get("markdown", ""))
+            # Try to find date pattern like "X月X日" or "XXXX年XX月XX日"
+            date_match = re.search(r'(\d{1,2}年)?\d{1,2}月\d{1,2}[日号]', markdown_text)
+            if date_match:
+                formatted["publish_date"] = date_match.group(0)
 
         return formatted
 

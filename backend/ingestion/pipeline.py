@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
-from backend.data import (
+from backend.database import (
     ArticleFields,
     ArticleRepository,
     get_article_repository,

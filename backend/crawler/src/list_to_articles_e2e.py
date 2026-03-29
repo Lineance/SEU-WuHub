@@ -3,8 +3,16 @@ import asyncio
 import importlib
 import json
 import os
+import sys
 import time
+from pathlib import Path
 from typing import Any
+
+# Fix Windows console GBK encoding issue for Unicode characters (✓, ✗, etc.)
+if sys.platform == "win32":
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 if __package__:
     _article_mod = importlib.import_module(".article_url_crawler", __package__)
@@ -126,6 +134,27 @@ async def run_e2e(args: argparse.Namespace) -> dict[str, Any]:
                 "browser": browser_overrides,
             }
 
+        # Load website config to get source name
+    source_name = None
+    if args.website:
+        website_cfg_path = None
+        # repo_root is parents[3] because we need D:\SEU-WuHub not D:\SEU-WuHub\backend
+        repo_root = Path(__file__).resolve().parents[3]
+        config_dir = Path(args.config_dir).resolve() if args.config_dir else repo_root / "config_data"
+        candidates = [
+            config_dir / "websites" / f"{args.website}.yaml",
+            repo_root / "config" / "websites" / f"{args.website}.yaml",
+        ]
+        for p in candidates:
+            if p.exists():
+                website_cfg_path = p
+                break
+        if website_cfg_path:
+            import yaml as yaml_mod
+            with open(website_cfg_path, encoding="utf-8") as f:
+                website_data = yaml_mod.safe_load(f)
+                source_name = website_data.get("website", {}).get("name")
+
     async with ArticleUrlCrawler(
         config_dir=args.config_dir,
         cache_base_directory=args.cache_dir,
@@ -135,6 +164,12 @@ async def run_e2e(args: argparse.Namespace) -> dict[str, Any]:
             override_config=website_overrides,
         )
         results = await article_crawler.crawl_articles(incremental_urls, run_config=run_config)
+
+    # Add source field to each result if website config has source name
+    if source_name:
+        for item in results:
+            if "source" not in item or not item["source"]:
+                item["source"] = source_name
 
     success_count = sum(1 for item in results if item.get("success"))
     failed_count = len(results) - success_count

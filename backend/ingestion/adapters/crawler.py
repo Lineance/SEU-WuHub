@@ -15,7 +15,7 @@ import logging
 from datetime import datetime
 from typing import Any
 
-from backend.data import ArticleFields
+from backend.database import ArticleFields
 
 from ..normalizers import extract_first_sentence, normalize_datetime
 
