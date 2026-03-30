@@ -145,6 +145,51 @@ POST /api/v1/search
 GET /api/v1/search?q=<query>&limit=10
 ```
 
+## Agent 对话接口
+
+### 流式对话
+
+```
+POST /api/v1/chat/stream
+```
+
+**请求体**:
+```json
+{
+  "query": "补考时间是什么时候",
+  "session_id": "session-001",
+  "history": [
+    {
+      "role": "user",
+      "content": "我想了解教务通知"
+    }
+  ],
+  "options": {
+    "max_steps": 5
+  }
+}
+```
+
+**响应类型**:
+
+- `Content-Type: text/event-stream`
+- 采用 SSE 分块推送事件，事件类型包含：`thought`、`tool_call`、`tool_result`、`message`、`done`、`error`
+
+**SSE 数据示例**:
+```text
+event: thought
+data: {"type":"thought","step":1,"timestamp":"2026-03-31T12:00:00Z","payload":{"message":"正在分析问题并规划工具调用"}}
+
+event: tool_call
+data: {"type":"tool_call","step":1,"timestamp":"2026-03-31T12:00:00Z","payload":{"tool":"search_keyword","input":{"query":"补考时间是什么时候","limit":5}}}
+
+event: message
+data: {"type":"message","step":1,"timestamp":"2026-03-31T12:00:01Z","payload":{"content":"根据你的问题，我找到以下相关信息..."}}
+
+event: done
+data: {"type":"done","step":1,"timestamp":"2026-03-31T12:00:01Z","payload":{"reason":"completed"}}
+```
+
 ## 健康检查
 
 ```

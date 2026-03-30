@@ -19,10 +19,10 @@ def strip_html(text: str) -> str:
     return text[:200]
 
 
-def format_date(dt: Any) -> Optional[str]:
+def format_date(dt: Any) -> str:
     """Format datetime-like objects as YYYY-MM-DD."""
     if dt is None:
-        return None
+        return ""
     if hasattr(dt, "strftime"):
         return dt.strftime("%Y-%m-%d")
     return str(dt)[:10]

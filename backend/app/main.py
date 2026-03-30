@@ -19,9 +19,10 @@ if str(_backend) not in sys.path:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .core.config import settings
 from .api.v1.articles import router as articles_router
+from .api.v1.chat import router as chat_router
 from .api.v1.search import router as search_router
+from .core.config import settings
 from .schemas.common import HealthResponse
 
 # 创建 FastAPI 应用
@@ -44,6 +45,7 @@ app.add_middleware(
 # 注册路由
 app.include_router(articles_router, prefix="/api/v1")
 app.include_router(search_router, prefix="/api/v1")
+app.include_router(chat_router, prefix="/api/v1")
 
 
 @app.get("/", tags=["root"])

@@ -31,6 +31,16 @@ def get_engine() -> RetrievalEngine:
     return _engine
 
 
+def strip_html(text: str) -> str:
+    """兼容旧测试：委托给 service 实现。"""
+    return search_service.strip_html(text)
+
+
+def format_date(dt):
+    """兼容旧测试：委托给 service 实现。"""
+    return search_service.format_date(dt)
+
+
 @router.post("/", response_model=SearchResponse)
 async def search_articles(request: SearchRequest):
     """
