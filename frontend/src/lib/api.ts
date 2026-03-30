@@ -159,6 +159,10 @@ export interface SearchArticlesParams {
   time?: string
   start_date?: string
   end_date?: string
+  source?: string
+  tag?: string
+  date?: string
+  exact?: boolean
 }
 
 export interface SearchQueryParams {
@@ -166,6 +170,8 @@ export interface SearchQueryParams {
   limit?: number
   start_date?: string
   end_date?: string
+  category?: string
+  tags?: string[]
 }
 
 export function buildSearchQueryParams(params: SearchArticlesParams): SearchQueryParams {
@@ -189,11 +195,18 @@ export function buildSearchQueryParams(params: SearchArticlesParams): SearchQuer
     }
   }
 
+  if (params.date && !start_date && !end_date) {
+    start_date = params.date
+    end_date = params.date
+  }
+
   return {
     query: params.q || '',
     limit: params.page_size || 20,
     start_date,
     end_date,
+    category: params.source,
+    tags: params.tag ? [params.tag] : undefined,
   }
 }
 
@@ -270,14 +283,7 @@ export const api = {
       },
     }
   },
-  searchArticles: async (params: {
-    q?: string
-    page?: number
-    page_size?: number
-    time?: string
-    start_date?: string
-    end_date?: string
-  }) => {
+  searchArticles: async (params: SearchArticlesParams) => {
     const queryParams = buildSearchQueryParams(params)
     const response = await searchApi.search(queryParams)
     // 去除 HTML 标签并映射字段
