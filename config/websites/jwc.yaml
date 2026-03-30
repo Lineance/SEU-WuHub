@@ -2,7 +2,6 @@
 
 website:
   name: "SEU JWC"
-  base_url: "https://jwc.seu.edu.cn"
 
   # Multiple list channels under the same site; each list will keep independent incremental state.
   start_urls:
@@ -10,7 +9,6 @@ website:
     - "https://jwc.seu.edu.cn/zxdt/list.htm"
 
   list_incremental:
-    enabled: true
     max_pages: 31
     state_file: "tmp/jwc_seen_urls.json"
     cache_base_directory: "tmp/crawl4ai_jwc_cache"

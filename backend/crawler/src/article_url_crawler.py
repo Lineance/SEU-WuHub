@@ -185,8 +185,67 @@ class ArticleUrlCrawler:
         if crawler is None:
             raise RuntimeError("Crawler instance is not initialized")
 
-        res = await crawler.arun(url=url, config=run_config)
-        return self._format_result(res)
+        # Check if css_selector is configured for two-pass extraction
+        css_selector = getattr(run_config, "css_selector", None)
+
+        if css_selector:
+            # Two-pass approach:
+            # 1. First pass: NO css_selector to get full HTML with title, date
+            # 2. Second pass: specific css_selector for content-only markdown
+            meta_only_config = CrawlerRunConfig(
+                page_timeout=getattr(run_config, "page_timeout", 30000),
+                cache_mode=getattr(run_config, "cache_mode", None),
+                check_cache_freshness=getattr(run_config, "check_cache_freshness", False),
+            )
+            result_with_meta = await crawler.arun(url=url, config=meta_only_config)
+
+            # Extract title and date from first pass HTML
+            inner = result_with_meta._results[0] if hasattr(result_with_meta, "_results") else result_with_meta
+            full_html = inner.html if hasattr(inner, "html") else ""
+
+            title = ""
+            publish_date = ""
+
+            if full_html:
+                metadata = self._extract_metadata(
+                    full_html,
+                    title_selectors=[
+                        ".Article_Title",
+                        ".News-title",
+                        "h1",
+                        ".article-title",
+                        "[class*=title]",
+                    ],
+                    date_selectors=[".Article_PublishDate", ".publish-date", ".date", "time"],
+                    author_selectors=[".author", ".Article_Author", ".writer"],
+                )
+                title = metadata.get("title", "")
+                publish_date = metadata.get("date", "")
+
+            # Second pass: content-only with css_selector
+            content_only_config = CrawlerRunConfig(
+                css_selector=css_selector,
+                page_timeout=getattr(run_config, "page_timeout", 30000),
+                cache_mode=getattr(run_config, "cache_mode", None),
+                check_cache_freshness=getattr(run_config, "check_cache_freshness", False),
+            )
+            result_content = await crawler.arun(url=url, config=content_only_config)
+
+            # Combine results - use title/date from first pass, content from second
+            combined_result = result_content._results[0] if hasattr(result_content, "_results") else result_content
+            if hasattr(combined_result, "html") and full_html:
+                # Put the full HTML back so _format_result can use it
+                combined_result.html = full_html
+            # Store pre-extracted title/date for _format_result via result attributes
+            if title or publish_date:
+                combined_result._pre_extracted_title = title
+                combined_result._pre_extracted_date = publish_date
+
+            return self._format_result(combined_result)
+        else:
+            # Single pass without css_selector
+            res = await crawler.arun(url=url, config=run_config)
+            return self._format_result(res)
 
     async def crawl_articles(
         self,
@@ -267,11 +326,15 @@ class ArticleUrlCrawler:
         markdown_result = getattr(result, "markdown", "") or ""
         content_result = getattr(result, "content", "") or ""
 
+        # Use pre-extracted title/publish_date from two-pass approach if available
+        pre_extracted_title = getattr(result, "_pre_extracted_title", "") or ""
+        pre_extracted_date = getattr(result, "_pre_extracted_date", "") or ""
+
         formatted = {
             "success": success,
             "url": url,
-            "title": getattr(result, "title", "") or "",
-            "publish_date": "",
+            "title": pre_extracted_title,
+            "publish_date": pre_extracted_date,
             "author": "",
             "content": content_result,
             "markdown": markdown_result,
@@ -294,8 +357,9 @@ class ArticleUrlCrawler:
             formatted["error"] = error_msg or "Crawl failed without specific error message"
 
         # Extract metadata using CSS selectors from raw HTML (which contains full page)
+        # Skip if we already have title/date from two-pass approach
         raw_html = getattr(result, "html", "") or ""
-        if raw_html:
+        if raw_html and not pre_extracted_title and not pre_extracted_date:
             metadata = self._extract_metadata(
                 raw_html,
                 title_selectors=[

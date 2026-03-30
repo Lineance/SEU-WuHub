@@ -15,6 +15,7 @@ import math
 from typing import Any
 
 import numpy as np
+
 from backend.database.tag_repository import TagRepository, get_tag_repository
 from backend.database.tag_schema import TAG_EMBEDDING_DIM
 
