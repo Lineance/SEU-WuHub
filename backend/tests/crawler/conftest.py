@@ -168,6 +168,20 @@ def pytest_configure(config: Any) -> None:
     if str(crawler_src) not in sys.path:
         sys.path.insert(0, str(crawler_src))
 
+    # Fix Windows console encoding issue for rich-based output
+    import os
+    if os.name == "nt":
+        # Enable UTF-8 mode for Windows console
+        os.environ["PYTHONIOENCODING"] = "utf-8"
+        # Try to set the console mode to support UTF-8
+        try:
+            if sys.stdout is not None:
+                sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+            if sys.stderr is not None:
+                sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
 
 def pytest_collection_modifyitems(config: Any, items: list[Any]) -> None:
     if config.getoption("--run-real-web"):
