@@ -15,6 +15,7 @@ from datetime import datetime
 from typing import Any, cast
 
 from .connection import init_database
+from .exceptions import RepositorySystemError
 from .guard import SQLGuard, sanitize
 from .schema import ArticleFields, ArticleRecord
 
@@ -100,6 +101,9 @@ class ArticleRepository:
             self._table.add([record_dict])
             logger.debug(f"Added article: {record.news_id}")
             return True
+        except (OSError, PermissionError, IOError) as e:
+            logger.error(f"Failed to add article: {e}")
+            raise RepositorySystemError(f"Failed to add article: {e}") from e
         except Exception as e:
             logger.error(f"Failed to add article: {e}")
             return False
@@ -229,6 +233,9 @@ class ArticleRepository:
             return sorted(
                 results, key=lambda x: x.get(ArticleFields.PUBLISH_DATE, ""), reverse=True
             )
+        except (OSError, PermissionError, IOError) as e:
+            logger.error(f"Failed to find all articles: {e}")
+            raise RepositorySystemError(f"Failed to find all articles: {e}") from e
         except Exception as e:
             logger.error(f"Failed to find all articles: {e}")
             return []

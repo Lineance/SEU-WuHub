@@ -23,11 +23,14 @@ class _FakeListIncrementalCrawler:
         max_pages: int,
         include_patterns: list[str] | None,
         exclude_patterns: list[str] | None,
+        list_crawler_overrides: dict[str, Any] | None = None,
+        article_crawler_overrides: dict[str, Any] | None = None,
+        browser_overrides: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         assert website_name == "jwc"
         assert max_pages == 31
         return {
-            "overrides": {"crawler": {"word_count_threshold": 20}},
+            "article_overrides": {"crawler": {"word_count_threshold": 20}},
             "lists": [
                 {
                     "list_url": "https://jwc.seu.edu.cn/jwxx/list.htm",
@@ -92,6 +95,9 @@ async def test_run_e2e_website_mode_smoke(monkeypatch: pytest.MonkeyPatch) -> No
         output=None,
         include_pattern=None,
         exclude_pattern=None,
+        list_crawler_overrides=None,
+        article_crawler_overrides=None,
+        browser_overrides=None,
     )
 
     summary = await e2e.run_e2e(args)

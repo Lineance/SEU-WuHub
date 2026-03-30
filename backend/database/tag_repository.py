@@ -17,6 +17,7 @@ from typing import Any
 import lancedb
 
 from .connection import LanceDBConnection, get_connection
+from .exceptions import RepositorySystemError
 from .tag_schema import (
     TAG_EMBEDDING_DIM,
     TagFields,
@@ -121,6 +122,9 @@ class TagRepository:
             self._table.add([data])
             logger.debug(f"Added tag: {tag_record.tag_id} - {tag_record.name}")
             return True
+        except (OSError, PermissionError, IOError) as e:
+            logger.error(f"Failed to add tag {tag_record.tag_id}: {e}")
+            raise RepositorySystemError(f"Failed to add tag: {e}") from e
         except Exception as e:
             logger.error(f"Failed to add tag {tag_record.tag_id}: {e}")
             return False
