@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { Loader2, AlertCircle, ArrowLeft, ExternalLink, Calendar, Tag, Star, Copy, Share2, Check, X, Download, FileText } from "lucide-react"
+import { Loader2, AlertCircle, ArrowLeft, ExternalLink, Calendar, Tag, Star, Copy, Share2, Check, X, Download, FileText, QRCode, Maximize2, Minimize2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -13,18 +13,20 @@ import { PdfViewer, extractPdfUrls } from "@/components/pdf-viewer"
 import { QRCodeSVG } from "qrcode.react"
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { useReadingMode } from "@/components/reading-mode-provider"
 
 export default function ArticleDetailPage() {
   const params = useParams()
   const router = useRouter()
   const articleId = params.id as string
+  const { isReadingMode, toggleReadingMode } = useReadingMode()
 
   const [article, setArticle] = useState<ArticleDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isFav, setIsFav] = useState(false)
   const [copied, setCopied] = useState(false)
-  const [showShareModal, setShowShareModal] = useState(false)
+  const [showQrCode, setShowQrCode] = useState(false)
   const [pdfUrls, setPdfUrls] = useState<Array<{ url: string; name: string }>>([])
 
   useEffect(() => {
@@ -61,6 +63,26 @@ export default function ArticleDetailPage() {
       published_at: article.published_at
     })
     setIsFav(prev => !prev)
+  }
+
+  const handleShare = async () => {
+    const shareData = {
+      title: article?.title || '',
+      text: article?.summary || '',
+      url: window.location.href
+    }
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData)
+      } else {
+        await navigator.clipboard.writeText(window.location.href)
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        console.error('分享失败:', err)
+      }
+    }
   }
 
   const handleCopyLink = async () => {
@@ -131,18 +153,34 @@ export default function ArticleDetailPage() {
               <Button
                 variant="outline"
                 size="icon"
+                onClick={handleShare}
+                className="shrink-0"
+              >
+                <Share2 className="h-5 w-5" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setShowQrCode(true)}
+                className="shrink-0"
+              >
+                <QRCode className="h-5 w-5" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
                 onClick={handleCopyLink}
                 className="shrink-0"
               >
                 {copied ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
               </Button>
               <Button
-                variant="outline"
+                variant={isReadingMode ? "default" : "outline"}
                 size="icon"
-                onClick={() => setShowShareModal(true)}
+                onClick={toggleReadingMode}
                 className="shrink-0"
               >
-                <Share2 className="h-5 w-5" />
+                {isReadingMode ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
               </Button>
             </div>
           </div>
@@ -347,15 +385,15 @@ export default function ArticleDetailPage() {
         )}
       </article>
 
-      {showShareModal && (
+      {showQrCode && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <Card className="w-full max-w-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-              <CardTitle className="text-lg">分享文章</CardTitle>
+              <CardTitle className="text-lg">二维码</CardTitle>
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setShowShareModal(false)}
+                onClick={() => setShowQrCode(false)}
               >
                 <X className="h-4 w-4" />
               </Button>

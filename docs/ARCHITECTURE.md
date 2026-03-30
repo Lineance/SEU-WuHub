@@ -26,6 +26,13 @@
 3. **配置驱动爬虫**：新增数据源仅需修改 YAML，无需改代码发版
 4. **流式响应**：SSE 实时推送，支持大模型打字机效果
 
+### 1.4 当前实现状态（2026-03）
+
+- 后端已实现 Agent 流式接口：`POST /api/v1/chat/stream`
+- Agent 以 `backend/agent/` 独立模块落地，包含 ReAct 主循环、工具注册、事件序列化与短时会话内存
+- API 层采用薄编排：`app/api/v1/chat.py` 仅负责请求校验和 `text/event-stream` 输出
+- 业务编排在 `app/services/agent_service.py`，并复用现有 `retrieval` 与 `database` 能力
+
 ---
 
 ## 2. 技术路线选型

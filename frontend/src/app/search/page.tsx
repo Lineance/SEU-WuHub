@@ -38,9 +38,13 @@ function SearchContent() {
         setError(null)
         const response = await api.searchArticles({
           q: query || undefined,
+          source: source || undefined,
+          tag: tag || undefined,
+          time: time || undefined,
+          date: date || undefined,
+          exact: exactMatch,
           page: safePage,
           page_size: 20,
-          time: time || undefined,
         })
         setArticles(response.data)
       } catch (err) {
@@ -52,7 +56,7 @@ function SearchContent() {
     }
 
     search()
-  }, [query, safePage])
+  }, [query, source, tag, time, date, exactMatch, safePage])
 
   const filteredArticles = useMemo(() => {
     return articles.filter((article) => {
