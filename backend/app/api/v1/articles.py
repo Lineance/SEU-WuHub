@@ -16,8 +16,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from backend.database.guard import SQLGuard
 from backend.database.repository import ArticleRepository
-from retrieval.store import LanceStore
-from retrieval.engine import RetrievalEngine
+from backend.retrieval.store import LanceStore
+from backend.retrieval.engine import RetrievalEngine
 
 from ...schemas.article import ArticleResponse, ArticleListResponse, ArticleCreate, ArticleUpdate
 from ...schemas.search import SearchRequest, SearchResponse, SearchResult
