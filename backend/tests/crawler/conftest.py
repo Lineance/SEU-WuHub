@@ -147,12 +147,8 @@ def _install_fake_crawl4ai() -> None:
 
 
 def pytest_addoption(parser: Any) -> None:
-    parser.addoption(
-        "--run-real-web",
-        action="store_true",
-        default=False,
-        help="Run real network crawler integration tests marked as real_web.",
-    )
+    # Option is now registered in tests/conftest.py to avoid duplication
+    pass
 
 
 def pytest_configure(config: Any) -> None:
