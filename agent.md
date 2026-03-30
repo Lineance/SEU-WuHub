@@ -85,3 +85,34 @@ from backend.retrieval.store import LanceStore  # 应使用完整路径
 ```
 
 > **注意**: 修改任何导入路径后，必须同步更新相关文档。
+
+## 测试命令
+
+### 运行所有测试
+
+```bash
+cd d:/SEU-WuHub
+PYTHONPATH=d:/SEU-WuHub python -m pytest backend/tests/ --cov --cov-fail-under=0 -q
+```
+
+### 运行真实浏览器测试
+
+```bash
+cd d:/SEU-WuHub
+PYTHONPATH=d:/SEU-WuHub python -m pytest backend/tests/ --run-real-web --cov --cov-fail-under=0 -q
+```
+
+### 快速测试（无覆盖率）
+
+```bash
+cd d:/SEU-WuHub
+PYTHONPATH=d:/SEU-WuHub python -m pytest backend/tests/ --no-cov -q
+```
+
+### 运行特定模块测试
+
+```bash
+cd d:/SEU-WuHub
+PYTHONPATH=d:/SEU-WuHub python -m pytest backend/tests/api/ --no-cov -q
+PYTHONPATH=d:/SEU-WuHub python -m pytest backend/tests/crawler/ --run-real-web --no-cov -q
+```
