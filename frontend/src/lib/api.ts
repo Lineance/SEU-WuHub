@@ -152,6 +152,74 @@ export const healthApi = {
 
 export type { Article, ArticleListResponse, SearchResult, SearchResponse }
 
+export interface SearchArticlesParams {
+  q?: string
+  page?: number
+  page_size?: number
+  time?: string
+  start_date?: string
+  end_date?: string
+}
+
+export interface SearchQueryParams {
+  query: string
+  limit?: number
+  start_date?: string
+  end_date?: string
+}
+
+export function buildSearchQueryParams(params: SearchArticlesParams): SearchQueryParams {
+  let start_date = params.start_date
+  let end_date = params.end_date
+
+  if (params.time && !start_date && !end_date) {
+    const now = new Date()
+    const timeMap: Record<string, number> = {
+      today: 1,
+      '7days': 7,
+      '30days': 30,
+      '6months': 180,
+      '1year': 365,
+    }
+    const days = timeMap[params.time]
+    if (days) {
+      const d = new Date(now.getTime() - days * 24 * 60 * 60 * 1000)
+      start_date = d.toISOString().split('T')[0]
+      end_date = now.toISOString().split('T')[0]
+    }
+  }
+
+  return {
+    query: params.q || '',
+    limit: params.page_size || 20,
+    start_date,
+    end_date,
+  }
+}
+
+export function buildSearchParams(params: {
+  page?: number
+  page_size?: number
+  category?: string
+  tags?: string
+}): URLSearchParams {
+  const searchParams = new URLSearchParams()
+  if (params.page) searchParams.set('page', String(params.page))
+  if (params.page_size) searchParams.set('page_size', String(params.page_size))
+  if (params.category) searchParams.set('category', params.category)
+  if (params.tags) searchParams.set('tags', params.tags)
+  return searchParams
+}
+
+export function buildSearchUrlParams(params: SearchArticlesParams): URLSearchParams {
+  const queryParams = buildSearchQueryParams(params)
+  const searchParams = new URLSearchParams({ q: queryParams.query })
+  if (queryParams.limit) searchParams.set('limit', String(queryParams.limit))
+  if (queryParams.start_date) searchParams.set('start_date', queryParams.start_date)
+  if (queryParams.end_date) searchParams.set('end_date', queryParams.end_date)
+  return searchParams
+}
+
 // Categories API - 从文章数据中提取分类
 export const categoriesApi = {
   getCategories: async (): Promise<{ data: Array<{ id: string; name: string; count: number }> }> => {
@@ -210,31 +278,8 @@ export const api = {
     start_date?: string
     end_date?: string
   }) => {
-    // 将 time 转换为日期范围
-    let start_date = params.start_date
-    let end_date = params.end_date
-    if (params.time && !start_date && !end_date) {
-      const now = new Date()
-      const timeMap: Record<string, number> = {
-        today: 1,
-        '7days': 7,
-        '30days': 30,
-        '6months': 180,
-        '1year': 365,
-      }
-      const days = timeMap[params.time]
-      if (days) {
-        const d = new Date(now.getTime() - days * 24 * 60 * 60 * 1000)
-        start_date = d.toISOString().split('T')[0]
-        end_date = now.toISOString().split('T')[0]
-      }
-    }
-    const response = await searchApi.search({
-      query: params.q || "",
-      limit: params.page_size || 20,
-      start_date,
-      end_date,
-    })
+    const queryParams = buildSearchQueryParams(params)
+    const response = await searchApi.search(queryParams)
     // 去除 HTML 标签并映射字段
     const stripHtml = (html: string) => html ? html.replace(/<[^>]*>/g, '').slice(0, 200) : ''
     const data = response.results.map(r => ({
