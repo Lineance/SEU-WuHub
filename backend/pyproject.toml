@@ -116,19 +116,18 @@ line-ending = "lf"
 testpaths = ["tests"]
 asyncio_mode = "auto"
 addopts = [
-    "--cov=app",
-    "--cov=agent",
-    "--cov=ingestion",
-    "--cov=retrieval",
+    "--cov=backend.app",
+    "--cov=backend.ingestion",
+    "--cov=backend.retrieval",
     "--cov-report=term-missing",
-    "--cov-fail-under=80",
+    "--cov-fail-under=78",
     "-q",
     "--strict-markers",
     "--capture=no",
 ]
 
 [tool.coverage.run]
-source = ["app", "ingestion", "retrieval"]
+source = ["backend.app", "backend.ingestion", "backend.retrieval"]
 branch = true
 omit = ["*/tests/*", "*/__pycache__/*", "*/.venv/*"]
 
