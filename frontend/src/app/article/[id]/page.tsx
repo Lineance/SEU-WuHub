@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { Loader2, AlertCircle, ArrowLeft, ExternalLink, Calendar, Tag, Star, Copy, Share2, Check, X, Download, FileText, QRCode } from "lucide-react"
+import { Loader2, AlertCircle, ArrowLeft, ExternalLink, Calendar, Tag, Star, Copy, Share2, Check, X, Download, FileText, QRCode, Maximize2, Minimize2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -13,11 +13,13 @@ import { PdfViewer, extractPdfUrls } from "@/components/pdf-viewer"
 import { QRCodeSVG } from "qrcode.react"
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { useReadingMode } from "@/components/reading-mode-provider"
 
 export default function ArticleDetailPage() {
   const params = useParams()
   const router = useRouter()
   const articleId = params.id as string
+  const { isReadingMode, toggleReadingMode } = useReadingMode()
 
   const [article, setArticle] = useState<ArticleDetail | null>(null)
   const [loading, setLoading] = useState(true)
@@ -171,6 +173,14 @@ export default function ArticleDetailPage() {
                 className="shrink-0"
               >
                 {copied ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
+              </Button>
+              <Button
+                variant={isReadingMode ? "default" : "outline"}
+                size="icon"
+                onClick={toggleReadingMode}
+                className="shrink-0"
+              >
+                {isReadingMode ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
               </Button>
             </div>
           </div>
