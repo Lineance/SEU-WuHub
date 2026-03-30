@@ -11,12 +11,16 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps) {
   const [isAIOpen, setIsAIOpen] = useState(false)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
 
   return (
     <div className="flex h-screen flex-col bg-background">
       <Header onAIToggle={() => setIsAIOpen(!isAIOpen)} />
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
+        <Sidebar
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        />
         <main className="flex-1 overflow-auto">
           {children}
         </main>

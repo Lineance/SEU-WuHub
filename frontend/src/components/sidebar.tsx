@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ChevronRight, BookOpen, Compass, Bell, Link2, FileText, GraduationCap, Lightbulb, Trophy, Home, HelpCircle, Building, Users, Globe, Loader2, AlertCircle } from "lucide-react"
+import { ChevronRight, BookOpen, Compass, Bell, Link2, FileText, GraduationCap, Lightbulb, Trophy, Home, HelpCircle, Building, Users, Globe, Loader2, AlertCircle, PanelLeftClose, PanelLeftOpen } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { api } from "@/lib/api"
+import { Button } from "@/components/ui/button"
 import type { Category } from "@/lib/types"
 
 const iconMap: Record<string, React.ReactNode> = {
@@ -26,9 +27,10 @@ const iconMap: Record<string, React.ReactNode> = {
 interface NavItemComponentProps {
   item: Category
   level?: number
+  isCollapsed?: boolean
 }
 
-function NavItemComponent({ item, level = 0 }: NavItemComponentProps) {
+function NavItemComponent({ item, level = 0, isCollapsed = false }: NavItemComponentProps) {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(level === 0 && item.children && item.children.length > 0 ? true : false)
   const hasChildren = item.children && item.children.length > 0
@@ -63,7 +65,7 @@ function NavItemComponent({ item, level = 0 }: NavItemComponentProps) {
         )}
         {!hasChildren && <span className="w-4" />}
         {item.icon && iconMap[item.icon] || <FileText className="h-4 w-4" />}
-        <span className="truncate">{item.name}</span>
+        <span className={cn("truncate", isCollapsed && "hidden")}>{item.name}</span>
       </button>
       {hasChildren && isOpen && (
         <div className="mt-1 space-y-1">
@@ -80,9 +82,12 @@ function NavItemComponent({ item, level = 0 }: NavItemComponentProps) {
   )
 }
 
-interface SidebarProps {}
+interface SidebarProps {
+  isCollapsed?: boolean
+  onToggleCollapse?: () => void
+}
 
-export function Sidebar({}: SidebarProps) {
+export function Sidebar({ isCollapsed = false, onToggleCollapse }: SidebarProps) {
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -106,7 +111,23 @@ export function Sidebar({}: SidebarProps) {
   }, [])
 
   return (
-    <aside className="sticky top-14 h-[calc(100vh-3.5rem)] w-64 shrink-0 overflow-y-auto border-r border-sidebar-border bg-sidebar p-4">
+    <aside
+      className={cn(
+        "sticky top-14 shrink-0 overflow-y-auto border-r border-sidebar-border bg-sidebar p-4 transition-all duration-300",
+        isCollapsed ? "w-16" : "w-64"
+      )}
+    >
+      <div className="mb-4 flex items-center justify-between">
+        <span className={cn("text-lg font-semibold text-foreground", isCollapsed && "hidden")}>导航</span>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onToggleCollapse}
+          className="shrink-0"
+        >
+          {isCollapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
+        </Button>
+      </div>
       {loading && (
         <div className="flex items-center justify-center py-8">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -114,16 +135,16 @@ export function Sidebar({}: SidebarProps) {
       )}
 
       {error && (
-        <div className="flex flex-col items-center justify-center py-8 text-center">
+        <div className={cn("flex flex-col items-center justify-center py-8 text-center", !isCollapsed && "px-2")}>
           <AlertCircle className="mb-2 h-6 w-6 text-destructive" />
-          <p className="text-sm text-muted-foreground">{error}</p>
+          <p className={cn("text-sm text-muted-foreground", !isCollapsed && "truncate")}>{error}</p>
         </div>
       )}
 
       {!loading && !error && categories.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-8 text-center">
+        <div className={cn("flex flex-col items-center justify-center py-8 text-center", !isCollapsed && "px-2")}>
           <FileText className="mb-2 h-6 w-6 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">暂无分类</p>
+          <p className={cn("text-sm text-muted-foreground", !isCollapsed && "truncate")}>暂无分类</p>
         </div>
       )}
 
@@ -133,6 +154,7 @@ export function Sidebar({}: SidebarProps) {
             <NavItemComponent
               key={item.id}
               item={item}
+              isCollapsed={isCollapsed}
             />
           ))}
         </nav>
