@@ -60,7 +60,10 @@ class TablePreservingMarkdownGenerator(DefaultMarkdownGenerator):
             return str(table)
 
         # 只保留这些属性
-        allowed_attrs = {"rowspan", "colspan", "valign", "align", "href", "src", "alt", "title", "width", "height"}
+        allowed_attrs = {"rowspan", "colspan", "valign", "align", "href", "src", "alt", "title"}
+
+        # 要删除的图标图片
+        icon_patterns = ("icon_pdf.gif", "icon_xls.gif", "icon_doc.gif")
 
         # 处理 table 标签本身
         for attr in list(clean_table.attrs):
@@ -69,6 +72,13 @@ class TablePreservingMarkdownGenerator(DefaultMarkdownGenerator):
 
         # 处理所有子元素
         for tag in clean_table.find_all(True):
+            # 删除图标图片
+            if tag.name == "img":
+                src = tag.get("src", "")
+                if any(src.endswith(icon) for icon in icon_patterns):
+                    tag.decompose()
+                    continue
+
             attrs_to_remove = [attr for attr in list(tag.attrs) if attr not in allowed_attrs]
             for attr in attrs_to_remove:
                 del tag[attr]
