@@ -240,7 +240,10 @@ export default function ArticleDetailPage() {
                     const hrefStr = typeof href === 'string' ? href : ''
                     // 检测PDF链接
                     if (hrefStr && hrefStr.toLowerCase().endsWith('.pdf')) {
-                      const pdfName = decodeURIComponent(hrefStr.split("/").pop()?.replace(/\.pdf$/i, "") || "PDF文档")
+                      // 使用 [] 中的内容作为 PDF 名称
+                      const pdfName = Array.isArray(children)
+                        ? children.filter(c => typeof c === 'string').join('')
+                        : (typeof children === 'string' ? children : "PDF文档")
                       const fullUrl = hrefStr.startsWith("http") ? hrefStr
                         : hrefStr.startsWith("/_upload/")
                           ? `https://jwc.seu.edu.cn${hrefStr}`
@@ -249,7 +252,7 @@ export default function ArticleDetailPage() {
                         <PdfViewer pdfUrl={fullUrl} pdfName={pdfName}>
                           <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100 cursor-pointer text-sm">
                             <FileText className="h-4 w-4" />
-                            {children}
+                            {pdfName}
                             <span className="text-xs opacity-70">(PDF)</span>
                           </span>
                         </PdfViewer>
