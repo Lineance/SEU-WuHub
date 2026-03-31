@@ -146,11 +146,18 @@ def normalize_markdown(markdown: str) -> str:
         return markdown
 
     # 修复 PDF 图标 + 链接相邻: ![](url)[name](link) → ![](url) [name](link)
-    markdown = re.sub(r'!\[\]([^\[]*)\[', r'![]\1 [', markdown)
+    # 使用 [^\[\n]* 避免跨行匹配
+    markdown = re.sub(r'!\[\]([^\[\n]*)\[', r'![]\1 [', markdown)
 
     # 修复多余星号: **8****月30日** → **8月30日**
     while re.search(r'\*{4,}', markdown):
         markdown = re.sub(r'\*{4,}', '**', markdown)
+
+    # 删除连续的四个星号
+    markdown = re.sub(r'\*{4,}', '', markdown)
+
+    # 删除连续的四个竖线
+    markdown = re.sub(r'\|{4,}', '', markdown)
 
     # 修复换行：段落内单个换行转为硬换行
     # 使用状态机追踪是否在表格行内
@@ -158,15 +165,21 @@ def normalize_markdown(markdown: str) -> str:
     result_lines = []
     in_table = False
     prev_ended_with_text = False
+    prev_line_was_image = False
 
     for line in lines:
         stripped = line.strip()
         is_table_row = stripped.startswith('|') and not re.match(r'^[\s|:-]+$', stripped)
+        is_image_line = stripped.startswith('![](') or stripped.startswith('![')
 
         if is_table_row:
             # 表格行保持原样
             result_lines.append(line)
             in_table = True
+        elif is_image_line:
+            # 图片行单独成行，不合并
+            result_lines.append(line)
+            in_table = False
         else:
             if stripped.startswith('#') or stripped.startswith('- [') or stripped.startswith('```'):
                 # 标题、列表项、代码块保持原样
@@ -175,11 +188,13 @@ def normalize_markdown(markdown: str) -> str:
             elif prev_ended_with_text and stripped and not stripped.startswith('|'):
                 # 上一行是非空文本，当前行非空且不是表格行 → 合并
                 result_lines[-1] = result_lines[-1].rstrip() + '  \n' + line
+                in_table = False
             else:
                 result_lines.append(line)
                 in_table = False
 
-        prev_ended_with_text = bool(stripped) and not stripped.startswith('|')
+        prev_ended_with_text = bool(stripped) and not stripped.startswith('|') and not is_image_line
+        prev_line_was_image = is_image_line
 
     return '\n'.join(result_lines)
 
