@@ -1,5 +1,8 @@
 import logging
+import re
 from typing import Any
+
+from bs4 import BeautifulSoup
 
 from crawl4ai import CacheMode, LLMConfig
 from crawl4ai.content_filter_strategy import (
@@ -8,6 +11,107 @@ from crawl4ai.content_filter_strategy import (
     PruningContentFilter,
 )
 from crawl4ai.markdown_generation_strategy import DefaultMarkdownGenerator
+
+
+class TablePreservingMarkdownGenerator(DefaultMarkdownGenerator):
+    """
+    扩展的 Markdown 生成器，当表格包含 rowspan 或 colspan 时保留原始 HTML。
+    表格内容会清理多余的 style、class 等属性。
+    """
+
+    def generate(self, html: str, **kwargs) -> str:
+        """
+        生成 Markdown，若 HTML 中表格包含 rowspan 或 colspan：
+        - 表格部分保留为清理后的 HTML
+        - 其余内容转换为 Markdown
+        """
+        if not html:
+            return ""
+
+        soup = BeautifulSoup(html, "html.parser")
+
+        # 检查是否有复杂表格（包含 rowspan 或 colspan）
+        complex_tables = self._find_complex_tables(soup)
+
+        if not complex_tables:
+            # 没有复杂表格，使用默认行为
+            result = self.generate_markdown(html, **kwargs)
+            if hasattr(result, 'markdown'):
+                return result.markdown
+            return str(result)
+
+        # 有复杂表格，需要混合处理
+        return self._process_with_complex_tables(soup, **kwargs)
+
+    def _find_complex_tables(self, soup: BeautifulSoup) -> list:
+        """找出所有包含 rowspan 或 colspan 的表格。"""
+        complex_tables = []
+        for table in soup.find_all("table"):
+            for td in table.find_all(["td", "th"]):
+                if td.has_attr("rowspan") or td.has_attr("colspan"):
+                    complex_tables.append(table)
+                    break
+        return complex_tables
+
+    def _clean_table(self, table: BeautifulSoup) -> str:
+        """清理表格，只保留 rowspan, colspan, valign, align, href, src, alt, title 属性。"""
+        clean_table = BeautifulSoup(str(table), "html.parser").find("table")
+        if not clean_table:
+            return str(table)
+
+        # 只保留这些属性
+        allowed_attrs = {"rowspan", "colspan", "valign", "align", "href", "src", "alt", "title", "width", "height"}
+
+        # 处理 table 标签本身
+        for attr in list(clean_table.attrs):
+            if attr not in allowed_attrs:
+                del clean_table[attr]
+
+        # 处理所有子元素
+        for tag in clean_table.find_all(True):
+            attrs_to_remove = [attr for attr in list(tag.attrs) if attr not in allowed_attrs]
+            for attr in attrs_to_remove:
+                del tag[attr]
+
+        return str(clean_table)
+
+    def _process_with_complex_tables(self, soup: BeautifulSoup, **kwargs) -> str:
+        """
+        处理包含复杂表格的 HTML：
+        1. 用占位符替换复杂表格
+        2. 将替换后的 HTML 转为 Markdown
+        3. 用清理后的表格 HTML 替换占位符
+        """
+        complex_tables = self._find_complex_tables(soup)
+
+        # 准备一个副本用于处理
+        work_soup = BeautifulSoup(str(soup), "html.parser")
+
+        # 用占位符替换复杂表格
+        table_replacements = []
+        for i, table in enumerate(complex_tables):
+            placeholder = f"__TABLE_PLACEHOLDER_{i}__"
+            cleaned_html = self._clean_table(table)
+            table_replacements.append((placeholder, cleaned_html))
+            # 在工作副本中替换
+            new_soup = BeautifulSoup(str(work_soup), "html.parser")
+            for t in new_soup.find_all("table"):
+                if t == table:
+                    t.replace_with(BeautifulSoup(placeholder, "html.parser"))
+            work_soup = new_soup
+
+        # 将替换后的 HTML 转为 Markdown
+        result = self.generate_markdown(str(work_soup), **kwargs)
+        if hasattr(result, 'markdown'):
+            markdown = result.markdown
+        else:
+            markdown = str(result)
+
+        # 用清理后的表格 HTML 替换占位符
+        for placeholder, cleaned_html in table_replacements:
+            markdown = markdown.replace(placeholder, cleaned_html)
+
+        return markdown
 
 
 def normalize_cache_mode(value: Any, logger: logging.Logger) -> Any:
@@ -50,7 +154,7 @@ def build_markdown_generator(config: Any, logger: logging.Logger) -> Any:
         return config
 
     generator_type = str(config.get("type", "default")).strip().lower()
-    if generator_type not in {"default", "defaultmarkdowngenerator"}:
+    if generator_type not in {"default", "defaultmarkdowngenerator", "table_preserving"}:
         logger.warning("Unsupported markdown_generator type: %s", generator_type)
         return None
 
@@ -62,7 +166,8 @@ def build_markdown_generator(config: Any, logger: logging.Logger) -> Any:
     if "content_filter" in config:
         kwargs["content_filter"] = build_content_filter(config["content_filter"], logger)
 
-    return DefaultMarkdownGenerator(**kwargs)
+    # 使用支持复杂表格的生成器
+    return TablePreservingMarkdownGenerator(**kwargs)
 
 
 def normalize_crawler_overrides(

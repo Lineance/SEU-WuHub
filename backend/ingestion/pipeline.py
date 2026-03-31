@@ -25,7 +25,7 @@ from backend.database import (
 
 from .dedup import DuplicateDetector, RepositoryDedup
 from .embedder import Embedder, get_embedder
-from .normalizers import normalize_content, normalize_datetime
+from .normalizers import normalize_content, normalize_datetime, normalize_markdown
 from .tag_matcher import TagMatcher, get_tag_matcher
 from .validators import DocumentValidator, ValidationResult
 
@@ -391,6 +391,7 @@ class IngestionPipeline:
 
         # 内容处理
         content_markdown = data.get("content_markdown", "")
+        content_markdown = normalize_markdown(content_markdown)
         result[ArticleFields.CONTENT_MARKDOWN] = content_markdown
 
         # Markdown → 纯文本

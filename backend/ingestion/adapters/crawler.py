@@ -32,7 +32,9 @@ FIELD_MAPPING = {
     "id": ArticleFields.NEWS_ID,
     "title": ArticleFields.TITLE,
     "url": ArticleFields.URL,
+    # content 和 markdown 都映射到 content_markdown（兼容不同爬虫输出格式）
     "content": ArticleFields.CONTENT_MARKDOWN,
+    "markdown": ArticleFields.CONTENT_MARKDOWN,
     # 可选字段
     "publish_date": ArticleFields.PUBLISH_DATE,
     "source": ArticleFields.SOURCE_SITE,

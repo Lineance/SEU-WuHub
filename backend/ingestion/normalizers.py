@@ -127,6 +127,63 @@ def strip_markdown_simple(md_content: str) -> str:
     return normalize_whitespace(text)
 
 
+def normalize_markdown(markdown: str) -> str:
+    """
+    规范化 markdown 格式，修复常见的格式错误
+
+    处理流程:
+    1. 修复 PDF 图标和链接相邻问题
+    2. 修复多余的星号
+    3. 修复换行：段落内单个换行转为硬换行（不干扰表格）
+
+    Args:
+        markdown: 原始 markdown 内容
+
+    Returns:
+        规范化后的 markdown 内容
+    """
+    if not markdown:
+        return markdown
+
+    # 修复 PDF 图标 + 链接相邻: ![](url)[name](link) → ![](url) [name](link)
+    markdown = re.sub(r'!\[\]([^\[]*)\[', r'![]\1 [', markdown)
+
+    # 修复多余星号: **8****月30日** → **8月30日**
+    while re.search(r'\*{4,}', markdown):
+        markdown = re.sub(r'\*{4,}', '**', markdown)
+
+    # 修复换行：段落内单个换行转为硬换行
+    # 使用状态机追踪是否在表格行内
+    lines = markdown.split('\n')
+    result_lines = []
+    in_table = False
+    prev_ended_with_text = False
+
+    for line in lines:
+        stripped = line.strip()
+        is_table_row = stripped.startswith('|') and not re.match(r'^[\s|:-]+$', stripped)
+
+        if is_table_row:
+            # 表格行保持原样
+            result_lines.append(line)
+            in_table = True
+        else:
+            if stripped.startswith('#') or stripped.startswith('- [') or stripped.startswith('```'):
+                # 标题、列表项、代码块保持原样
+                result_lines.append(line)
+                in_table = False
+            elif prev_ended_with_text and stripped and not stripped.startswith('|'):
+                # 上一行是非空文本，当前行非空且不是表格行 → 合并
+                result_lines[-1] = result_lines[-1].rstrip() + '  \n' + line
+            else:
+                result_lines.append(line)
+                in_table = False
+
+        prev_ended_with_text = bool(stripped) and not stripped.startswith('|')
+
+    return '\n'.join(result_lines)
+
+
 # =============================================================================
 # HTML 处理
 # =============================================================================

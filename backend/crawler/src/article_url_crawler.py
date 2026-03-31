@@ -223,6 +223,8 @@ class ArticleUrlCrawler:
                 publish_date = metadata.get("date", "")
 
             # Second pass: content-only with css_selector
+            # Note: markdown_generator is NOT passed here because crawl4ai doesn't use it
+            # when css_selector is set. We manually generate markdown from html instead.
             content_only_config = CrawlerRunConfig(
                 css_selector=css_selector,
                 page_timeout=getattr(run_config, "page_timeout", 30000),
@@ -233,6 +235,30 @@ class ArticleUrlCrawler:
 
             # Combine results - use title/date from first pass, content from second
             combined_result = result_content._results[0] if hasattr(result_content, "_results") else result_content
+
+            # Manually generate markdown from html using TablePreservingMarkdownGenerator
+            # This ensures rowspan/colspan tables are preserved as raw HTML
+            raw_html = getattr(combined_result, "html", "") or ""
+            md_generator = getattr(run_config, "markdown_generator", None)
+            generated_markdown = ""
+            if raw_html and md_generator:
+                try:
+                    # Extract content using css_selector from raw_html
+                    from bs4 import BeautifulSoup
+                    soup = BeautifulSoup(raw_html, "html.parser")
+                    selected = soup.select_one(css_selector)
+                    if selected:
+                        content_html = str(selected)
+                    else:
+                        content_html = raw_html
+
+                    # Generate markdown using our custom generator
+                    generated_markdown = md_generator.generate(content_html)
+                    if hasattr(generated_markdown, 'markdown'):
+                        generated_markdown = generated_markdown.markdown
+                except Exception as e:
+                    self.logger.warning(f"Failed to generate markdown: {e}")
+
             if hasattr(combined_result, "html") and full_html:
                 # Put the full HTML back so _format_result can use it
                 combined_result.html = full_html
@@ -241,7 +267,14 @@ class ArticleUrlCrawler:
                 combined_result._pre_extracted_title = title
                 combined_result._pre_extracted_date = publish_date
 
-            return self._format_result(combined_result)
+            # Get formatted result from _format_result
+            formatted = self._format_result(combined_result)
+
+            # Override markdown with our generated markdown if available
+            if generated_markdown:
+                formatted["markdown"] = generated_markdown
+
+            return formatted
         else:
             # Single pass without css_selector
             res = await crawler.arun(url=url, config=run_config)
