@@ -59,8 +59,8 @@ class TablePreservingMarkdownGenerator(DefaultMarkdownGenerator):
         if not clean_table:
             return str(table)
 
-        # 只保留这些属性
-        allowed_attrs = {"rowspan", "colspan", "valign", "align", "href", "src", "alt", "title"}
+        # 只保留这些属性（注意：不保留 valign 因为 React 不识别 vAlign）
+        allowed_attrs = {"rowspan", "colspan", "align", "href", "src", "alt", "title"}
 
         # 要删除的图标图片
         icon_patterns = ("icon_pdf.gif", "icon_xls.gif", "icon_doc.gif")
