@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { Loader2, AlertCircle, ArrowLeft, ExternalLink, Calendar, Tag, Star, Copy, Share2, Check, X, Download, FileText, QRCode, Maximize2, Minimize2 } from "lucide-react"
+import { Loader2, AlertCircle, ArrowLeft, ExternalLink, Calendar, Tag, Star, Copy, Share2, Check, X, Download, FileText, QrCode, Maximize2, Minimize2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -13,6 +13,7 @@ import { PdfViewer, extractPdfUrls } from "@/components/pdf-viewer"
 import { QRCodeSVG } from "qrcode.react"
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import rehypeRaw from 'rehype-raw'
 import { useReadingMode } from "@/components/reading-mode-provider"
 
 export default function ArticleDetailPage() {
@@ -164,7 +165,7 @@ export default function ArticleDetailPage() {
                 onClick={() => setShowQrCode(true)}
                 className="shrink-0"
               >
-                <QRCode className="h-5 w-5" />
+                <QrCode className="h-5 w-5" />
               </Button>
               <Button
                 variant="outline"
@@ -219,6 +220,7 @@ export default function ArticleDetailPage() {
             {article.content_md ? (
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeRaw]}
                 components={{
                   img: ({ src, alt }) => {
                     // src可能是string或Blob
