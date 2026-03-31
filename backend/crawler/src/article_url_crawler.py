@@ -253,7 +253,7 @@ class ArticleUrlCrawler:
                         content_html = raw_html
 
                     # Generate markdown using our custom generator
-                    generated_markdown = md_generator.generate(content_html)
+                    generated_markdown = md_generator.generate(content_html, source_url=url)
                     if hasattr(generated_markdown, 'markdown'):
                         generated_markdown = generated_markdown.markdown
                 except Exception as e:

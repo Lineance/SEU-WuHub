@@ -223,17 +223,8 @@ export default function ArticleDetailPage() {
                 rehypePlugins={[rehypeRaw]}
                 components={{
                   img: ({ src, alt }) => {
-                    // src可能是string或Blob
                     const imageSrc = typeof src === 'string' ? src : ""
-                    // 转换相对URL为绝对URL
-                    let finalSrc = imageSrc || ""
-                    if (finalSrc && !finalSrc.startsWith("http") && !finalSrc.startsWith("//")) {
-                      // 教务处图片
-                      if (finalSrc.startsWith("/_upload/")) {
-                        finalSrc = `https://jwc.seu.edu.cn${finalSrc}`
-                      }
-                    }
-                    return <img src={finalSrc} alt={typeof alt === 'string' ? alt : ""} className="max-w-full h-auto" />
+                    return <img src={imageSrc} alt={typeof alt === 'string' ? alt : ""} className="max-w-full h-auto" />
                   },
                   a: ({ href, children }) => {
                     // href可能是string或Blob

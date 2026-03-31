@@ -19,14 +19,21 @@ class TablePreservingMarkdownGenerator(DefaultMarkdownGenerator):
     表格内容会清理多余的 style、class 等属性。
     """
 
-    def generate(self, html: str, **kwargs) -> str:
+    def generate(self, html: str, source_url: str = "", **kwargs) -> str:
         """
         生成 Markdown，若 HTML 中表格包含 rowspan 或 colspan：
         - 表格部分保留为清理后的 HTML
         - 其余内容转换为 Markdown
+
+        Args:
+            html: HTML 内容
+            source_url: 源页面 URL，用于提取图片的 base URL
         """
         if not html:
             return ""
+
+        # 从 source_url 提取 base URL
+        base_url = self._extract_base_url(source_url) if source_url else ""
 
         soup = BeautifulSoup(html, "html.parser")
 
@@ -37,11 +44,43 @@ class TablePreservingMarkdownGenerator(DefaultMarkdownGenerator):
             # 没有复杂表格，使用默认行为
             result = self.generate_markdown(html, **kwargs)
             if hasattr(result, 'markdown'):
-                return result.markdown
-            return str(result)
+                markdown = result.markdown
+            else:
+                markdown = str(result)
+            # 转换相对图片 URL 为绝对 URL
+            return self._convert_image_urls(markdown, base_url)
 
         # 有复杂表格，需要混合处理
-        return self._process_with_complex_tables(soup, **kwargs)
+        return self._process_with_complex_tables(soup, base_url=base_url, **kwargs)
+
+    def _extract_base_url(self, url: str) -> str:
+        """从 URL 中提取 base URL (protocol + host)。"""
+        if not url:
+            return ""
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(url)
+            return f"{parsed.scheme}://{parsed.netloc}"
+        except Exception:
+            return ""
+
+    def _convert_image_urls(self, markdown: str, base_url: str = "") -> str:
+        """将 markdown 中的相对图片 URL 转换为绝对 URL。"""
+        if not markdown:
+            return markdown
+
+        # 匹配 ![...](path) 或 ![](path) 格式的图片
+        def replace_image_url(match):
+            alt_text = match.group(1) if match.group(1) else ""
+            path = match.group(2)
+            # 如果是相对路径且是上传目录，转换为绝对路径
+            if path.startswith("/_upload/") and base_url:
+                return f'![{alt_text}]({base_url}{path})'
+            return match.group(0)
+
+        # 替换图片 URL
+        pattern = r'!\[([^\]]*)\]\(([^)]+)\)'
+        return re.sub(pattern, replace_image_url, markdown)
 
     def _find_complex_tables(self, soup: BeautifulSoup) -> list:
         """找出所有包含 rowspan 或 colspan 的表格。"""
@@ -85,7 +124,7 @@ class TablePreservingMarkdownGenerator(DefaultMarkdownGenerator):
 
         return str(clean_table)
 
-    def _process_with_complex_tables(self, soup: BeautifulSoup, **kwargs) -> str:
+    def _process_with_complex_tables(self, soup: BeautifulSoup, base_url: str = "", **kwargs) -> str:
         """
         处理包含复杂表格的 HTML：
         1. 用占位符替换复杂表格
@@ -121,7 +160,8 @@ class TablePreservingMarkdownGenerator(DefaultMarkdownGenerator):
         for placeholder, cleaned_html in table_replacements:
             markdown = markdown.replace(placeholder, cleaned_html)
 
-        return markdown
+        # 转换相对图片 URL 为绝对 URL
+        return self._convert_image_urls(markdown, base_url)
 
 
 def normalize_cache_mode(value: Any, logger: logging.Logger) -> Any:
