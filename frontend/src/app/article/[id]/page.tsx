@@ -218,14 +218,14 @@ export default function ArticleDetailPage() {
         </header>
 
         <Card>
-          <CardContent className="prose prose-slate dark:prose-invert max-w-none">
+          <CardContent className="prose prose-slate dark:prose-invert max-w-none prose-p:mb-6 prose-p:leading-relaxed">
             {article.content_md ? (
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 rehypePlugins={[rehypeRaw]}
                 components={{
                   p: ({ children }) => (
-                    <p className="mb-4 leading-relaxed">{children}</p>
+                    <p className="mb-6 leading-relaxed">{children}</p>
                   ),
                   img: ({ src, alt }) => {
                     const imageSrc = typeof src === 'string' ? src : ""
