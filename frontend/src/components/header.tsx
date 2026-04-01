@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useRef, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Search, Bot, Star, Settings, Loader2 } from "lucide-react"
+import { Search, Bot, Star, Settings, Loader2, Newspaper } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { DatePicker } from "@/components/date-picker"
@@ -99,8 +99,8 @@ function HeaderSearchContent() {
 
   return (
     <div className="flex flex-1 items-center justify-center px-4">
-      <div className="relative w-full max-w-md">
-        <div ref={searchContainerRef}>
+      <div className="relative w-full max-w-md flex items-center gap-2">
+        <div ref={searchContainerRef} className="flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground z-10" />
           <Input
             type="search"
@@ -112,6 +112,16 @@ function HeaderSearchContent() {
             className="h-9 w-full rounded-full border-border bg-secondary pl-9 pr-4 text-sm placeholder:text-muted-foreground focus-visible:ring-primary"
           />
         </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="rounded-full shrink-0"
+          onClick={() => router.push('/search?time=today')}
+          title="查看今日文章"
+        >
+          <Newspaper className="h-4 w-4" />
+          <span className="sr-only">今日文章</span>
+        </Button>
 
         {isSearchExpanded && (
           <div
@@ -242,6 +252,7 @@ export function Header({ onAIToggle }: HeaderProps) {
           size="icon"
           className="rounded-full"
           onClick={handleFavoritesClick}
+          title="收藏夹"
         >
           <Star className="h-5 w-5" />
           <span className="sr-only">收藏夹</span>
@@ -252,6 +263,7 @@ export function Header({ onAIToggle }: HeaderProps) {
           size="icon"
           className="rounded-full"
           onClick={onAIToggle}
+          title="SEU Agent"
         >
           <Bot className="h-5 w-5" />
           <span className="sr-only">AI 助手</span>
@@ -262,6 +274,7 @@ export function Header({ onAIToggle }: HeaderProps) {
           size="icon"
           className="rounded-full"
           onClick={handleSettingsClick}
+          title="设置"
         >
           <Settings className="h-5 w-5" />
           <span className="sr-only">设置</span>

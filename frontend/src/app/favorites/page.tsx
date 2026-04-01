@@ -121,6 +121,7 @@ export default function FavoritesPage() {
                   handleRemoveFavorite(article.id)
                 }}
                 className="absolute top-2 right-2 h-8 w-8 rounded-full bg-destructive/10 hover:bg-destructive/20 text-destructive opacity-0 transition-opacity group-hover:opacity-100"
+                title="删除"
               >
                 <Trash2 className="h-4 w-4" />
               </Button>

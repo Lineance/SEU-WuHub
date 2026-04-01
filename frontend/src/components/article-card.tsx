@@ -43,6 +43,7 @@ export function ArticleCard({ id, title, summary, time, source, tags }: ArticleC
               toggleFavorite(article)
               setFavorited(isFavorite(String(id)))
             }}
+            title="收藏"
           >
             <Star className={`h-4 w-4 ${favorited ? 'fill-current text-yellow-500' : ''}`} />
           </Button>

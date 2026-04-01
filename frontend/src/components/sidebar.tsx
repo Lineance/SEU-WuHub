@@ -124,6 +124,7 @@ export function Sidebar({ isCollapsed = false, onToggleCollapse }: SidebarProps)
           size="icon"
           onClick={onToggleCollapse}
           className="shrink-0"
+          title={isCollapsed ? "展开侧边栏" : "折叠侧边栏"}
         >
           {isCollapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
         </Button>
