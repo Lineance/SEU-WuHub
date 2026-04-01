@@ -149,15 +149,20 @@ def normalize_markdown(markdown: str) -> str:
     # 使用 [^\[\n]* 避免跨行匹配
     markdown = re.sub(r'!\[\]([^\[\n]*)\[', r'![]\1 [', markdown)
 
-    # 修复多余星号: **8****月30日** → **8月30日**
-    while re.search(r'\*{4,}', markdown):
-        markdown = re.sub(r'\*{4,}', '**', markdown)
-
-    # 删除连续的四个星号
-    markdown = re.sub(r'\*{4,}', '', markdown)
+    # 删除多余的连续星号: **8****月30日** → **8月30日**
+    # 第一步：删除不在 ** 包围中的 ****
+    markdown = re.sub(r'(?<!\*)\*{4,}(?!\*)', '', markdown)
+    # 第二步：处理剩余的多个星号
+    markdown = re.sub(r'\*{4,}', '**', markdown)
 
     # 删除连续的四个竖线（带空格）
     markdown = re.sub(r'(\|\s*){4,}', '', markdown)
+
+    # 删除 | | | | 后紧跟的 |--- 分隔线
+    markdown = re.sub(r'\|-{3,}', '', markdown)
+
+    # 删除单独一行的 --- 分隔线
+    markdown = re.sub(r'^-\s*-\s*-.*$', '', markdown, flags=re.MULTILINE)
 
     # 修复换行：段落内单个换行转为硬换行
     # 使用状态机追踪是否在表格行内
