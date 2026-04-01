@@ -2,11 +2,12 @@
 
 import { Suspense, useState, useRef, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Search, Bot, Star, Settings, Loader2, Newspaper } from "lucide-react"
+import { Search, Bot, Star, Settings, Loader2, Newspaper, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { DatePicker } from "@/components/date-picker"
 import Image from "next/image"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 interface HeaderProps {
   onAIToggle: () => void
@@ -19,6 +20,7 @@ function HeaderSearchContent() {
   const router = useRouter()
   const searchContainerRef = useRef<HTMLDivElement>(null)
   const filterPanelRef = useRef<HTMLDivElement>(null)
+  const isMobile = useIsMobile()
 
   const updateSearchParam = (key: string, value: string | null) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -100,18 +102,62 @@ function HeaderSearchContent() {
   return (
     <div className="flex flex-1 items-center justify-center px-4">
       <div className="relative w-full max-w-md flex items-center gap-2">
-        <div ref={searchContainerRef} className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground z-10" />
-          <Input
-            type="search"
-            placeholder="搜索文章、通知、资源..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={handleSearch}
-            onFocus={() => setIsSearchExpanded(true)}
-            className="h-9 w-full rounded-full border-border bg-secondary pl-9 pr-4 text-sm placeholder:text-muted-foreground focus-visible:ring-primary"
-          />
-        </div>
+        {isMobile ? (
+          <div ref={searchContainerRef} className="relative flex-1">
+            <div className="relative flex items-center">
+              {!isSearchExpanded && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsSearchExpanded(true)}
+                  className="absolute right-0 z-20"
+                >
+                  <Search className="h-5 w-5" />
+                </Button>
+              )}
+              <div 
+                className={`relative transition-all duration-300 ${isSearchExpanded ? 'w-full' : 'w-0'}`}
+              >
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground z-10" />
+                <Input
+                  type="search"
+                  placeholder="搜索..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={handleSearch}
+                  onFocus={() => setIsSearchExpanded(true)}
+                  className="h-9 w-full rounded-full border-border bg-secondary pl-9 pr-4 text-sm placeholder:text-muted-foreground focus-visible:ring-primary"
+                />
+                {isSearchExpanded && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      setIsSearchExpanded(false)
+                      setSearchQuery('')
+                    }}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 z-10"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div ref={searchContainerRef} className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground z-10" />
+            <Input
+              type="search"
+              placeholder="搜索文章、通知、资源..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleSearch}
+              onFocus={() => setIsSearchExpanded(true)}
+              className="h-9 w-full rounded-full border-border bg-secondary pl-9 pr-4 text-sm placeholder:text-muted-foreground focus-visible:ring-primary"
+            />
+          </div>
+        )}
         <Button
           variant="ghost"
           size="icon"
@@ -206,8 +252,8 @@ function HeaderSearchFallback() {
 }
 
 export function Header({ onAIToggle }: HeaderProps) {
-  const [logoError, setLogoError] = useState(false)
-  const router = useRouter()
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false)
+  const isMobile = useIsMobile()
 
   const handleSettingsClick = () => {
     router.push('/settings')

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ChevronRight, BookOpen, Compass, Bell, Link2, FileText, GraduationCap, Lightbulb, Trophy, Home, HelpCircle, Building, Users, Globe, Loader2, AlertCircle, PanelLeftClose, PanelLeftOpen } from "lucide-react"
+import { ChevronRight, BookOpen, Compass, Bell, Link2, FileText, GraduationCap, Lightbulb, Trophy, Home, HelpCircle, Building, Users, Globe, Loader2, AlertCircle, PanelLeftClose, PanelLeftOpen, Bot, Settings, Star } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { api } from "@/lib/api"
 import { Button } from "@/components/ui/button"
@@ -28,9 +28,10 @@ interface NavItemComponentProps {
   item: Category
   level?: number
   isCollapsed?: boolean
+  onActionClick?: () => void
 }
 
-function NavItemComponent({ item, level = 0, isCollapsed = false }: NavItemComponentProps) {
+function NavItemComponent({ item, level = 0, isCollapsed = false, onActionClick }: NavItemComponentProps) {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(level === 0 && item.children && item.children.length > 0 ? true : false)
   const hasChildren = item.children && item.children.length > 0
@@ -40,6 +41,7 @@ function NavItemComponent({ item, level = 0, isCollapsed = false }: NavItemCompo
       setIsOpen(!isOpen)
     } else if (item.id) {
       router.push(`/category/${item.id}`)
+      onActionClick?.()
     }
   }
 
@@ -85,12 +87,16 @@ function NavItemComponent({ item, level = 0, isCollapsed = false }: NavItemCompo
 interface SidebarProps {
   isCollapsed?: boolean
   onToggleCollapse?: () => void
+  isMobile?: boolean
+  onActionClick?: () => void
+  onAgentClick?: () => void
 }
 
-export function Sidebar({ isCollapsed = false, onToggleCollapse }: SidebarProps) {
+export function Sidebar({ isCollapsed = false, onToggleCollapse, isMobile = false, onActionClick, onAgentClick }: SidebarProps) {
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const router = useRouter()
 
   useEffect(() => {
     async function loadCategories() {
@@ -110,24 +116,42 @@ export function Sidebar({ isCollapsed = false, onToggleCollapse }: SidebarProps)
     loadCategories()
   }, [])
 
+  const handleAgentClick = () => {
+    onAgentClick?.()
+    onActionClick?.()
+  }
+
+  const handleFavoritesClick = () => {
+    router.push('/favorites')
+    onActionClick?.()
+  }
+
+  const handleSettingsClick = () => {
+    router.push('/settings')
+    onActionClick?.()
+  }
+
   return (
     <aside
       className={cn(
-        "sticky top-14 shrink-0 overflow-y-auto border-r border-sidebar-border bg-sidebar p-4 transition-all duration-300",
+        "shrink-0 border-r border-sidebar-border bg-sidebar p-4 transition-all duration-300",
+        isMobile ? "h-full" : "sticky top-14 overflow-y-auto",
         isCollapsed ? "w-16" : "w-64"
       )}
     >
       <div className="mb-4 flex items-center justify-between">
         <span className={cn("text-lg font-semibold text-foreground", isCollapsed && "hidden")}>导航</span>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onToggleCollapse}
-          className="shrink-0"
-          title={isCollapsed ? "展开侧边栏" : "折叠侧边栏"}
-        >
-          {isCollapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
-        </Button>
+        {!isMobile && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onToggleCollapse}
+            className="shrink-0"
+            title={isCollapsed ? "展开侧边栏" : "折叠侧边栏"}
+          >
+            {isCollapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
+          </Button>
+        )}
       </div>
       {loading && (
         <div className="flex items-center justify-center py-8">
@@ -149,16 +173,56 @@ export function Sidebar({ isCollapsed = false, onToggleCollapse }: SidebarProps)
         </div>
       )}
 
-      {!loading && !error && categories.length > 0 && (
-        <nav className="space-y-1">
-          {categories.map((item) => (
-            <NavItemComponent
-              key={item.id}
-              item={item}
-              isCollapsed={isCollapsed}
-            />
-          ))}
-        </nav>
+      <div className={cn(
+        "space-y-1",
+        isMobile && "pb-20"
+      )}>
+        {!loading && !error && categories.length > 0 && (
+          <nav className="space-y-1">
+            {categories.map((item) => (
+              <NavItemComponent
+                key={item.id}
+                item={item}
+                isCollapsed={isCollapsed}
+                onActionClick={onActionClick}
+              />
+            ))}
+          </nav>
+        )}
+      </div>
+
+      {isMobile && (
+        <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-sidebar p-4">
+          <div className="flex justify-around gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="flex flex-col items-center gap-1"
+              onClick={handleAgentClick}
+            >
+              <Bot className="h-5 w-5" />
+              <span className="text-xs">Agent</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="flex flex-col items-center gap-1"
+              onClick={handleFavoritesClick}
+            >
+              <Star className="h-5 w-5" />
+              <span className="text-xs">收藏</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="flex flex-col items-center gap-1"
+              onClick={handleSettingsClick}
+            >
+              <Settings className="h-5 w-5" />
+              <span className="text-xs">设置</span>
+            </Button>
+          </div>
+        </div>
       )}
     </aside>
   )

@@ -23,6 +23,11 @@ export function AppShell({ children }: AppShellProps) {
   const { isReadingMode } = useReadingMode()
   const isMobile = useIsMobile()
 
+  const handleAgentClick = () => {
+    setIsMobileMenuOpen(false)
+    setIsAIOpen(true)
+  }
+
   return (
     <div className="flex h-screen flex-col bg-background">
       <Header onAIToggle={() => setIsAIOpen(!isAIOpen)} />
@@ -58,6 +63,9 @@ export function AppShell({ children }: AppShellProps) {
               <Sidebar
                 isCollapsed={false}
                 onToggleCollapse={() => {}}
+                isMobile
+                onActionClick={() => setIsMobileMenuOpen(false)}
+                onAgentClick={handleAgentClick}
               />
             </SheetContent>
           </Sheet>
