@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { api } from "@/lib/api"
 import { isFavorite, toggleFavorite } from "@/lib/favorites"
 import type { ArticleDetail, Resource, Attachment } from "@/lib/types"
-import { PdfViewer, extractPdfUrls } from "@/components/pdf-viewer"
+import { extractPdfUrls } from "@/components/pdf-viewer"
 import { QRCodeSVG } from "qrcode.react"
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -240,13 +240,11 @@ export default function ArticleDetailPage() {
                           ? `https://jwc.seu.edu.cn${hrefStr}`
                           : hrefStr
                       return (
-                        <PdfViewer pdfUrl={fullUrl} pdfName={pdfName}>
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100 cursor-pointer text-sm">
-                            <FileText className="h-4 w-4" />
-                            {pdfName}
-                            <span className="text-xs opacity-70">(PDF)</span>
-                          </span>
-                        </PdfViewer>
+                        <a href={fullUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100 cursor-pointer text-sm">
+                          <FileText className="h-4 w-4" />
+                          {pdfName}
+                          <span className="text-xs opacity-70">(PDF)</span>
+                        </a>
                       )
                     }
                     // 普通链接
@@ -293,7 +291,7 @@ export default function ArticleDetailPage() {
             </h2>
             <div className="grid gap-3 md:grid-cols-2">
               {pdfUrls.map((pdf, index) => (
-                <PdfViewer key={index} pdfUrl={pdf.url} pdfName={pdf.name}>
+                <a key={index} href={pdf.url} target="_blank" rel="noopener noreferrer" className="block">
                   <Card className="group cursor-pointer transition-all hover:shadow-md">
                     <CardContent className="flex items-center gap-3 p-4">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600">
@@ -309,7 +307,7 @@ export default function ArticleDetailPage() {
                       </div>
                     </CardContent>
                   </Card>
-                </PdfViewer>
+                </a>
               ))}
             </div>
           </div>
@@ -356,7 +354,7 @@ export default function ArticleDetailPage() {
                       ? `https://jwc.seu.edu.cn${url}`
                       : url
                   return (
-                    <PdfViewer key={index} pdfUrl={fullUrl} pdfName={name}>
+                    <a key={index} href={fullUrl} target="_blank" rel="noopener noreferrer" className="block">
                       <Card className="group cursor-pointer transition-all hover:shadow-md">
                         <CardContent className="flex items-center gap-3 p-4">
                           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600">
@@ -372,7 +370,7 @@ export default function ArticleDetailPage() {
                           </div>
                         </CardContent>
                       </Card>
-                    </PdfViewer>
+                    </a>
                   )
                 })}
               </div>
