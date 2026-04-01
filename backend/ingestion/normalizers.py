@@ -158,11 +158,19 @@ def normalize_markdown(markdown: str) -> str:
     # 删除连续的四个竖线（带空格）
     markdown = re.sub(r'(\|\s*){4,}', '', markdown)
 
-    # 删除 | | | | 后紧跟的 |--- 分隔线
-    markdown = re.sub(r'\|-{3,}', '', markdown)
+    # 修复表格分隔行：确保首尾有 |（在删除standalone ---之前运行）
+    # 只匹配包含 - 和 | 的分隔行
+    def fix_separator(match):
+        content = match.group(0)
+        if not content.startswith('|'):
+            content = '|' + content
+        if not content.rstrip().endswith('|'):
+            content = content.rstrip() + '|'
+        return content
+    markdown = re.sub(r'^(?=.*\|)(?=.*-)[^\n]+$', fix_separator, markdown, flags=re.MULTILINE)
 
-    # 删除单独一行的 --- 分隔线
-    markdown = re.sub(r'^-\s*-\s*-.*$', '', markdown, flags=re.MULTILINE)
+    # 删除单独一行的 --- 分隔线（不包含 | 的）
+    markdown = re.sub(r'^(?!.*\|.*$)[-:\s]+$', '', markdown, flags=re.MULTILINE)
 
     # 修复换行：段落内单个换行转为硬换行
     # 使用状态机追踪是否在表格行内
