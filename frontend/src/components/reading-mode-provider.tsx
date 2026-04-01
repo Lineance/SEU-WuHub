@@ -5,6 +5,7 @@ import { createContext, useContext, useState, ReactNode } from "react"
 interface ReadingModeContextType {
   isReadingMode: boolean
   toggleReadingMode: () => void
+  setIsReadingMode: (value: boolean) => void
 }
 
 const ReadingModeContext = createContext<ReadingModeContextType | undefined>(undefined)
@@ -17,7 +18,7 @@ export function ReadingModeProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <ReadingModeContext.Provider value={{ isReadingMode, toggleReadingMode }}>
+    <ReadingModeContext.Provider value={{ isReadingMode, toggleReadingMode, setIsReadingMode }}>
       {children}
     </ReadingModeContext.Provider>
   )

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { Loader2, AlertCircle, ArrowLeft, ExternalLink, Calendar, Tag, Star, Copy, Share2, Check, X, Download, FileText, QrCode, Maximize2, Minimize2 } from "lucide-react"
+import { Loader2, AlertCircle, ArrowLeft, ExternalLink, Calendar, Tag, Star, Copy, Share2, Check, X, Download, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -10,7 +10,6 @@ import { api } from "@/lib/api"
 import { isFavorite, toggleFavorite } from "@/lib/favorites"
 import type { ArticleDetail, Resource, Attachment } from "@/lib/types"
 import { extractPdfUrls } from "@/components/pdf-viewer"
-import { QRCodeSVG } from "qrcode.react"
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
@@ -20,14 +19,13 @@ export default function ArticleDetailPage() {
   const params = useParams()
   const router = useRouter()
   const articleId = params.id as string
-  const { isReadingMode, toggleReadingMode } = useReadingMode()
+  const { isReadingMode, toggleReadingMode, setIsReadingMode } = useReadingMode()
 
   const [article, setArticle] = useState<ArticleDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isFav, setIsFav] = useState(false)
   const [copied, setCopied] = useState(false)
-  const [showQrCode, setShowQrCode] = useState(false)
   const [pdfUrls, setPdfUrls] = useState<Array<{ url: string; name: string }>>([])
 
   useEffect(() => {
@@ -53,6 +51,12 @@ export default function ArticleDetailPage() {
 
     loadArticle()
   }, [articleId])
+
+  useEffect(() => {
+    return () => {
+      setIsReadingMode(false)
+    }
+  }, [setIsReadingMode])
 
   const handleToggleFavorite = () => {
     if (!article) return
@@ -164,29 +168,24 @@ export default function ArticleDetailPage() {
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => setShowQrCode(true)}
-                className="shrink-0"
-              >
-                <QrCode className="h-5 w-5" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
                 onClick={handleCopyLink}
                 className="shrink-0"
                 title="复制网址"
               >
                 {copied ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
               </Button>
-              <Button
-                variant={isReadingMode ? "default" : "outline"}
-                size="icon"
-                onClick={toggleReadingMode}
-                className="shrink-0"
-              >
-                {isReadingMode ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
-              </Button>
             </div>
+          </div>
+
+          <div className="mb-4">
+            <Button
+              variant="default"
+              onClick={toggleReadingMode}
+              className="px-6 py-2 font-semibold"
+              title={isReadingMode ? "退出全屏" : "全屏模式"}
+            >
+              {isReadingMode ? "退出全屏" : "全屏模式"}
+            </Button>
           </div>
 
           <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
@@ -243,9 +242,10 @@ export default function ArticleDetailPage() {
                           ? `https://jwc.seu.edu.cn${hrefStr}`
                           : hrefStr
                       return (
-                        <a href={fullUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2 py-1 rounded bg-muted text-muted-foreground hover:bg-muted/80 dark:hover:bg-muted/60 cursor-pointer text-sm">
+                        <a href={fullUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100 cursor-pointer text-sm">
                           <FileText className="h-4 w-4" />
                           {pdfName}
+                          <span className="text-xs opacity-70">(PDF)</span>
                         </a>
                       )
                     }
@@ -296,7 +296,7 @@ export default function ArticleDetailPage() {
                 <a key={index} href={pdf.url} target="_blank" rel="noopener noreferrer" className="block no-underline">
                   <Card className="group cursor-pointer transition-all hover:shadow-md">
                     <CardContent className="flex items-center gap-3 p-4">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground dark:bg-muted dark:text-muted-foreground">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600">
                         <FileText className="h-5 w-5" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -359,7 +359,7 @@ export default function ArticleDetailPage() {
                     <a key={index} href={fullUrl} target="_blank" rel="noopener noreferrer" className="block no-underline">
                       <Card className="group cursor-pointer transition-all hover:shadow-md">
                         <CardContent className="flex items-center gap-3 p-4">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground dark:bg-muted dark:text-muted-foreground">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600">
                             <FileText className="h-5 w-5" />
                           </div>
                           <div className="flex-1 min-w-0">
@@ -380,36 +380,6 @@ export default function ArticleDetailPage() {
           </div>
         )}
       </article>
-
-      {showQrCode && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <Card className="w-full max-w-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-              <CardTitle className="text-lg">二维码</CardTitle>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowQrCode(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center space-y-4">
-              <div className="rounded-lg bg-white p-4">
-                <QRCodeSVG
-                  value={window.location.href}
-                  size={200}
-                  level="M"
-                  includeMargin={false}
-                />
-              </div>
-              <p className="text-center text-sm text-muted-foreground">
-                扫描二维码查看文章
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
     </div>
   )
 }
