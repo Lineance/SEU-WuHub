@@ -188,19 +188,6 @@ export default function ArticleDetailPage() {
               </Button>
             </div>
           </div>
-<<<<<<< HEAD
-=======
-          <div className="mb-4">
-            <Button
-              variant="default"
-              onClick={toggleReadingMode}
-              className="px-6 py-2 font-semibold"
-              title={isReadingMode ? "退出全屏" : "全屏模式"}
-            >
-              {isReadingMode ? "退出全屏" : "全屏模式"}
-            </Button>
-          </div>
->>>>>>> c65fe38 (add a 'news' button and hovering tips to all buttons)
 
           <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
