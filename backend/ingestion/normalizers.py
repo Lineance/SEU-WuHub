@@ -199,8 +199,9 @@ def normalize_markdown(markdown: str) -> str:
                 result_lines.append(line)
                 in_table = False
             elif prev_ended_with_text and stripped and not stripped.startswith('|'):
-                # 上一行是非空文本，当前行非空且不是表格行 → 合并
-                result_lines[-1] = result_lines[-1].rstrip() + '  \n' + line
+                # 上一行是非空文本，当前行非空且不是表格行 → 添加空行分隔
+                result_lines.append('')
+                result_lines.append(line)
                 in_table = False
             else:
                 result_lines.append(line)

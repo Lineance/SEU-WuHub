@@ -187,7 +187,7 @@ export default function ArticleDetailPage() {
         </header>
 
         <Card>
-          <CardContent className="prose prose-slate dark:prose-invert max-w-none">
+          <CardContent className="prose prose-slate dark:prose-invert max-w-none prose-p:mb-6 prose-p:leading-relaxed">
             {article.content_md ? (
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
@@ -200,21 +200,36 @@ export default function ArticleDetailPage() {
                   a: ({ href, children }) => {
                     // href可能是string或Blob
                     const hrefStr = typeof href === 'string' ? href : ''
-                    // 检测PDF链接
-                    if (hrefStr && hrefStr.toLowerCase().endsWith('.pdf')) {
-                      // 使用 [] 中的内容作为 PDF 名称
-                      const pdfName = Array.isArray(children)
+                    // 文件类型配置
+                    const fileTypes: Record<string, { extensions: string[], icon: typeof FileText, label: string }> = {
+                      pdf: { extensions: ['.pdf'], icon: FileText, label: 'PDF' },
+                      excel: { extensions: ['.xls', '.xlsx'], icon: FileSpreadsheet, label: 'Excel' },
+                      word: { extensions: ['.doc', '.docx'], icon: FileText, label: 'Word' },
+                      archive: { extensions: ['.rar', '.zip', '.7z'], icon: FileArchive, label: '压缩包' },
+                    }
+                    // 检测文件类型
+                    let fileType: string | null = null
+                    for (const [key, config] of Object.entries(fileTypes)) {
+                      if (config.extensions.some(ext => hrefStr.toLowerCase().endsWith(ext))) {
+                        fileType = key
+                        break
+                      }
+                    }
+                    if (hrefStr && fileType) {
+                      const config = fileTypes[fileType]
+                      const Icon = config.icon
+                      // 使用 [] 中的内容作为名称
+                      const fileName = Array.isArray(children)
                         ? children.filter(c => typeof c === 'string').join('')
-                        : (typeof children === 'string' ? children : "PDF文档")
+                        : (typeof children === 'string' ? children : config.label)
                       const fullUrl = hrefStr.startsWith("http") ? hrefStr
                         : hrefStr.startsWith("/_upload/")
                           ? `https://jwc.seu.edu.cn${hrefStr}`
                           : hrefStr
                       return (
-                        <a href={fullUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100 cursor-pointer text-sm">
-                          <FileText className="h-4 w-4" />
-                          {pdfName}
-                          <span className="text-xs opacity-70">(PDF)</span>
+                        <a href={fullUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2 py-1 rounded bg-muted text-muted-foreground hover:bg-muted/80 dark:hover:bg-muted/60 cursor-pointer text-sm">
+                          <Icon className="h-4 w-4" />
+                          {fileName}
                         </a>
                       )
                     }
@@ -262,10 +277,10 @@ export default function ArticleDetailPage() {
             </h2>
             <div className="grid gap-3 md:grid-cols-2">
               {pdfUrls.map((pdf, index) => (
-                <a key={index} href={pdf.url} target="_blank" rel="noopener noreferrer" className="block no-underline">
+                <a key={index} href={pdf.url} target="_blank" rel="noopener noreferrer" className="block">
                   <Card className="group cursor-pointer transition-all hover:shadow-md">
                     <CardContent className="flex items-center gap-3 p-4">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground dark:bg-muted dark:text-muted-foreground">
                         <FileText className="h-5 w-5" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -325,10 +340,10 @@ export default function ArticleDetailPage() {
                       ? `https://jwc.seu.edu.cn${url}`
                       : url
                   return (
-                    <a key={index} href={fullUrl} target="_blank" rel="noopener noreferrer" className="block no-underline">
+                    <a key={index} href={fullUrl} target="_blank" rel="noopener noreferrer" className="block">
                       <Card className="group cursor-pointer transition-all hover:shadow-md">
                         <CardContent className="flex items-center gap-3 p-4">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground dark:bg-muted dark:text-muted-foreground">
                             <FileText className="h-5 w-5" />
                           </div>
                           <div className="flex-1 min-w-0">

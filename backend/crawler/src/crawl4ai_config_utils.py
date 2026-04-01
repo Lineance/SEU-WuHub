@@ -37,12 +37,15 @@ class TablePreservingMarkdownGenerator(DefaultMarkdownGenerator):
 
         soup = BeautifulSoup(html, "html.parser")
 
+        # 将 wp_pdf_player iframe 转换为 markdown 链接
+        self._convert_wp_pdf_iframe(soup, base_url)
+
         # 检查是否有复杂表格（包含 rowspan 或 colspan）
         complex_tables = self._find_complex_tables(soup)
 
         if not complex_tables:
             # 没有复杂表格，使用默认行为
-            result = self.generate_markdown(html, **kwargs)
+            result = self.generate_markdown(str(soup), **kwargs)
             if hasattr(result, 'markdown'):
                 markdown = result.markdown
             else:
@@ -81,6 +84,40 @@ class TablePreservingMarkdownGenerator(DefaultMarkdownGenerator):
         # 替换图片 URL
         pattern = r'!\[([^\]]*)\]\(([^)]+)\)'
         return re.sub(pattern, replace_image_url, markdown)
+
+    def _convert_wp_pdf_iframe(self, soup: BeautifulSoup, base_url: str = "") -> None:
+        """
+        将 wp_pdf_player iframe 转换为 markdown 链接。
+
+        格式: <iframe class="wp_pdf_player" src="/_js/.../viewer.html?file=/_upload/.../xxx.pdf">
+        """
+        iframes = soup.find_all("iframe")
+        for iframe in iframes:
+            # 检查 class 属性是否包含 wp_pdf_player
+            iframe_class = iframe.get("class", [])
+            if not any("wp_pdf_player" in c for c in iframe_class):
+                continue
+            src = iframe.get("src", "")
+            if "viewer.html" not in src:
+                continue
+            # 提取 file 参数中的 PDF URL
+            match = re.search(r'file=([^&"]+)', src)
+            if match:
+                pdf_url = match.group(1)
+                # URL 解码
+                from urllib.parse import unquote
+                pdf_url = unquote(pdf_url)
+                # 转换为绝对 URL
+                if pdf_url.startswith("/"):
+                    pdf_url = base_url + pdf_url
+                # 优先使用 title 属性作为链接文本
+                filename = iframe.get("title", "") or pdf_url.split("/")[-1].replace(".pdf", "")
+                if not filename:
+                    filename = "PDF文档"
+                # 替换为 markdown 链接
+                new_tag = soup.new_tag("a", href=pdf_url)
+                new_tag.string = filename
+                iframe.replace_with(new_tag)
 
     def _find_complex_tables(self, soup: BeautifulSoup) -> list:
         """找出所有包含 rowspan 或 colspan 的表格。"""
@@ -135,6 +172,9 @@ class TablePreservingMarkdownGenerator(DefaultMarkdownGenerator):
 
         # 准备一个副本用于处理
         work_soup = BeautifulSoup(str(soup), "html.parser")
+
+        # 将 wp_pdf_player iframe 转换为 markdown 链接
+        self._convert_wp_pdf_iframe(work_soup, base_url)
 
         # 用占位符替换复杂表格
         table_replacements = []
