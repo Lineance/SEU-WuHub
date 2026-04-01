@@ -240,7 +240,7 @@ export default function ArticleDetailPage() {
                           ? `https://jwc.seu.edu.cn${hrefStr}`
                           : hrefStr
                       return (
-                        <a href={fullUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100 cursor-pointer text-sm">
+                        <a href={fullUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-blue-600 hover:underline">
                           <FileText className="h-4 w-4" />
                           {pdfName}
                           <span className="text-xs opacity-70">(PDF)</span>
@@ -291,22 +291,10 @@ export default function ArticleDetailPage() {
             </h2>
             <div className="grid gap-3 md:grid-cols-2">
               {pdfUrls.map((pdf, index) => (
-                <a key={index} href={pdf.url} target="_blank" rel="noopener noreferrer" className="block">
-                  <Card className="group cursor-pointer transition-all hover:shadow-md">
-                    <CardContent className="flex items-center gap-3 p-4">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600">
-                        <FileText className="h-5 w-5" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="truncate text-sm font-medium text-foreground">
-                          {pdf.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          PDF文档
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
+                <a key={index} href={pdf.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 hover:underline">
+                  <FileText className="h-4 w-4" />
+                  <span className="truncate">{pdf.name}</span>
+                  <span className="text-xs opacity-70">(PDF)</span>
                 </a>
               ))}
             </div>
@@ -354,22 +342,10 @@ export default function ArticleDetailPage() {
                       ? `https://jwc.seu.edu.cn${url}`
                       : url
                   return (
-                    <a key={index} href={fullUrl} target="_blank" rel="noopener noreferrer" className="block">
-                      <Card className="group cursor-pointer transition-all hover:shadow-md">
-                        <CardContent className="flex items-center gap-3 p-4">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600">
-                            <FileText className="h-5 w-5" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="truncate text-sm font-medium text-foreground">
-                              {name}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              PDF文档
-                            </p>
-                          </div>
-                        </CardContent>
-                      </Card>
+                    <a key={index} href={fullUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 hover:underline">
+                      <FileText className="h-4 w-4" />
+                      <span className="truncate">{name}</span>
+                      <span className="text-xs opacity-70">(PDF)</span>
                     </a>
                   )
                 })}
