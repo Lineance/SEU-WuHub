@@ -240,7 +240,7 @@ export default function ArticleDetailPage() {
                           ? `https://jwc.seu.edu.cn${hrefStr}`
                           : hrefStr
                       return (
-                        <a href={fullUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline inline-flex items-center gap-1">
+                        <a href={fullUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2 py-1 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 cursor-pointer text-sm">
                           <FileText className="h-4 w-4" />
                           {pdfName}
                           <span className="text-xs opacity-70">(PDF)</span>
