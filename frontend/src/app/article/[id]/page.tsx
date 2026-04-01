@@ -293,7 +293,7 @@ export default function ArticleDetailPage() {
             </h2>
             <div className="grid gap-3 md:grid-cols-2">
               {pdfUrls.map((pdf, index) => (
-                <a key={index} href={pdf.url} target="_blank" rel="noopener noreferrer" className="block no-underline">
+                <a key={index} href={pdf.url} target="_blank" rel="noopener noreferrer" className="block">
                   <Card className="group cursor-pointer transition-all hover:shadow-md">
                     <CardContent className="flex items-center gap-3 p-4">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600">
@@ -356,7 +356,7 @@ export default function ArticleDetailPage() {
                       ? `https://jwc.seu.edu.cn${url}`
                       : url
                   return (
-                    <a key={index} href={fullUrl} target="_blank" rel="noopener noreferrer" className="block no-underline">
+                    <a key={index} href={fullUrl} target="_blank" rel="noopener noreferrer" className="block">
                       <Card className="group cursor-pointer transition-all hover:shadow-md">
                         <CardContent className="flex items-center gap-3 p-4">
                           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600">
