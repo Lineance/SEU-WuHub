@@ -10,6 +10,7 @@ import Image from "next/image"
 
 interface HeaderProps {
   onAIToggle: () => void
+  menuTrigger?: React.ReactNode
 }
 
 function HeaderSearchContent() {
@@ -205,7 +206,7 @@ function HeaderSearchFallback() {
   )
 }
 
-export function Header({ onAIToggle }: HeaderProps) {
+export function Header({ onAIToggle, menuTrigger }: HeaderProps) {
   const [logoError, setLogoError] = useState(false)
   const router = useRouter()
 
@@ -220,6 +221,7 @@ export function Header({ onAIToggle }: HeaderProps) {
   return (
     <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-card/95 px-4 shadow-sm backdrop-blur-sm">
       <div className="flex items-center gap-2">
+        {menuTrigger}
         <div
           className="relative flex h-8 w-8 cursor-pointer items-center justify-center overflow-hidden rounded-lg"
           onClick={() => router.push('/')}
