@@ -155,6 +155,12 @@ def normalize_markdown(markdown: str) -> str:
     # 第二步：处理剩余的多个星号
     markdown = re.sub(r'\*{4,}', '**', markdown)
 
+    # 修复表格表头中的粗体标记: **序号**| → 序号|
+    # 粗体标记直接跟着表格分隔符，导致表格解析失败
+    # 处理两种情况：末尾有|的和末尾没有|的
+    markdown = re.sub(r'\*\*([^*]+)\*\*(\|)', r'\1\2', markdown)
+    markdown = re.sub(r'\*\*([^*]+)\*\*(\s*$)', r'\1\2', markdown)
+
     # 删除连续的四个竖线（带空格）
     markdown = re.sub(r'(\|\s*){4,}', '', markdown)
 
