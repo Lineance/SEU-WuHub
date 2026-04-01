@@ -126,7 +126,9 @@
   }
   /* 表格单元格内容垂直居中 */
   table td,
-  table th {
+  table th,
+  table td > *,
+  table th > * {
     vertical-align: middle;
   }
 }
