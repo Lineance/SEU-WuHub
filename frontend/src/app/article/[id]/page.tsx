@@ -243,7 +243,6 @@ export default function ArticleDetailPage() {
                         <a href={fullUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2 py-1 rounded bg-muted text-muted-foreground hover:bg-muted/80 dark:hover:bg-muted/60 cursor-pointer text-sm">
                           <FileText className="h-4 w-4" />
                           {pdfName}
-                          <span className="text-xs opacity-70">(PDF)</span>
                         </a>
                       )
                     }
