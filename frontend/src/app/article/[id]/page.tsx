@@ -224,9 +224,6 @@ export default function ArticleDetailPage() {
                 remarkPlugins={[remarkGfm]}
                 rehypePlugins={[rehypeRaw]}
                 components={{
-                  p: ({ children }) => (
-                    <p className="mb-4 leading-relaxed">{children}</p>
-                  ),
                   img: ({ src, alt }) => {
                     const imageSrc = typeof src === 'string' ? src : ""
                     return <img src={imageSrc} alt={typeof alt === 'string' ? alt : ""} className="max-w-full h-auto" />
