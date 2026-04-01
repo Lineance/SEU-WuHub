@@ -65,14 +65,20 @@ class TablePreservingMarkdownGenerator(DefaultMarkdownGenerator):
             return ""
 
     def _convert_image_urls(self, markdown: str, base_url: str = "") -> str:
-        """将 markdown 中的相对图片 URL 转换为绝对 URL。"""
+        """将 markdown 中的相对图片 URL 转换为绝对 URL，并删除图标图片。"""
         if not markdown:
             return markdown
+
+        # 要删除的图标图片
+        icon_patterns = ("icon_pdf.gif", "icon_xls.gif", "icon_doc.gif", "icon_rar.gif")
 
         # 匹配 ![...](path) 或 ![](path) 格式的图片
         def replace_image_url(match):
             alt_text = match.group(1) if match.group(1) else ""
             path = match.group(2)
+            # 删除图标图片
+            if any(path.endswith(icon) for icon in icon_patterns):
+                return ""
             # 如果是相对路径且是上传目录，转换为绝对路径
             if path.startswith("/_upload/") and base_url:
                 return f'![{alt_text}]({base_url}{path})'
@@ -102,7 +108,7 @@ class TablePreservingMarkdownGenerator(DefaultMarkdownGenerator):
         allowed_attrs = {"rowspan", "colspan", "align", "href", "src", "alt", "title"}
 
         # 要删除的图标图片
-        icon_patterns = ("icon_pdf.gif", "icon_xls.gif", "icon_doc.gif")
+        icon_patterns = ("icon_pdf.gif", "icon_xls.gif", "icon_doc.gif", "icon_rar.gif")
 
         # 处理 table 标签本身
         for attr in list(clean_table.attrs):
