@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { Loader2, AlertCircle, ArrowLeft, ExternalLink, Calendar, Tag, Star, Copy, Share2, Check, X, Download, FileText } from "lucide-react"
+import { Loader2, AlertCircle, ArrowLeft, ExternalLink, Calendar, Tag, Star, Copy, Share2, Check, X, Download, FileText, FileSpreadsheet, FileArchive, File } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -231,20 +231,36 @@ export default function ArticleDetailPage() {
                   a: ({ href, children }) => {
                     // href可能是string或Blob
                     const hrefStr = typeof href === 'string' ? href : ''
-                    // 检测PDF链接
-                    if (hrefStr && hrefStr.toLowerCase().endsWith('.pdf')) {
-                      // 使用 [] 中的内容作为 PDF 名称
-                      const pdfName = Array.isArray(children)
+                    // 文件类型配置
+                    const fileTypes: Record<string, { extensions: string[], icon: typeof FileText, label: string }> = {
+                      pdf: { extensions: ['.pdf'], icon: FileText, label: 'PDF' },
+                      excel: { extensions: ['.xls', '.xlsx'], icon: FileSpreadsheet, label: 'Excel' },
+                      word: { extensions: ['.doc', '.docx'], icon: FileText, label: 'Word' },
+                      archive: { extensions: ['.rar', '.zip', '.7z'], icon: FileArchive, label: '压缩包' },
+                    }
+                    // 检测文件类型
+                    let fileType: string | null = null
+                    for (const [key, config] of Object.entries(fileTypes)) {
+                      if (config.extensions.some(ext => hrefStr.toLowerCase().endsWith(ext))) {
+                        fileType = key
+                        break
+                      }
+                    }
+                    if (hrefStr && fileType) {
+                      const config = fileTypes[fileType]
+                      const Icon = config.icon
+                      // 使用 [] 中的内容作为名称
+                      const fileName = Array.isArray(children)
                         ? children.filter(c => typeof c === 'string').join('')
-                        : (typeof children === 'string' ? children : "PDF文档")
+                        : (typeof children === 'string' ? children : config.label)
                       const fullUrl = hrefStr.startsWith("http") ? hrefStr
                         : hrefStr.startsWith("/_upload/")
                           ? `https://jwc.seu.edu.cn${hrefStr}`
                           : hrefStr
                       return (
                         <a href={fullUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2 py-1 rounded bg-muted text-muted-foreground hover:bg-muted/80 dark:hover:bg-muted/60 cursor-pointer text-sm">
-                          <FileText className="h-4 w-4" />
-                          {pdfName}
+                          <Icon className="h-4 w-4" />
+                          {fileName}
                         </a>
                       )
                     }
