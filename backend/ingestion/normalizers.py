@@ -156,8 +156,8 @@ def normalize_markdown(markdown: str) -> str:
     # 删除连续的四个星号
     markdown = re.sub(r'\*{4,}', '', markdown)
 
-    # 删除连续的四个竖线
-    markdown = re.sub(r'\|{4,}', '', markdown)
+    # 删除连续的四个竖线（带空格）
+    markdown = re.sub(r'(\|\s*){4,}', '', markdown)
 
     # 修复换行：段落内单个换行转为硬换行
     # 使用状态机追踪是否在表格行内
