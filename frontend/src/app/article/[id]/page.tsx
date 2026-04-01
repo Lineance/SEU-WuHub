@@ -225,7 +225,7 @@ export default function ArticleDetailPage() {
                 rehypePlugins={[rehypeRaw]}
                 components={{
                   p: ({ children }) => (
-                    <p className="mb-8 leading-relaxed">{children}</p>
+                    <p className="mb-4 leading-relaxed">{children}</p>
                   ),
                   img: ({ src, alt }) => {
                     const imageSrc = typeof src === 'string' ? src : ""
