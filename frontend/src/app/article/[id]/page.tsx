@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { Loader2, AlertCircle, ArrowLeft, ExternalLink, Calendar, Tag, Star, Copy, Share2, Check, X, Download, FileText } from "lucide-react"
+import { Loader2, AlertCircle, ArrowLeft, ExternalLink, Calendar, Tag, Star, Copy, Check, X, Download, FileText, Maximize2, Minimize2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -68,26 +68,6 @@ export default function ArticleDetailPage() {
       published_at: article.published_at
     })
     setIsFav(prev => !prev)
-  }
-
-  const handleShare = async () => {
-    const shareData = {
-      title: article?.title || '',
-      text: article?.summary || '',
-      url: window.location.href
-    }
-
-    try {
-      if (navigator.share) {
-        await navigator.share(shareData)
-      } else {
-        await navigator.clipboard.writeText(window.location.href)
-      }
-    } catch (err) {
-      if (err.name !== 'AbortError') {
-        console.error('分享失败:', err)
-      }
-    }
   }
 
   const handleCopyLink = async () => {
@@ -157,13 +137,13 @@ export default function ArticleDetailPage() {
                 <Star className={`h-5 w-5 ${isFav ? 'fill-current' : ''}`} />
               </Button>
               <Button
-                variant="outline"
+                variant={isReadingMode ? "default" : "outline"}
                 size="icon"
-                onClick={handleShare}
+                onClick={toggleReadingMode}
                 className="shrink-0"
-                title="分享"
+                title={isReadingMode ? "退出全屏" : "全屏模式"}
               >
-                <Share2 className="h-5 w-5" />
+                {isReadingMode ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
               </Button>
               <Button
                 variant="outline"
@@ -175,17 +155,6 @@ export default function ArticleDetailPage() {
                 {copied ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
               </Button>
             </div>
-          </div>
-
-          <div className="mb-4">
-            <Button
-              variant="default"
-              onClick={toggleReadingMode}
-              className="px-6 py-2 font-semibold"
-              title={isReadingMode ? "退出全屏" : "全屏模式"}
-            >
-              {isReadingMode ? "退出全屏" : "全屏模式"}
-            </Button>
           </div>
 
           <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
