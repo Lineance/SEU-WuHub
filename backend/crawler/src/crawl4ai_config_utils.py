@@ -110,8 +110,8 @@ class TablePreservingMarkdownGenerator(DefaultMarkdownGenerator):
                 # 转换为绝对 URL
                 if pdf_url.startswith("/"):
                     pdf_url = base_url + pdf_url
-                # 提取文件名作为链接文本
-                filename = pdf_url.split("/")[-1].replace(".pdf", "")
+                # 优先使用 title 属性作为链接文本
+                filename = iframe.get("title", "") or pdf_url.split("/")[-1].replace(".pdf", "")
                 if not filename:
                     filename = "PDF文档"
                 # 替换为 markdown 链接
