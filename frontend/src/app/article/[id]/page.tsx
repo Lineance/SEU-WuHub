@@ -242,10 +242,9 @@ export default function ArticleDetailPage() {
                           ? `https://jwc.seu.edu.cn${hrefStr}`
                           : hrefStr
                       return (
-                        <a href={fullUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100 cursor-pointer text-sm">
+                        <a href={fullUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2 py-1 rounded bg-muted text-muted-foreground hover:bg-muted/80 dark:hover:bg-muted/60 cursor-pointer text-sm">
                           <FileText className="h-4 w-4" />
                           {pdfName}
-                          <span className="text-xs opacity-70">(PDF)</span>
                         </a>
                       )
                     }
@@ -296,7 +295,7 @@ export default function ArticleDetailPage() {
                 <a key={index} href={pdf.url} target="_blank" rel="noopener noreferrer" className="block">
                   <Card className="group cursor-pointer transition-all hover:shadow-md">
                     <CardContent className="flex items-center gap-3 p-4">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground dark:bg-muted dark:text-muted-foreground">
                         <FileText className="h-5 w-5" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -359,7 +358,7 @@ export default function ArticleDetailPage() {
                     <a key={index} href={fullUrl} target="_blank" rel="noopener noreferrer" className="block">
                       <Card className="group cursor-pointer transition-all hover:shadow-md">
                         <CardContent className="flex items-center gap-3 p-4">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground dark:bg-muted dark:text-muted-foreground">
                             <FileText className="h-5 w-5" />
                           </div>
                           <div className="flex-1 min-w-0">
