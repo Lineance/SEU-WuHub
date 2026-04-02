@@ -255,6 +255,7 @@ yarn-error.log*
 tmp/
 data/
 logs/
+temp/
 
 # Node.js dependencies
 node_modules/

@@ -595,6 +595,22 @@ class LanceStore:
                 where=query_obj.build_where_clause(),
             )
 
+        # 当没有关键词但有过滤条件时，使用纯过滤查询
+        if not vector_results and not text_results and not query_obj.keyword:
+            where_clause = query_obj.build_where_clause()
+            if where_clause and where_clause != "1=1":
+                try:
+                    # 使用 LanceDB 的 where + limit 获取过滤结果
+                    filtered_results = (
+                        self.table.search()
+                        .where(where_clause)
+                        .limit(query_obj.limit)
+                        .to_list()
+                    )
+                    return filtered_results
+                except Exception as e:
+                    logger.warning(f"Filtered search failed: {e}")
+
         # 融合结果
         return self._fuse_results(
             vector_results,
