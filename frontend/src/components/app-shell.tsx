@@ -53,12 +53,12 @@ export function AppShell({ children }: AppShellProps) {
       {isMobile && (
         <>
           <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-            <SheetContent side="left" className="w-[280px] p-0">
+            <SheetContent side="left" className="w-[280px] p-0 [&>button]:hidden">
               <div className="p-4 flex justify-between items-center border-b">
                 <h2 className="text-lg font-semibold">导航</h2>
                 <SheetClose asChild>
-                  <Button variant="ghost" size="icon">
-                    <X className="h-5 w-5" />
+                  <Button variant="ghost" size="icon" className="h-11 w-11 rounded-full hover:bg-secondary">
+                    <X className="h-6 w-6" />
                   </Button>
                 </SheetClose>
               </div>

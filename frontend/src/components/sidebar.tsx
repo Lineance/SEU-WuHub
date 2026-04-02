@@ -139,9 +139,9 @@ export function Sidebar({ isCollapsed = false, onToggleCollapse, isMobile = fals
         isCollapsed ? "w-16" : "w-64"
       )}
     >
-      <div className="mb-4 flex items-center justify-between">
-        <span className={cn("text-lg font-semibold text-foreground", isCollapsed && "hidden")}>导航</span>
-        {!isMobile && (
+      {!isMobile && (
+        <div className="mb-4 flex items-center justify-between">
+          <span className={cn("text-lg font-semibold text-foreground", isCollapsed && "hidden")}>导航</span>
           <Button
             variant="ghost"
             size="icon"
@@ -151,8 +151,8 @@ export function Sidebar({ isCollapsed = false, onToggleCollapse, isMobile = fals
           >
             {isCollapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
           </Button>
-        )}
-      </div>
+        </div>
+      )}
       {loading && (
         <div className="flex items-center justify-center py-8">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
