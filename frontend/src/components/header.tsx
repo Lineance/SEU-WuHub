@@ -105,7 +105,7 @@ function HeaderSearchContent() {
         {isMobile ? (
           <div 
             ref={searchContainerRef} 
-            className="relative flex-1"
+            className="relative flex-1 max-w-[300px]"
             onClick={() => !isSearchExpanded && setIsSearchExpanded(true)}
           >
             <div className="relative flex items-center">

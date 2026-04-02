@@ -73,9 +73,10 @@ export function AppShell({ children }: AppShellProps) {
           </Sheet>
           
           {/* 移动端悬浮导航按钮 */}
-          {!isReadingMode && (
+          {!isReadingMode && !isAIOpen && !isMobileMenuOpen && (
             <MobileNavFab 
               onClick={() => setIsMobileMenuOpen(true)} 
+              isVisible={!isAIOpen && !isMobileMenuOpen}
             />
           )}
         </>
