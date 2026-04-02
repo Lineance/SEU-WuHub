@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
-import { Moon, Sun, MessageSquare, Send, ChevronRight, ArrowLeft } from "lucide-react"
+import { Moon, Sun, MessageSquare, Send, ChevronRight, ArrowLeft, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
@@ -114,6 +114,45 @@ export function SettingsPage() {
               )
             })}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* 数据管理 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Trash2 className="h-5 w-5" />
+            数据管理
+          </CardTitle>
+          <CardDescription>管理您的本地存储数据，此操作不可撤销。</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Button
+            variant="outline"
+            className="w-full justify-between text-destructive hover:bg-destructive/10 hover:text-destructive"
+            onClick={() => {
+              if (window.confirm('要清空本地所有对话记录吗？此操作不可撤销！')) {
+                localStorage.removeItem('seu_wuhub_chat_history')
+                window.alert('对话记录已清空')
+              }
+            }}
+          >
+            一键清空对话记录
+            <Trash2 className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full justify-between text-destructive hover:bg-destructive/10 hover:text-destructive"
+            onClick={() => {
+              if (window.confirm('要清空本地所有收藏夹吗？此操作不可撤销！')) {
+                localStorage.removeItem('seu_wuhub_favorites')
+                window.alert('收藏夹已清空')
+              }
+            }}
+          >
+            一键清空收藏夹
+            <Trash2 className="h-4 w-4" />
+          </Button>
         </CardContent>
       </Card>
 
