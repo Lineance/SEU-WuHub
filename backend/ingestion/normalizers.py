@@ -132,7 +132,7 @@ def normalize_markdown(markdown: str) -> str:
     规范化 markdown 格式，修复常见的格式错误
 
     处理流程:
-    1. 去除空的 <strong> 标签（HTML 转 markdown 时产生的孤立 **）
+    1. 去除 HTML <strong> 标签（包括空标签）
     2. 修复 PDF 图标和链接相邻问题
     3. 修复多余的星号
     4. 修复换行：段落内单个换行转为硬换行（不干扰表格）
@@ -146,8 +146,7 @@ def normalize_markdown(markdown: str) -> str:
     if not markdown:
         return markdown
 
-    # 去除空的 HTML <strong> 标签产生的孤立 **
-    # 匹配 ** 之间只有空白字符（包括换行）的孤立粗体标记
+    # 去除空的 ** 模式（来自 HTML <strong><br></strong> 转换）
     markdown = re.sub(r'\*\*[ \t\r\n]*\*\*', '', markdown)
 
     # 修复 PDF 图标 + 链接相邻: ![](url)[name](link) → ![](url) [name](link)
