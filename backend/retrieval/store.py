@@ -771,10 +771,10 @@ class LanceStore:
                 logger.warning(f"Failed to convert document: {e}")
                 continue
 
-        # 批量插入
+        # 批量插入（使用 merge_insert 去重）
         try:
-            self.table.add(articles)
-            logger.info(f"Added {len(articles)} documents")
+            self.table.merge_insert("news_id").when_matched_update_all().execute(articles)
+            logger.info(f"Added/Updated {len(articles)} documents")
             return len(articles)
         except Exception as e:
             logger.error(f"Failed to add documents: {e}")

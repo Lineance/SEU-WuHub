@@ -77,21 +77,31 @@ def list_articles(
     where_clause = sql_guard.build_safe_where(conditions) if conditions else None
 
     if where_clause:
-        results = table.search().where(where_clause).limit(page_size).offset(offset).to_list()
-        total = len(table.search().where(where_clause).to_list())
+        results = table.search().where(where_clause).to_list()
+        total = len(results)
     else:
-        import numpy as np
+        # 无筛选条件时，获取所有记录
+        results = table.to_pandas().to_dict("records")
+        total = len(results)
 
-        dummy_vector = np.zeros(384, dtype=np.float32)
-        results = (
-            table.search(dummy_vector, vector_column_name="title_embedding")
-            .limit(page_size)
-            .offset(offset)
-            .to_list()
-        )
-        total = table.count_rows()
+    # 按发布时间从新到旧排序
+    def sort_key(item):
+        pd = item.get("publish_date")
+        if pd is None:
+            return datetime.min
+        if isinstance(pd, str):
+            try:
+                return datetime.fromisoformat(pd.replace("Z", "+00:00"))
+            except:
+                return datetime.min
+        return pd
 
-    items = [_to_article_response(record) for record in results]
+    results.sort(key=sort_key, reverse=True)
+
+    # 应用分页
+    paginated_results = results[offset : offset + page_size]
+
+    items = [_to_article_response(record) for record in paginated_results]
     total_pages = (total + page_size - 1) // page_size
 
     return ArticleListResponse(
