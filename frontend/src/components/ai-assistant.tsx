@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Send, Bot, ExternalLink, Sparkles, X, Trash2 } from "lucide-react"
+import { motion } from "framer-motion"
+import { Send, Bot, ExternalLink, Sparkles, X, RotateCcw } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -31,8 +32,12 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [currentThought, setCurrentThought] = useState<string | null>(null)
   const [currentToolCall, setCurrentToolCall] = useState<string | null>(null)
+  const [sheetHeight, setSheetHeight] = useState(80) // 初始高度为 80%
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const isMobile = useIsMobile()
+  
+  // 吸附点定义
+  const SNAP_POINTS = [25, 50, 80, 100]
 
   // 从 localStorage 加载历史记录
   useEffect(() => {
@@ -175,6 +180,26 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
   // 聊天界面内容
   const chatInnerContent = (
     <div className="flex h-full flex-col">
+      {isMobile && (
+        <motion.div 
+          className="mx-auto mb-4 h-3 w-72 rounded-full bg-muted cursor-grab active:cursor-grabbing touch-none flex-shrink-0"
+          onPan={(event, info) => {
+            // 算出位移占屏幕高度的百分比（注意 y 的正负：往下拉 info.delta.y 为正，高度应减小）
+            const deltaPercent = (info.delta.y / window.innerHeight) * 100;
+            setSheetHeight(prev => {
+              const newHeight = prev - deltaPercent;
+              return Math.max(20, Math.min(100, newHeight));
+            });
+          }}
+          onPanEnd={() => {
+            // 计算离哪个吸附点最近
+            const closest = SNAP_POINTS.reduce((prev, curr) => 
+              Math.abs(curr - sheetHeight) < Math.abs(prev - sheetHeight) ? curr : prev
+            );
+            setSheetHeight(closest);
+          }}
+        />
+      )}
       <div className="border-b border-border pb-4">
         <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -183,17 +208,17 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
                 </div>
                 <h3 className="text-base font-semibold text-card-foreground">AI 助手</h3>
                 <Sparkles className="h-4 w-4 text-accent" />
-              </div>
-              <div className="flex items-center gap-1">
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={handleClearHistory}
                   className="h-8 w-8 rounded-full hover:bg-secondary"
-                  title="清空对话"
+                  title="重置对话"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <RotateCcw className="h-4 w-4" />
                 </Button>
+              </div>
+              <div className="flex items-center gap-1">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -295,7 +320,14 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
   if (isMobile) {
     return (
       <Sheet open={isOpen} onOpenChange={onClose}>
-        <SheetContent side="bottom" className="h-[80vh] p-4">
+        <SheetContent 
+          side="bottom" 
+          className="p-4 transition-all duration-300 ease-in-out overflow-hidden flex flex-col"
+          style={{ 
+            height: `${sheetHeight}vh`,
+            willChange: 'height'
+          }}
+        >
           {chatInnerContent}
         </SheetContent>
       </Sheet>
