@@ -208,24 +208,24 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
                 </div>
                 <h3 className="text-base font-semibold text-card-foreground">AI 助手</h3>
                 <Sparkles className="h-4 w-4 text-accent" />
+              </div>
+              <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={handleClearHistory}
-                  className="h-8 w-8 rounded-full hover:bg-secondary"
+                  className="h-11 w-11 rounded-full hover:bg-secondary"
                   title="重置对话"
                 >
-                  <RotateCcw className="h-4 w-4" />
+                  <RotateCcw className="h-6 w-6" />
                 </Button>
-              </div>
-              <div className="flex items-center gap-1">
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={onClose}
-                  className="hidden md:flex h-8 w-8 rounded-full hover:bg-secondary"
+                  className="h-11 w-11 rounded-full hover:bg-secondary"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-6 w-6" />
                 </Button>
               </div>
             </div>
@@ -322,7 +322,7 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
       <Sheet open={isOpen} onOpenChange={onClose}>
         <SheetContent 
           side="bottom" 
-          className="p-4 transition-all duration-300 ease-in-out overflow-hidden flex flex-col"
+          className="p-4 transition-all duration-300 ease-in-out overflow-hidden flex flex-col [&>button]:hidden"
           style={{ 
             height: `${sheetHeight}vh`,
             willChange: 'height'
