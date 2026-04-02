@@ -185,6 +185,7 @@ class AdminCLI:
 
         incremental_urls = batch_result.get("incremental_urls", [])
         website_overrides = batch_result.get("article_overrides", {})
+        source_name = batch_result.get("source")
 
         if not incremental_urls:
             return {
@@ -214,6 +215,12 @@ class AdminCLI:
         failed_count = len(articles_result) - success_count
 
         print(f"文章爬取完成: 成功 {success_count}, 失败 {failed_count}")
+
+        # Add source field to each result if source name is available
+        if source_name:
+            for item in articles_result:
+                if "source" not in item or not item["source"]:
+                    item["source"] = source_name
 
         # Step 3: 导入到数据库
         if success_count > 0:

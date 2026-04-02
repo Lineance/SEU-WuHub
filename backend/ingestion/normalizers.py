@@ -188,7 +188,8 @@ def normalize_markdown(markdown: str) -> str:
 
     for line in lines:
         stripped = line.strip()
-        is_table_row = stripped.startswith('|') and not re.match(r'^[\s|:-]+$', stripped)
+        # 表格行检测：包含 | 但不是分隔行
+        is_table_row = '|' in stripped and not re.match(r'^[\s|:-]+$', stripped)
         is_image_line = stripped.startswith('![](') or stripped.startswith('![')
 
         if is_table_row:
@@ -200,11 +201,15 @@ def normalize_markdown(markdown: str) -> str:
             result_lines.append(line)
             in_table = False
         else:
-            if stripped.startswith('#') or stripped.startswith('- [') or stripped.startswith('```'):
+            if not stripped:
+                # 空行，重置状态
+                result_lines.append(line)
+                in_table = False
+            elif stripped.startswith('#') or stripped.startswith('- [') or stripped.startswith('```'):
                 # 标题、列表项、代码块保持原样
                 result_lines.append(line)
                 in_table = False
-            elif prev_ended_with_text and stripped and not stripped.startswith('|'):
+            elif prev_ended_with_text and not stripped.startswith('|'):
                 # 上一行是非空文本，当前行非空且不是表格行 → 添加空行分隔
                 result_lines.append('')
                 result_lines.append(line)

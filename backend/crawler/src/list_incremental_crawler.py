@@ -318,6 +318,7 @@ class ListIncrementalCrawler:
         if not start_urls:
             return {
                 "website": website_name,
+                "source": website_cfg.get("name"),
                 "start_urls": [],
                 "lists": [],
                 "incremental_urls": [],
@@ -378,6 +379,7 @@ class ListIncrementalCrawler:
 
         return {
             "website": website_name,
+            "source": website_cfg.get("name"),
             "start_urls": start_urls,
             "lists": per_list,
             "incremental_urls": sorted(all_incremental),

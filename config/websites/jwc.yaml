@@ -1,7 +1,7 @@
 # JWC list incremental crawling config
 
 website:
-  name: "SEU JWC"
+  name: "教务处"
 
   # Multiple list channels under the same site; each list will keep independent incremental state.
   start_urls:

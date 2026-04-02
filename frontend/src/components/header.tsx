@@ -253,7 +253,9 @@ function HeaderSearchFallback() {
 
 export function Header({ onAIToggle }: HeaderProps) {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
+  const [logoError, setLogoError] = useState(false)
   const isMobile = useIsMobile()
+  const router = useRouter()
 
   const handleSettingsClick = () => {
     router.push('/settings')

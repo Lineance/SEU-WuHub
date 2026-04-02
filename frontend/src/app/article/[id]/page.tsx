@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { Loader2, AlertCircle, ArrowLeft, ExternalLink, Calendar, Tag, Star, Copy, Check, X, Download, FileText, Maximize2, Minimize2 } from "lucide-react"
+import { Loader2, AlertCircle, ArrowLeft, ExternalLink, Calendar, Tag, Star, Copy, Check, X, Download, FileText, FileSpreadsheet, FileArchive, Maximize2, Minimize2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -187,7 +187,7 @@ export default function ArticleDetailPage() {
         </header>
 
         <Card>
-          <CardContent className="prose prose-slate dark:prose-invert max-w-none prose-p:mb-6 prose-p:leading-relaxed">
+          <CardContent className="prose prose-slate dark:prose-invert max-w-none">
             {article.content_md ? (
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
@@ -195,7 +195,7 @@ export default function ArticleDetailPage() {
                 components={{
                   img: ({ src, alt }) => {
                     const imageSrc = typeof src === 'string' ? src : ""
-                    return <img src={imageSrc} alt={typeof alt === 'string' ? alt : ""} className="max-w-full h-auto" />
+                    return <img src={imageSrc} alt={typeof alt === 'string' ? alt : ""} className="max-w-full h-auto !inline" />
                   },
                   a: ({ href, children }) => {
                     // href可能是string或Blob
@@ -271,7 +271,7 @@ export default function ArticleDetailPage() {
 
         {/* 从内容中提取的PDF附件 */}
         {pdfUrls.length > 0 && (
-          <div className="mt-8">
+          <div className="mt-4">
             <h2 className="mb-4 text-xl font-semibold text-foreground">
               文档附件
             </h2>
@@ -300,7 +300,7 @@ export default function ArticleDetailPage() {
         )}
 
         {article.attachments && article.attachments.length > 0 && (
-          <div className="mt-8">
+          <div className="mt-4">
             <h2 className="mb-4 text-xl font-semibold text-foreground">
               附件
             </h2>
