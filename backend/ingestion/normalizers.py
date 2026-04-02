@@ -146,9 +146,9 @@ def normalize_markdown(markdown: str) -> str:
     if not markdown:
         return markdown
 
-    # 去除空的 HTML <strong> 标签（如 <strong>  </strong> 转换为 ** 后的情况）
-    # 匹配 ** 之间只有空白或换行的孤立粗体标记
-    markdown = re.sub(r'\*\*(?:\s|\\n)+\*\*', '', markdown)
+    # 去除空的 HTML <strong> 标签产生的孤立 **
+    # 匹配 ** 之间只有空白字符（包括换行）的孤立粗体标记
+    markdown = re.sub(r'\*\*[ \t\r\n]*\*\*', '', markdown)
 
     # 修复 PDF 图标 + 链接相邻: ![](url)[name](link) → ![](url) [name](link)
     # 使用 [^\[\n]* 避免跨行匹配
