@@ -102,13 +102,26 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
           // 流式输出
           assistantContent += event.content
           
-          // 更新消息
-          const updatedMessages = [...messages, userMessage, {
-            role: 'assistant' as const,
-            content: assistantContent,
-            sources: assistantSources
-          }]
-          setMessages(updatedMessages)
+          // 使用函数式更新确保数据的绝对实时性
+          setMessages(prev => {
+            // 逻辑：保留之前的消息，仅更新最后一条助手回复
+            const newMessages = [...prev]
+            // 确保至少有用户消息在那
+            if (newMessages.length > 0 && newMessages[newMessages.length - 1].role === 'assistant') {
+              newMessages[newMessages.length - 1] = {
+                role: 'assistant' as const,
+                content: assistantContent,
+                sources: assistantSources
+              }
+            } else {
+              newMessages.push({
+                role: 'assistant' as const,
+                content: assistantContent,
+                sources: assistantSources
+              })
+            }
+            return newMessages
+          })
         }
       }
 
@@ -143,6 +156,15 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
     }
   }
 
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // 自动聚焦到输入框
+  useEffect(() => {
+    if (isOpen && textareaRef.current) {
+      textareaRef.current.focus()
+    }
+  }, [isOpen])
+
   const handleClearHistory = () => {
     if (confirm('确定要清空对话历史吗？')) {
       setMessages([])
@@ -150,7 +172,8 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
     }
   }
 
-  const ChatContent = () => (
+  // 聊天界面内容
+  const chatInnerContent = (
     <div className="flex h-full flex-col">
       <div className="border-b border-border pb-4">
         <div className="flex items-center justify-between">
@@ -243,6 +266,8 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
       </div>
       <div className="space-y-2">
         <Textarea
+          key="ai-assistant-input"
+          ref={textareaRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="输入你的问题..."
@@ -266,11 +291,12 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
     </div>
   )
 
+  // 条件渲染包裹容器
   if (isMobile) {
     return (
       <Sheet open={isOpen} onOpenChange={onClose}>
         <SheetContent side="bottom" className="h-[80vh] p-4">
-          <ChatContent />
+          {chatInnerContent}
         </SheetContent>
       </Sheet>
     )
@@ -282,7 +308,7 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
     >
       <Card className="h-full rounded-none border-l border-border bg-card shadow-lg">
         <CardContent className="flex h-full flex-col p-4">
-          <ChatContent />
+          {chatInnerContent}
         </CardContent>
       </Card>
     </div>
