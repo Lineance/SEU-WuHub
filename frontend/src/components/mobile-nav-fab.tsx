@@ -7,15 +7,21 @@ import { Button } from "@/components/ui/button"
 
 interface MobileNavFabProps {
   onClick: () => void
+  opacity?: number
 }
 
-export function MobileNavFab({ onClick }: MobileNavFabProps) {
-  const [position, setPosition] = useState({ x: 300, y: 0 })
+export function MobileNavFab({ onClick, opacity = 1 }: MobileNavFabProps) {
+  const [position, setPosition] = useState({ x: 20, y: 200 })
 
   return (
     <motion.div
       className="fixed bottom-8 z-50"
-      style={{ x: position.x, y: position.y }}
+      style={{ 
+        x: position.x, 
+        y: position.y,
+        zIndex: 1000, // 调高 z-index
+        opacity: opacity
+      }}
       drag
       dragConstraints={{ left: 0, right: window.innerWidth - 64, top: 0, bottom: window.innerHeight - 64 }}
       onDragEnd={(event, info) => {
@@ -32,7 +38,7 @@ export function MobileNavFab({ onClick }: MobileNavFabProps) {
       <Button
         variant="default"
         size="icon"
-        className="h-16 w-16 rounded-full shadow-lg"
+        className="h-16 w-16 rounded-full shadow-lg transition-opacity duration-300 hover:opacity-100"
         onClick={onClick}
       >
         <ChevronRight className="h-8 w-8" />

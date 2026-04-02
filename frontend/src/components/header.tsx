@@ -103,22 +103,18 @@ function HeaderSearchContent() {
     <div className="flex flex-1 items-center justify-center px-4">
       <div className="relative w-full max-w-md flex items-center gap-2">
         {isMobile ? (
-          <div ref={searchContainerRef} className="relative flex-1">
+          <div 
+            ref={searchContainerRef} 
+            className="relative flex-1"
+            onClick={() => !isSearchExpanded && setIsSearchExpanded(true)}
+          >
             <div className="relative flex items-center">
-              {!isSearchExpanded && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setIsSearchExpanded(true)}
-                  className="absolute right-0 z-20"
-                >
-                  <Search className="h-5 w-5" />
-                </Button>
-              )}
               <div 
-                className={`relative transition-all duration-300 ${isSearchExpanded ? 'w-full' : 'w-0'}`}
+                className={`relative transition-all duration-300 ${isSearchExpanded ? 'w-full' : 'w-9'}`}
               >
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground z-10" />
+                <Search 
+                  className={`absolute top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground z-10 transition-all duration-300 ${isSearchExpanded ? 'left-3' : 'left-1/2 -translate-x-1/2'}`} 
+                />
                 <Input
                   type="search"
                   placeholder="搜索..."
@@ -132,7 +128,8 @@ function HeaderSearchContent() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation()
                       setIsSearchExpanded(false)
                       setSearchQuery('')
                     }}
@@ -294,40 +291,42 @@ export function Header({ onAIToggle }: HeaderProps) {
         <HeaderSearchContent />
       </Suspense>
 
-      <div className="flex items-center gap-1">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="rounded-full"
-          onClick={handleFavoritesClick}
-          title="收藏夹"
-        >
-          <Star className="h-5 w-5" />
-          <span className="sr-only">收藏夹</span>
-        </Button>
+      {!isMobile && (
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-full"
+            onClick={handleFavoritesClick}
+            title="收藏夹"
+          >
+            <Star className="h-5 w-5" />
+            <span className="sr-only">收藏夹</span>
+          </Button>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          className="rounded-full"
-          onClick={onAIToggle}
-          title="SEU Agent"
-        >
-          <Bot className="h-5 w-5" />
-          <span className="sr-only">AI 助手</span>
-        </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-full"
+            onClick={onAIToggle}
+            title="SEU Agent"
+          >
+            <Bot className="h-5 w-5" />
+            <span className="sr-only">AI 助手</span>
+          </Button>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          className="rounded-full"
-          onClick={handleSettingsClick}
-          title="设置"
-        >
-          <Settings className="h-5 w-5" />
-          <span className="sr-only">设置</span>
-        </Button>
-      </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-full"
+            onClick={handleSettingsClick}
+            title="设置"
+          >
+            <Settings className="h-5 w-5" />
+            <span className="sr-only">设置</span>
+          </Button>
+        </div>
+      )}
     </header>
   )
 }

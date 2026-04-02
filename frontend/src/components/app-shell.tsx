@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Menu, X } from "lucide-react"
+import { usePathname } from "next/navigation"
 import { Header } from "@/components/header"
 import { Sidebar } from "@/components/sidebar"
 import { AIAssistant } from "@/components/ai-assistant"
@@ -22,6 +23,7 @@ export function AppShell({ children }: AppShellProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const { isReadingMode } = useReadingMode()
   const isMobile = useIsMobile()
+  const pathname = usePathname()
 
   const handleAgentClick = () => {
     setIsMobileMenuOpen(false)
@@ -72,7 +74,9 @@ export function AppShell({ children }: AppShellProps) {
           
           {/* 移动端悬浮导航按钮 */}
           {!isReadingMode && (
-            <MobileNavFab onClick={() => setIsMobileMenuOpen(true)} />
+            <MobileNavFab 
+              onClick={() => setIsMobileMenuOpen(true)} 
+            />
           )}
         </>
       )}
