@@ -7,9 +7,13 @@ website:
   start_urls:
     - "https://jwc.seu.edu.cn/jwxx/list.htm"
     - "https://jwc.seu.edu.cn/zxdt/list.htm"
+    - "https://jwc.seu.edu.cn/xjgl/list.htm"
+    - "https://jwc.seu.edu.cn/sjjx/list.htm"
+    - "https://jwc.seu.edu.cn/gjjl/list.psp"
+    - "https://jwc.seu.edu.cn/cbxx/list.htm"
 
   list_incremental:
-    max_pages: 31
+    max_pages: 999
     state_file: "tmp/jwc_seen_urls.json"
     cache_base_directory: "tmp/crawl4ai_jwc_cache"
 
