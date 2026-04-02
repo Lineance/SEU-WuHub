@@ -255,11 +255,76 @@ export const categoriesApi = {
   },
 }
 
+// AI Chat API
+export const aiApi = {
+  chatWithAI: async (query: string, history: any[]) => {
+    const url = `${API_BASE}/chat`
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query,
+        history,
+      }),
+    })
+
+    if (!response.ok) {
+      throw new ApiError(response.status, await response.text())
+    }
+
+    if (!response.body) {
+      throw new Error('No response body')
+    }
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+
+    return {
+      async *[Symbol.asyncIterator]() {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          
+          buffer += decoder.decode(value, { stream: true })
+          
+          // 按换行符分割
+          const lines = buffer.split('\n')
+          buffer = lines.pop() || ''
+          
+          for (const line of lines) {
+            if (line.trim()) {
+              try {
+                yield JSON.parse(line)
+              } catch (e) {
+                console.error('Failed to parse line:', line, e)
+              }
+            }
+          }
+        }
+        
+        // 处理最后一行
+        if (buffer.trim()) {
+          try {
+            yield JSON.parse(buffer)
+          } catch (e) {
+            console.error('Failed to parse final line:', buffer, e)
+          }
+        }
+      },
+    }
+  },
+}
+
 // 默认导出
 export const api = {
   article: articleApi,
   search: searchApi,
   health: healthApi,
+  ai: aiApi,
   getCategories: categoriesApi.getCategories,
   getArticles: async (params: { category_id?: string; page?: number; page_size?: number }) => {
     // 将 category_id 转换为 category 以匹配后端 API
@@ -323,4 +388,5 @@ export const api = {
       },
     }
   },
+  chatWithAI: aiApi.chatWithAI,
 }

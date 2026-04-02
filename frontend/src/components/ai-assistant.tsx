@@ -1,14 +1,23 @@
 "use client"
 
-import { useState } from "react"
-import { Send, Bot, ExternalLink, Sparkles, X } from "lucide-react"
+import { useState, useEffect, useRef } from "react"
+import { Send, Bot, ExternalLink, Sparkles, X, Trash2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose } from "@/components/ui/sheet"
+import { api } from "@/lib/api"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 interface SourceReference {
   title: string
   url: string
+}
+
+interface Message {
+  role: 'user' | 'assistant'
+  content: string
+  sources?: SourceReference[]
 }
 
 interface AIAssistantProps {
@@ -18,41 +27,150 @@ interface AIAssistantProps {
 
 export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
   const [input, setInput] = useState("")
-  const [answer, setAnswer] = useState<string | null>(null)
-  const [sources, setSources] = useState<SourceReference[]>([])
+  const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [currentThought, setCurrentThought] = useState<string | null>(null)
+  const [currentToolCall, setCurrentToolCall] = useState<string | null>(null)
+  const chatContainerRef = useRef<HTMLDivElement>(null)
+  const isMobile = useIsMobile()
 
-  const handleSubmit = () => {
-    if (!input.trim()) return
+  // 从 localStorage 加载历史记录
+  useEffect(() => {
+    if (isOpen) {
+      const savedHistory = localStorage.getItem('seu_wuhub_chat_history')
+      if (savedHistory) {
+        try {
+          setMessages(JSON.parse(savedHistory))
+        } catch (e) {
+          console.error('Failed to parse chat history:', e)
+        }
+      }
+    }
+  }, [isOpen])
+
+  // 保存历史记录到 localStorage
+  useEffect(() => {
+    if (isOpen && messages.length > 0) {
+      localStorage.setItem('seu_wuhub_chat_history', JSON.stringify(messages))
+    }
+  }, [messages, isOpen])
+
+  // 自动滚动到底部
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight
+    }
+  }, [messages, currentThought, currentToolCall])
+
+  const handleSubmit = async () => {
+    if (!input.trim() || isLoading) return
+
+    const userMessage: Message = {
+      role: 'user',
+      content: input.trim()
+    }
+
+    setMessages(prev => [...prev, userMessage])
+    setInput("")
     setIsLoading(true)
-    setTimeout(() => {
-      setAnswer(
-        "根据大学生手册，新生入学后需要完成以下步骤：1）完成学籍注册；2）选择培养方案；3）参加新生教育活动。建议先阅读《新生入门》了解详细流程。"
-      )
-      setSources([
-        { title: "新生入门 - 入学流程", url: "#" },
-        { title: "培养方案 - 2024级", url: "#" },
-      ])
+    setCurrentThought(null)
+    setCurrentToolCall(null)
+
+    try {
+      // 获取最近 10 条历史记录
+      const history = messages.slice(-10).map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }))
+
+      const stream = await api.chatWithAI(userMessage.content, history)
+
+      let assistantContent = ""
+      let assistantSources: SourceReference[] = []
+
+      for await (const event of stream) {
+        if (event.type === 'thought') {
+          setCurrentThought(event.content)
+        } else if (event.type === 'tool_call') {
+          setCurrentToolCall(event.tool_name)
+        } else if (event.type === 'tool_response') {
+          // 可以显示工具响应
+        } else if (event.type === 'answer') {
+          assistantContent = event.content
+          assistantSources = event.sources || []
+        } else if (event.type === 'delta') {
+          // 流式输出
+          assistantContent += event.content
+          
+          // 更新消息
+          const updatedMessages = [...messages, userMessage, {
+            role: 'assistant' as const,
+            content: assistantContent,
+            sources: assistantSources
+          }]
+          setMessages(updatedMessages)
+        }
+      }
+
+      // 最终消息
+      const assistantMessage: Message = {
+        role: 'assistant',
+        content: assistantContent,
+        sources: assistantSources
+      }
+
+      setMessages(prev => {
+        // 替换临时消息
+        const newMessages = [...prev]
+        if (newMessages[newMessages.length - 1]?.role === 'assistant') {
+          newMessages[newMessages.length - 1] = assistantMessage
+        } else {
+          newMessages.push(assistantMessage)
+        }
+        return newMessages
+      })
+    } catch (error) {
+      console.error('Chat error:', error)
+      const errorMessage: Message = {
+        role: 'assistant',
+        content: '抱歉，出现了错误，请稍后重试。'
+      }
+      setMessages(prev => [...prev, errorMessage])
+    } finally {
       setIsLoading(false)
-    }, 1000)
+      setCurrentThought(null)
+      setCurrentToolCall(null)
+    }
   }
 
-  return (
-    <div
-      className={`fixed right-0 top-0 z-50 h-full w-80 transform transition-transform duration-300 ease-in-out ${
-        isOpen ? "translate-x-0" : "translate-x-full"
-      }`}
-    >
-      <Card className="h-full rounded-none border-l border-border bg-card shadow-lg">
-        <CardHeader className="border-b border-border pb-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-base font-semibold text-card-foreground">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-                <Bot className="h-5 w-5 text-primary-foreground" />
-              </div>
-              AI 助手
-              <Sparkles className="h-4 w-4 text-accent" />
-            </CardTitle>
+  const handleClearHistory = () => {
+    if (confirm('确定要清空对话历史吗？')) {
+      setMessages([])
+      localStorage.removeItem('seu_wuhub_chat_history')
+    }
+  }
+
+  const ChatContent = () => (
+    <div className="flex h-full flex-col">
+      <div className="border-b border-border pb-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+              <Bot className="h-5 w-5 text-primary-foreground" />
+            </div>
+            <h3 className="text-base font-semibold text-card-foreground">AI 助手</h3>
+            <Sparkles className="h-4 w-4 text-accent" />
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleClearHistory}
+              className="h-8 w-8 rounded-full hover:bg-secondary"
+              title="清空对话"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -62,69 +180,109 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
               <X className="h-4 w-4" />
             </Button>
           </div>
-        </CardHeader>
-        <CardContent className="flex h-[calc(100%-5rem)] flex-col p-4">
-          <div className="mb-4 flex-1 overflow-y-auto">
-            {!answer && !isLoading && (
-              <div className="flex h-full flex-col items-center justify-center text-center text-muted-foreground">
-                <Bot className="mb-3 h-12 w-12 opacity-50" />
-                <p className="text-sm">有什么问题？</p>
-                <p className="text-xs">我可以帮你搜索校园信息</p>
-              </div>
-            )}
-            {isLoading && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <div className="h-2 w-2 animate-pulse rounded-full bg-primary" />
-                <div className="animation-delay-150 h-2 w-2 animate-pulse rounded-full bg-primary" />
-                <div className="animation-delay-300 h-2 w-2 animate-pulse rounded-full bg-primary" />
-                <span>思考中...</span>
-              </div>
-            )}
-            {answer && !isLoading && (
-              <div className="space-y-4">
-                <div className="rounded-lg bg-secondary p-3 text-sm text-secondary-foreground">
-                  {answer}
+        </div>
+      </div>
+      <div ref={chatContainerRef} className="mb-4 flex-1 overflow-y-auto">
+        {messages.length === 0 && !isLoading && (
+          <div className="flex h-full flex-col items-center justify-center text-center text-muted-foreground">
+            <Bot className="mb-3 h-12 w-12 opacity-50" />
+            <p className="text-sm">有什么问题？</p>
+            <p className="text-xs">我可以帮你搜索校园信息</p>
+          </div>
+        )}
+        
+        {messages.map((message, index) => (
+          <div key={index} className={`mb-4 ${message.role === 'user' ? 'flex justify-end' : 'flex'}`}>
+            <div className={`max-w-[80%] rounded-lg p-3 text-sm ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>
+              {message.content}
+              {message.sources && message.sources.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground">参考来源</p>
+                  {message.sources.map((source, sourceIndex) => (
+                    <a
+                      key={sourceIndex}
+                      href={source.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 rounded-md border border-border p-1 text-xs text-foreground transition-colors hover:bg-secondary"
+                    >
+                      <ExternalLink className="h-3 w-3 text-primary" />
+                      {source.title}
+                    </a>
+                  ))}
                 </div>
-                {sources.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium text-muted-foreground">参考来源</p>
-                    {sources.map((source, index) => (
-                      <a
-                        key={index}
-                        href={source.url}
-                        className="flex items-center gap-2 rounded-md border border-border p-2 text-xs text-foreground transition-colors hover:bg-secondary"
-                      >
-                        <ExternalLink className="h-3 w-3 text-primary" />
-                        {source.title}
-                      </a>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+              )}
+            </div>
           </div>
-          <div className="space-y-2">
-            <Textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="输入你的问题..."
-              className="min-h-[80px] resize-none border-border bg-secondary text-sm placeholder:text-muted-foreground focus-visible:ring-primary"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault()
-                  handleSubmit()
-                }
-              }}
-            />
-            <Button
-              onClick={handleSubmit}
-              disabled={isLoading || !input.trim()}
-              className="w-full gap-2"
-            >
-              <Send className="h-4 w-4" />
-              发送
-            </Button>
+        ))}
+        
+        {currentThought && (
+          <div className="mb-4 flex">
+            <div className="max-w-[80%] rounded-lg bg-secondary p-3 text-sm text-secondary-foreground">
+              <p className="italic">AI 正在思考：{currentThought}</p>
+            </div>
           </div>
+        )}
+        
+        {currentToolCall && (
+          <div className="mb-4 flex">
+            <div className="max-w-[80%] rounded-lg bg-secondary p-3 text-sm text-secondary-foreground">
+              <p>正在调用 [{currentToolCall}]...</p>
+            </div>
+          </div>
+        )}
+        
+        {isLoading && !currentThought && !currentToolCall && (
+          <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="h-2 w-2 animate-pulse rounded-full bg-primary" />
+            <div className="animation-delay-150 h-2 w-2 animate-pulse rounded-full bg-primary" />
+            <div className="animation-delay-300 h-2 w-2 animate-pulse rounded-full bg-primary" />
+            <span>思考中...</span>
+          </div>
+        )}
+      </div>
+      <div className="space-y-2">
+        <Textarea
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="输入你的问题..."
+          className="min-h-[80px] resize-none border-border bg-secondary text-sm placeholder:text-muted-foreground focus-visible:ring-primary"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault()
+              handleSubmit()
+            }
+          }}
+        />
+        <Button
+          onClick={handleSubmit}
+          disabled={isLoading || !input.trim()}
+          className="w-full gap-2"
+        >
+          <Send className="h-4 w-4" />
+          发送
+        </Button>
+      </div>
+    </div>
+  )
+
+  if (isMobile) {
+    return (
+      <Sheet open={isOpen} onOpenChange={onClose}>
+        <SheetContent side="bottom" className="h-[80vh] p-4">
+          <ChatContent />
+        </SheetContent>
+      </Sheet>
+    )
+  }
+
+  return (
+    <div
+      className={`fixed right-0 top-0 z-50 h-full w-80 transform transition-transform duration-300 ease-in-out ${isOpen ? "translate-x-0" : "translate-x-full"}`}
+    >
+      <Card className="h-full rounded-none border-l border-border bg-card shadow-lg">
+        <CardContent className="flex h-full flex-col p-4">
+          <ChatContent />
         </CardContent>
       </Card>
     </div>
