@@ -72,14 +72,14 @@ export function SettingsPage() {
       {/* 外观设置 */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
             <Sun className="h-5 w-5" />
             外观
           </CardTitle>
           <CardDescription>选择您喜欢的界面主题</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
             {themeOptions.map((option) => {
               const Icon = option.icon
               return (
@@ -87,7 +87,7 @@ export function SettingsPage() {
                   key={option.value}
                   onClick={() => setTheme(option.value)}
                   className={cn(
-                    "flex items-center justify-center gap-3 rounded-xl border-2 p-4 transition-all",
+                    "flex items-center justify-center gap-1.5 sm:gap-3 rounded-xl border-2 px-2 py-4 sm:px-4 transition-all",
                     theme === option.value
                       ? "border-primary bg-primary/10"
                       : "border-border hover:border-primary/50 hover:bg-secondary"
@@ -105,7 +105,7 @@ export function SettingsPage() {
                   </div>
                   <span
                     className={cn(
-                      "text-base font-medium",
+                      "text-sm sm:text-base font-medium",
                       theme === option.value ? "text-primary" : "text-foreground"
                     )}
                   >
@@ -121,7 +121,7 @@ export function SettingsPage() {
       {/* 数据管理 */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
             <Trash2 className="h-5 w-5" />
             数据管理
           </CardTitle>
@@ -130,7 +130,7 @@ export function SettingsPage() {
         <CardContent className="space-y-3">
           <Button
             variant="outline"
-            className="w-full justify-between text-destructive hover:bg-destructive/10 hover:text-destructive"
+            className="w-full justify-between text-sm sm:text-base text-destructive hover:bg-destructive/10 hover:text-destructive"
             onClick={() => {
               if (window.confirm('确定要清空所有对话记录吗？此操作不可撤销。')) {
                 try {
@@ -154,7 +154,7 @@ export function SettingsPage() {
           </Button>
           <Button
             variant="outline"
-            className="w-full justify-between text-destructive hover:bg-destructive/10 hover:text-destructive"
+            className="w-full justify-between text-sm sm:text-base text-destructive hover:bg-destructive/10 hover:text-destructive"
             onClick={() => {
               if (window.confirm('确定要清空所有收藏夹吗？此操作不可撤销。')) {
                 try {
@@ -182,7 +182,7 @@ export function SettingsPage() {
       {/* 反馈 */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
             <MessageSquare className="h-5 w-5" />
             反馈问题
           </CardTitle>
@@ -253,7 +253,7 @@ export function SettingsPage() {
       {/* 关于 */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">关于 WuHub</CardTitle>
+          <CardTitle className="text-base sm:text-lg">关于 WuHub</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center justify-between rounded-lg bg-secondary/50 p-3">
