@@ -118,6 +118,27 @@ export function SettingsPage() {
         </CardContent>
       </Card>
 
+      {/* 历史对话回顾 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <MessageSquare className="h-5 w-5" />
+            历史对话回顾
+          </CardTitle>
+          <CardDescription>查看和管理您的历史对话记录</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button
+            variant="default"
+            className="w-full justify-between text-sm sm:text-base"
+            onClick={() => router.push('/chat-history')}
+          >
+            查看历史对话
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* 数据管理 */}
       <Card>
         <CardHeader>

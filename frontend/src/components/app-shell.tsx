@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { toast } from "sonner"
 import { Menu, X } from "lucide-react"
-import { usePathname } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 import { Header } from "@/components/header"
 import { Sidebar } from "@/components/sidebar"
 import { AIAssistant } from "@/components/ai-assistant"
@@ -25,6 +25,7 @@ export function AppShell({ children }: AppShellProps) {
   const { isReadingMode } = useReadingMode()
   const isMobile = useIsMobile()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
 
   // 检测无痕模式
   useEffect(() => {
@@ -47,6 +48,14 @@ export function AppShell({ children }: AppShellProps) {
       });
     }
   }, []); // 确保只在首次挂载时执行
+
+  // 检测 URL 参数中的 sessionId
+  useEffect(() => {
+    const sessionId = searchParams.get('sessionId');
+    if (sessionId) {
+      setIsAIOpen(true);
+    }
+  }, [searchParams]);
 
   const handleAgentClick = () => {
     setIsMobileMenuOpen(false)
@@ -105,7 +114,11 @@ export function AppShell({ children }: AppShellProps) {
         </>
       )}
       
-      <AIAssistant isOpen={isAIOpen && !isReadingMode} onClose={() => setIsAIOpen(false)} />
+      <AIAssistant 
+        isOpen={isAIOpen && !isReadingMode} 
+        onClose={() => setIsAIOpen(false)} 
+        sessionId={searchParams.get('sessionId') || undefined}
+      />
     </div>
   )
 }

@@ -32,9 +32,10 @@ interface Session {
 interface AIAssistantProps {
   isOpen: boolean
   onClose: () => void
+  sessionId?: string
 }
 
-export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
+export function AIAssistant({ isOpen, onClose, sessionId }: AIAssistantProps) {
   const [input, setInput] = useState("")
   const [sessions, setSessions] = useState<Session[]>([])
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
@@ -61,7 +62,10 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
           try {
             const parsedSessions = JSON.parse(savedSessions) as Session[]
             setSessions(parsedSessions)
-            if (parsedSessions.length > 0) {
+            // 检查是否有传入的 sessionId
+            if (sessionId && parsedSessions.some(s => s.id === sessionId)) {
+              setCurrentSessionId(sessionId)
+            } else if (parsedSessions.length > 0) {
               setCurrentSessionId(parsedSessions[0].id)
             } else {
               // 创建默认会话
@@ -114,7 +118,7 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
         setCurrentSessionId(newSession.id)
       }
     }
-  }, [isOpen])
+  }, [isOpen, sessionId])
 
   // 保存会话列表到 localStorage
   useEffect(() => {
