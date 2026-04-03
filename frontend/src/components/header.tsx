@@ -13,7 +13,11 @@ interface HeaderProps {
   onAIToggle: () => void
 }
 
-function HeaderSearchContent() {
+interface HeaderSearchContentProps {
+  onSearchExpand: (expanded: boolean) => void
+}
+
+function HeaderSearchContent({ onSearchExpand }: HeaderSearchContentProps) {
   const searchParams = useSearchParams()
   const [searchQuery, setSearchQuery] = useState('')
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
@@ -21,6 +25,11 @@ function HeaderSearchContent() {
   const searchContainerRef = useRef<HTMLDivElement>(null)
   const filterPanelRef = useRef<HTMLDivElement>(null)
   const isMobile = useIsMobile()
+
+  // 当搜索展开状态变化时，通知父组件
+  useEffect(() => {
+    onSearchExpand(isSearchExpanded)
+  }, [isSearchExpanded, onSearchExpand])
 
   const updateSearchParam = (key: string, value: string | null) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -105,7 +114,7 @@ function HeaderSearchContent() {
         {isMobile ? (
           <div 
             ref={searchContainerRef} 
-            className="relative flex-1 max-w-[300px]"
+            className={`relative flex-1 ${isSearchExpanded ? 'max-w-none' : 'max-w-[300px]'}`}
             onClick={() => !isSearchExpanded && setIsSearchExpanded(true)}
           >
             <div className="relative flex items-center">
@@ -113,7 +122,7 @@ function HeaderSearchContent() {
                 className={`relative transition-all duration-300 ${isSearchExpanded ? 'w-full' : 'w-9'}`}
               >
                 <Search 
-                  className={`absolute top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground z-10 transition-all duration-300 ${isSearchExpanded ? 'left-3' : 'left-1/2 -translate-x-1/2'}`} 
+                  className={`absolute top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground z-10 ${isSearchExpanded ? 'left-3' : 'left-1/2 -translate-x-1/2'}`} 
                 />
                 <Input
                   type="search"
@@ -169,7 +178,7 @@ function HeaderSearchContent() {
         {isSearchExpanded && (
           <div
             ref={filterPanelRef}
-            className="absolute left-0 right-0 top-full mt-2 rounded-xl border border-border bg-background p-4 shadow-lg z-50"
+            className={`${isMobile ? 'fixed left-4 right-4 top-[56px] mt-0' : 'absolute left-0 right-0 top-full mt-2'} rounded-xl border border-border bg-background p-4 shadow-lg z-50`}
           >
             <div className="space-y-4">
               <div>
@@ -264,7 +273,7 @@ export function Header({ onAIToggle }: HeaderProps) {
 
   return (
     <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-card/95 px-4 shadow-sm backdrop-blur-sm">
-      <div className="flex items-center gap-2">
+      <div className={`flex items-center gap-2 ${isMobile && isSearchExpanded ? 'hidden' : ''}`}>
         <div
           className="relative flex h-8 w-8 cursor-pointer items-center justify-center overflow-hidden rounded-lg"
           onClick={() => router.push('/')}
@@ -288,7 +297,7 @@ export function Header({ onAIToggle }: HeaderProps) {
       </div>
 
       <Suspense fallback={<HeaderSearchFallback />}>
-        <HeaderSearchContent />
+        <HeaderSearchContent onSearchExpand={setIsSearchExpanded} />
       </Suspense>
 
       {!isMobile && (
