@@ -131,26 +131,36 @@ export function SettingsPage() {
             variant="outline"
             className="w-full justify-between text-destructive hover:bg-destructive/10 hover:text-destructive"
             onClick={() => {
-              if (window.confirm('要清空本地所有对话记录吗？此操作不可撤销！')) {
-                localStorage.removeItem('seu_wuhub_chat_history')
-                window.alert('对话记录已清空')
+              if (window.confirm('确定要清空所有对话记录吗？此操作不可撤销。')) {
+                try {
+                  localStorage.removeItem('seu_wuhub_chat_history')
+                  window.alert('对话记录已清空')
+                } catch (e) {
+                  console.error('清空对话记录失败:', e)
+                  window.alert('清空对话记录失败，请检查浏览器设置')
+                }
               }
             }}
           >
-            一键清空对话记录
+            清空对话记录
             <Trash2 className="h-4 w-4" />
           </Button>
           <Button
             variant="outline"
             className="w-full justify-between text-destructive hover:bg-destructive/10 hover:text-destructive"
             onClick={() => {
-              if (window.confirm('要清空本地所有收藏夹吗？此操作不可撤销！')) {
-                localStorage.removeItem('seu_wuhub_favorites')
-                window.alert('收藏夹已清空')
+              if (window.confirm('确定要清空所有收藏夹吗？此操作不可撤销。')) {
+                try {
+                  localStorage.removeItem('seu_wuhub_favorites')
+                  window.alert('收藏夹已清空')
+                } catch (e) {
+                  console.error('清空收藏夹失败:', e)
+                  window.alert('清空收藏夹失败，请检查浏览器设置')
+                }
               }
             }}
           >
-            一键清空收藏夹
+            清空收藏夹
             <Trash2 className="h-4 w-4" />
           </Button>
         </CardContent>

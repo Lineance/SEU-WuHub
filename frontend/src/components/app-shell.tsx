@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Menu, X } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { Header } from "@/components/header"
@@ -24,6 +24,24 @@ export function AppShell({ children }: AppShellProps) {
   const { isReadingMode } = useReadingMode()
   const isMobile = useIsMobile()
   const pathname = usePathname()
+
+  // 检测无痕模式
+  useEffect(() => {
+    const checkStorage = () => {
+      try {
+        const testKey = "__storage_test__";
+        localStorage.setItem(testKey, testKey);
+        localStorage.removeItem(testKey);
+        return true;
+      } catch (e) {
+        return false;
+      }
+    };
+
+    if (!checkStorage()) {
+      alert("当前可能处于无痕模式，为防止数据丢失，建议关闭无痕模式");
+    }
+  }, []); // 确保只在首次挂载时执行
 
   const handleAgentClick = () => {
     setIsMobileMenuOpen(false)
