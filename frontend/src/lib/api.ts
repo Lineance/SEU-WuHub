@@ -389,4 +389,21 @@ export const api = {
     }
   },
   chatWithAI: aiApi.chatWithAI,
+  generateTitle: async (content: string) => {
+    const url = `${API_BASE}/chat/title`
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ content }),
+    })
+
+    if (!response.ok) {
+      throw new ApiError(response.status, await response.text())
+    }
+
+    return response.json()
+  },
 }

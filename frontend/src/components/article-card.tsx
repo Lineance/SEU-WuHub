@@ -20,7 +20,7 @@ interface ArticleCardProps {
 export function ArticleCard({ id, title, summary, time, source, tags }: ArticleCardProps) {
   const [favorited, setFavorited] = useState(() => isFavorite(String(id)))
   return (
-    <Card className="group cursor-pointer border-border bg-card transition-all hover:border-primary/30 hover:shadow-md">
+    <Card className="group flex h-full flex-col cursor-pointer border-border bg-card transition-all hover:border-primary/30 hover:shadow-md">
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="flex-1 line-clamp-2 text-base font-semibold text-card-foreground group-hover:text-primary">
@@ -49,7 +49,7 @@ export function ArticleCard({ id, title, summary, time, source, tags }: ArticleC
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="flex-1 flex flex-col space-y-3">
         <p className="line-clamp-2 text-sm text-muted-foreground">{summary}</p>
         <div className="flex flex-wrap gap-2">
           {tags.map((tag) => (
@@ -59,7 +59,7 @@ export function ArticleCard({ id, title, summary, time, source, tags }: ArticleC
             </Badge>
           ))}
         </div>
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+        <div className="mt-auto flex items-center gap-4 pt-2 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
             <Clock className="h-3 w-3" />
             {time}

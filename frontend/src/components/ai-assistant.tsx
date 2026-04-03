@@ -21,6 +21,14 @@ interface Message {
   sources?: SourceReference[]
 }
 
+interface Session {
+  id: string
+  title: string
+  messages: Message[]
+  createdAt: string
+  updatedAt: string
+}
+
 interface AIAssistantProps {
   isOpen: boolean
   onClose: () => void
@@ -28,45 +36,96 @@ interface AIAssistantProps {
 
 export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
   const [input, setInput] = useState("")
-  const [messages, setMessages] = useState<Message[]>([])
+  const [sessions, setSessions] = useState<Session[]>([])
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [currentThought, setCurrentThought] = useState<string | null>(null)
   const [currentToolCall, setCurrentToolCall] = useState<string | null>(null)
   const [sheetHeight, setSheetHeight] = useState(80) // 初始高度为 80%
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const isMobile = useIsMobile()
+
+  // 获取当前会话
+  const currentSession = sessions.find(session => session.id === currentSessionId)
+  const messages = currentSession?.messages || []
   
   // 吸附点定义
   const SNAP_POINTS = [25, 50, 80, 100]
 
-  // 从 localStorage 加载历史记录
+  // 从 localStorage 加载会话列表
   useEffect(() => {
     if (isOpen) {
       try {
-        const savedHistory = localStorage.getItem('seu_wuhub_chat_history')
-        if (savedHistory) {
+        const savedSessions = localStorage.getItem('seu_wuhub_sessions')
+        if (savedSessions) {
           try {
-            setMessages(JSON.parse(savedHistory))
+            const parsedSessions = JSON.parse(savedSessions) as Session[]
+            setSessions(parsedSessions)
+            if (parsedSessions.length > 0) {
+              setCurrentSessionId(parsedSessions[0].id)
+            } else {
+              // 创建默认会话
+              const newSession: Session = {
+                id: Date.now().toString(),
+                title: '新会话',
+                messages: [],
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+              }
+              setSessions([newSession])
+              setCurrentSessionId(newSession.id)
+            }
           } catch (e) {
-            console.error('Failed to parse chat history:', e)
+            console.error('Failed to parse sessions:', e)
+            // 创建默认会话
+            const newSession: Session = {
+              id: Date.now().toString(),
+              title: '新会话',
+              messages: [],
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            }
+            setSessions([newSession])
+            setCurrentSessionId(newSession.id)
           }
+        } else {
+          // 创建默认会话
+          const newSession: Session = {
+            id: Date.now().toString(),
+            title: '新会话',
+            messages: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          }
+          setSessions([newSession])
+          setCurrentSessionId(newSession.id)
         }
       } catch (e) {
-        console.warn('Failed to read chat history from localStorage:', e)
+        console.warn('Failed to read sessions from localStorage:', e)
+        // 创建默认会话
+        const newSession: Session = {
+          id: Date.now().toString(),
+          title: '新会话',
+          messages: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }
+        setSessions([newSession])
+        setCurrentSessionId(newSession.id)
       }
     }
   }, [isOpen])
 
-  // 保存历史记录到 localStorage
+  // 保存会话列表到 localStorage
   useEffect(() => {
-    if (isOpen && messages.length > 0) {
+    if (isOpen && sessions.length > 0) {
       try {
-        localStorage.setItem('seu_wuhub_chat_history', JSON.stringify(messages))
+        localStorage.setItem('seu_wuhub_sessions', JSON.stringify(sessions))
       } catch (e) {
-        console.warn('Failed to save chat history to localStorage:', e)
+        console.warn('Failed to save sessions to localStorage:', e)
       }
     }
-  }, [messages, isOpen])
+  }, [sessions, isOpen])
 
   // 自动滚动到底部
   useEffect(() => {
@@ -74,6 +133,40 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight
     }
   }, [messages, currentThought, currentToolCall])
+
+  // 创建新会话
+  const createNewSession = () => {
+    const newSession: Session = {
+      id: Date.now().toString(),
+      title: '新会话',
+      messages: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+    setSessions(prev => [newSession, ...prev])
+    setCurrentSessionId(newSession.id)
+  }
+
+  // 生成会话标题
+  const generateSessionTitle = async (content: string) => {
+    try {
+      const response = await api.generateTitle(content)
+      if (response && response.title) {
+        setSessions(prev => prev.map(session => {
+          if (session.id === currentSessionId) {
+            return {
+              ...session,
+              title: response.title,
+              updatedAt: new Date().toISOString()
+            }
+          }
+          return session
+        }))
+      }
+    } catch (error) {
+      console.error('Failed to generate session title:', error)
+    }
+  }
 
   const handleSubmit = async () => {
     if (!input.trim() || isLoading) return
@@ -83,7 +176,18 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
       content: input.trim()
     }
 
-    setMessages(prev => [...prev, userMessage])
+    // 更新当前会话的消息
+    setSessions(prev => prev.map(session => {
+      if (session.id === currentSessionId) {
+        return {
+          ...session,
+          messages: [...session.messages, userMessage],
+          updatedAt: new Date().toISOString()
+        }
+      }
+      return session
+    }))
+
     setInput("")
     setIsLoading(true)
     setCurrentThought(null)
@@ -115,26 +219,32 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
           // 流式输出
           assistantContent += event.content
           
-          // 使用函数式更新确保数据的绝对实时性
-          setMessages(prev => {
-            // 逻辑：保留之前的消息，仅更新最后一条助手回复
-            const newMessages = [...prev]
-            // 确保至少有用户消息在那
-            if (newMessages.length > 0 && newMessages[newMessages.length - 1].role === 'assistant') {
-              newMessages[newMessages.length - 1] = {
-                role: 'assistant' as const,
-                content: assistantContent,
-                sources: assistantSources
+          // 更新当前会话的消息
+          setSessions(prev => prev.map(session => {
+            if (session.id === currentSessionId) {
+              const sessionMessages = [...session.messages]
+              // 确保至少有用户消息在那
+              if (sessionMessages.length > 0 && sessionMessages[sessionMessages.length - 1].role === 'assistant') {
+                sessionMessages[sessionMessages.length - 1] = {
+                  role: 'assistant' as const,
+                  content: assistantContent,
+                  sources: assistantSources
+                }
+              } else {
+                sessionMessages.push({
+                  role: 'assistant' as const,
+                  content: assistantContent,
+                  sources: assistantSources
+                })
               }
-            } else {
-              newMessages.push({
-                role: 'assistant' as const,
-                content: assistantContent,
-                sources: assistantSources
-              })
+              return {
+                ...session,
+                messages: sessionMessages,
+                updatedAt: new Date().toISOString()
+              }
             }
-            return newMessages
-          })
+            return session
+          }))
         }
       }
 
@@ -145,23 +255,46 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
         sources: assistantSources
       }
 
-      setMessages(prev => {
-        // 替换临时消息
-        const newMessages = [...prev]
-        if (newMessages[newMessages.length - 1]?.role === 'assistant') {
-          newMessages[newMessages.length - 1] = assistantMessage
-        } else {
-          newMessages.push(assistantMessage)
+      // 更新当前会话的消息
+      setSessions(prev => prev.map(session => {
+        if (session.id === currentSessionId) {
+          const sessionMessages = [...session.messages]
+          if (sessionMessages[sessionMessages.length - 1]?.role === 'assistant') {
+            sessionMessages[sessionMessages.length - 1] = assistantMessage
+          } else {
+            sessionMessages.push(assistantMessage)
+          }
+          return {
+            ...session,
+            messages: sessionMessages,
+            updatedAt: new Date().toISOString()
+          }
         }
-        return newMessages
-      })
+        return session
+      }))
+
+      // 如果是新会话的第一条消息，生成标题
+      if (messages.length === 0) {
+        generateSessionTitle(userMessage.content)
+      }
     } catch (error) {
       console.error('Chat error:', error)
       const errorMessage: Message = {
         role: 'assistant',
         content: '抱歉，出现了错误，请稍后重试。'
       }
-      setMessages(prev => [...prev, errorMessage])
+      
+      // 更新当前会话的消息
+      setSessions(prev => prev.map(session => {
+        if (session.id === currentSessionId) {
+          return {
+            ...session,
+            messages: [...session.messages, errorMessage],
+            updatedAt: new Date().toISOString()
+          }
+        }
+        return session
+      }))
     } finally {
       setIsLoading(false)
       setCurrentThought(null)
@@ -178,10 +311,43 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
     }
   }, [isOpen])
 
-  const handleClearHistory = () => {
-    if (confirm('确定要清空对话历史吗？')) {
-      setMessages([])
-      localStorage.removeItem('seu_wuhub_chat_history')
+  // 清空当前会话
+  const handleClearCurrentSession = () => {
+    if (confirm('确定要清空当前对话历史吗？')) {
+      setSessions(prev => prev.map(session => {
+        if (session.id === currentSessionId) {
+          return {
+            ...session,
+            messages: [],
+            updatedAt: new Date().toISOString()
+          }
+        }
+        return session
+      }))
+    }
+  }
+
+  // 删除当前会话
+  const handleDeleteCurrentSession = () => {
+    if (confirm('确定要删除当前会话吗？')) {
+      setSessions(prev => {
+        const filteredSessions = prev.filter(session => session.id !== currentSessionId)
+        if (filteredSessions.length > 0) {
+          setCurrentSessionId(filteredSessions[0].id)
+        } else {
+          // 创建新会话
+          const newSession: Session = {
+            id: Date.now().toString(),
+            title: '新会话',
+            messages: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          }
+          setCurrentSessionId(newSession.id)
+          return [newSession]
+        }
+        return filteredSessions
+      })
     }
   }
 
@@ -214,18 +380,43 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
                   <Bot className="h-5 w-5 text-primary-foreground" />
                 </div>
-                <h3 className="text-base font-semibold text-card-foreground">AI 助手</h3>
+                <div className="flex flex-col">
+                  <h3 className="text-base font-semibold text-card-foreground">AI 助手</h3>
+                  {currentSession && (
+                    <p className="text-xs text-muted-foreground truncate">{currentSession.title}</p>
+                  )}
+                </div>
                 <Sparkles className="h-4 w-4 text-accent" />
               </div>
               <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={handleClearHistory}
+                  onClick={createNewSession}
                   className="h-11 w-11 rounded-full hover:bg-secondary"
-                  title="重置对话"
+                  title="新会话"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleClearCurrentSession}
+                  className="h-11 w-11 rounded-full hover:bg-secondary"
+                  title="清空对话"
                 >
                   <RotateCcw className="h-6 w-6" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleDeleteCurrentSession}
+                  className="h-11 w-11 rounded-full hover:bg-secondary"
+                  title="删除会话"
+                >
+                  <X className="h-6 w-6" />
                 </Button>
                 <Button
                   variant="ghost"
@@ -233,7 +424,9 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
                   onClick={onClose}
                   className="h-11 w-11 rounded-full hover:bg-secondary"
                 >
-                  <X className="h-6 w-6" />
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
                 </Button>
               </div>
             </div>

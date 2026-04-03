@@ -324,7 +324,7 @@ function SearchContent() {
       )}
 
       {!loading && !error && filteredArticles.length > 0 && (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {filteredArticles.map((article) => (
             <div
               key={article.id}
