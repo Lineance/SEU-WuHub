@@ -42,13 +42,17 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
   // 从 localStorage 加载历史记录
   useEffect(() => {
     if (isOpen) {
-      const savedHistory = localStorage.getItem('seu_wuhub_chat_history')
-      if (savedHistory) {
-        try {
-          setMessages(JSON.parse(savedHistory))
-        } catch (e) {
-          console.error('Failed to parse chat history:', e)
+      try {
+        const savedHistory = localStorage.getItem('seu_wuhub_chat_history')
+        if (savedHistory) {
+          try {
+            setMessages(JSON.parse(savedHistory))
+          } catch (e) {
+            console.error('Failed to parse chat history:', e)
+          }
         }
+      } catch (e) {
+        console.warn('Failed to read chat history from localStorage:', e)
       }
     }
   }, [isOpen])
@@ -56,7 +60,11 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
   // 保存历史记录到 localStorage
   useEffect(() => {
     if (isOpen && messages.length > 0) {
-      localStorage.setItem('seu_wuhub_chat_history', JSON.stringify(messages))
+      try {
+        localStorage.setItem('seu_wuhub_chat_history', JSON.stringify(messages))
+      } catch (e) {
+        console.warn('Failed to save chat history to localStorage:', e)
+      }
     }
   }, [messages, isOpen])
 

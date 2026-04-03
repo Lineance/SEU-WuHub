@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
 import { Moon, Sun, MessageSquare, Send, ChevronRight, ArrowLeft, Trash2 } from "lucide-react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
@@ -134,10 +135,16 @@ export function SettingsPage() {
               if (window.confirm('确定要清空所有对话记录吗？此操作不可撤销。')) {
                 try {
                   localStorage.removeItem('seu_wuhub_chat_history')
-                  window.alert('对话记录已清空')
+                  toast.success('对话记录已清空', {
+                    duration: 3000,
+                    position: "top-right",
+                  });
                 } catch (e) {
                   console.error('清空对话记录失败:', e)
-                  window.alert('清空对话记录失败，请检查浏览器设置')
+                  toast.error('检测到存储无法写入，为防止数据丢失，建议关闭无痕模式或者启用 cookies', {
+                    duration: 5000,
+                    position: "top-right",
+                  });
                 }
               }
             }}
@@ -152,10 +159,16 @@ export function SettingsPage() {
               if (window.confirm('确定要清空所有收藏夹吗？此操作不可撤销。')) {
                 try {
                   localStorage.removeItem('seu_wuhub_favorites')
-                  window.alert('收藏夹已清空')
+                  toast.success('收藏夹已清空', {
+                    duration: 3000,
+                    position: "top-right",
+                  });
                 } catch (e) {
                   console.error('清空收藏夹失败:', e)
-                  window.alert('清空收藏夹失败，请检查浏览器设置')
+                  toast.error('检测到存储无法写入，为防止数据丢失，建议关闭无痕模式或者启用 cookies', {
+                    duration: 5000,
+                    position: "top-right",
+                  });
                 }
               }
             }}

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { toast } from "sonner"
 import { Menu, X } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { Header } from "@/components/header"
@@ -34,12 +35,16 @@ export function AppShell({ children }: AppShellProps) {
         localStorage.removeItem(testKey);
         return true;
       } catch (e) {
+        console.warn("Storage check failed:", e);
         return false;
       }
     };
 
     if (!checkStorage()) {
-      alert("当前可能处于无痕模式，为防止数据丢失，建议关闭无痕模式");
+      toast.warning("检测到存储无法写入，为防止数据丢失，建议关闭无痕模式或者启用 cookies", {
+        duration: 10000,
+        position: "top-right",
+      });
     }
   }, []); // 确保只在首次挂载时执行
 
