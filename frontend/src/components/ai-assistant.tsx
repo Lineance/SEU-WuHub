@@ -43,7 +43,9 @@ export function AIAssistant({ isOpen, onClose, sessionId }: AIAssistantProps) {
   const [currentThought, setCurrentThought] = useState<string | null>(null)
   const [currentToolCall, setCurrentToolCall] = useState<string | null>(null)
   const [sheetHeight, setSheetHeight] = useState(80) // 初始高度为 80%
+  const [panelWidth, setPanelWidth] = useState(320) // 默认 320px，仅对 PC 生效
   const chatContainerRef = useRef<HTMLDivElement>(null)
+  const isResizing = useRef(false)
   const isMobile = useIsMobile()
 
   // 获取当前会话
@@ -338,6 +340,34 @@ export function AIAssistant({ isOpen, onClose, sessionId }: AIAssistantProps) {
 
 
 
+  // 拉伸手柄事件处理
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault()
+    isResizing.current = true
+    
+    // 添加全局鼠标事件监听
+    document.addEventListener('mousemove', handleResize)
+    document.addEventListener('mouseup', handleResizeEnd)
+  }
+
+  const handleResize = (e: MouseEvent) => {
+    if (!isResizing.current) return
+    
+    // 计算新的宽度
+    const maxWidth = Math.min(600, window.innerWidth * 0.4)
+    const newWidth = Math.max(280, maxWidth - (e.clientX - (window.innerWidth - panelWidth)))
+    
+    setPanelWidth(newWidth)
+  }
+
+  const handleResizeEnd = () => {
+    isResizing.current = false
+    
+    // 移除全局鼠标事件监听
+    document.removeEventListener('mousemove', handleResize)
+    document.removeEventListener('mouseup', handleResizeEnd)
+  }
+
   // 聊天界面内容
   const chatInnerContent = (
     <div className="flex h-full flex-col">
@@ -516,8 +546,18 @@ export function AIAssistant({ isOpen, onClose, sessionId }: AIAssistantProps) {
 
   return (
     <div
-      className={`fixed right-0 top-0 z-50 h-full w-80 transform transition-transform duration-300 ease-in-out ${isOpen ? "translate-x-0" : "translate-x-full"}`}
+      className={`fixed right-0 top-0 z-50 h-full transform transition-transform duration-300 ease-in-out ${isOpen ? "translate-x-0" : "translate-x-full"}`}
+      style={{ width: isMobile ? '100%' : `${panelWidth}px` }}
     >
+      {/* 拉伸手柄 */}
+      <div
+        className="absolute left-0 top-0 h-full w-4 cursor-col-resize bg-transparent hover:bg-primary/10 flex items-center justify-center"
+        onMouseDown={handleResizeStart}
+        style={{ zIndex: 1 }}
+      >
+        {/* 可视化胶囊滑块 */}
+        <div className="w-1.5 h-12 rounded-full bg-border hover:bg-border/80 transition-colors" />
+      </div>
       <Card className="h-full rounded-none border-l border-border bg-card shadow-lg">
         <CardContent className="flex h-full flex-col p-4">
           {chatInnerContent}
