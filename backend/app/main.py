@@ -48,6 +48,26 @@ app.include_router(search_router, prefix="/api/v1")
 app.include_router(chat_router, prefix="/api/v1")
 
 
+@app.on_event("startup")
+async def startup_event():
+    """启动时预加载向量模型"""
+    import logging
+    import sys
+
+    logging.basicConfig(level=logging.INFO, stream=sys.stdout, format="%(message)s")
+    logger = logging.getLogger(__name__)
+
+    logger.info("Loading embedding models...")
+
+    try:
+        # 预加载检索引擎（会加载向量模型）
+        from .api.v1.search import get_engine
+        _ = get_engine()
+        logger.info("Embedding models ready")
+    except Exception as e:
+        logger.warning(f"Failed to preload models: {e}")
+
+
 @app.get("/", tags=["root"])
 async def root():
     """根路径"""
