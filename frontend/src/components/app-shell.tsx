@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils"
 import { useReadingMode } from "@/components/reading-mode-provider"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { MobileNavFab } from "@/components/mobile-nav-fab"
 
 interface AppShellProps {
@@ -86,14 +86,14 @@ export function AppShell({ children }: AppShellProps) {
         <>
           <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
             <SheetContent side="left" className="w-[280px] p-0 [&>button]:hidden">
-              <div className="p-4 flex justify-between items-center border-b">
-                <h2 className="text-lg font-semibold">导航</h2>
+              <SheetHeader className="p-4 flex justify-between items-center border-b">
+                <SheetTitle className="text-lg font-semibold">导航</SheetTitle>
                 <SheetClose asChild>
                   <Button variant="ghost" size="icon" className="h-11 w-11 rounded-full hover:bg-secondary">
                     <X className="h-6 w-6" />
                   </Button>
                 </SheetClose>
-              </div>
+              </SheetHeader>
               <Sidebar
                 isCollapsed={false}
                 onToggleCollapse={() => {}}

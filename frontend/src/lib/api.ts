@@ -150,7 +150,7 @@ export const healthApi = {
   },
 }
 
-export type { Article, ArticleListResponse, SearchResult, SearchResponse }
+export type { Article, ArticleListResponse, SearchResponse, SearchResult }
 
 export interface SearchArticlesParams {
   q?: string
@@ -259,7 +259,7 @@ export const categoriesApi = {
 export const aiApi = {
   chatWithAI: async (query: string, history: any[]) => {
     const url = `${API_BASE}/chat/stream`
-    
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -283,6 +283,39 @@ export const aiApi = {
     const decoder = new TextDecoder()
     let buffer = ''
 
+    const normalizeEvent = (raw: any) => {
+      if (!raw || typeof raw !== 'object') return null
+      const eventType = String(raw.type || '')
+      const payload = (raw.payload && typeof raw.payload === 'object') ? raw.payload : {}
+
+      if (eventType === 'thought') {
+        return { type: 'thought', content: String(payload.message || '') }
+      }
+      if (eventType === 'tool_call') {
+        return { type: 'tool_call', tool_name: String(payload.tool || '') }
+      }
+      if (eventType === 'tool_result') {
+        return { type: 'tool_response', content: payload.result }
+      }
+      if (eventType === 'message') {
+        return {
+          type: 'answer',
+          content: String(payload.content || ''),
+          sources: Array.isArray(payload.sources) ? payload.sources : [],
+        }
+      }
+      if (eventType === 'done') {
+        return {
+          type: 'done',
+          reason: String(payload.reason || ''),
+          sources: Array.isArray(payload.sources) ? payload.sources : [],
+        }
+      }
+
+      // Backward compatibility: if upstream already sends frontend-ready events.
+      return raw
+    }
+
     return {
       async *[Symbol.asyncIterator]() {
         while (true) {
@@ -291,26 +324,26 @@ export const aiApi = {
 
           buffer += decoder.decode(value, { stream: true })
 
-          // SSE消息以\n\n分隔
-          const messages = buffer.split('\n\n')
+          // 分割消息 - SSE 事件以空行分隔
+          const messages = buffer.split('\\n\\n')
           buffer = messages.pop() || ''
 
           for (const message of messages) {
-            const lines = message.split('\n')
-            let eventType = 'message'
+            const lines = message.split('\\n')
             let dataStr = ''
 
             for (const line of lines) {
-              if (line.startsWith('event: ')) {
-                eventType = line.slice(7).trim()
-              } else if (line.startsWith('data: ')) {
+              if (line.startsWith('data: ')) {
                 dataStr = line.slice(6).trim()
               }
             }
 
             if (dataStr) {
               try {
-                yield JSON.parse(dataStr)
+                const normalized = normalizeEvent(JSON.parse(dataStr))
+                if (normalized) {
+                  yield normalized
+                }
               } catch (e) {
                 console.error('Failed to parse SSE data:', dataStr, e)
               }
@@ -320,13 +353,16 @@ export const aiApi = {
 
         // 处理最后残留的数据
         if (buffer) {
-          const lines = buffer.split('\n')
+          const lines = buffer.split('\\n')
           for (const line of lines) {
             if (line.startsWith('data: ')) {
               const dataStr = line.slice(6).trim()
               if (dataStr) {
                 try {
-                  yield JSON.parse(dataStr)
+                  const normalized = normalizeEvent(JSON.parse(dataStr))
+                  if (normalized) {
+                    yield normalized
+                  }
                 } catch (e) {
                   console.error('Failed to parse final SSE data:', dataStr, e)
                 }
@@ -411,7 +447,7 @@ export const api = {
   chatWithAI: aiApi.chatWithAI,
   generateTitle: async (content: string) => {
     const url = `${API_BASE}/chat/title`
-    
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {

@@ -49,7 +49,7 @@ export function AIAssistant({ isOpen, onClose, sessionId }: AIAssistantProps) {
   // 获取当前会话
   const currentSession = sessions.find(session => session.id === currentSessionId)
   const messages = currentSession?.messages || []
-  
+
   // 吸附点定义
   const SNAP_POINTS = [25, 50, 80, 100]
 
@@ -219,10 +219,15 @@ export function AIAssistant({ isOpen, onClose, sessionId }: AIAssistantProps) {
         } else if (event.type === 'answer') {
           assistantContent = event.content
           assistantSources = event.sources || []
+        } else if (event.type === 'done') {
+          // Backend may emit sources on done event.
+          if (Array.isArray(event.sources) && event.sources.length > 0) {
+            assistantSources = event.sources.map((url: string) => ({ title: url, url }))
+          }
         } else if (event.type === 'delta') {
           // 流式输出
           assistantContent += event.content
-          
+
           // 更新当前会话的消息
           setSessions(prev => prev.map(session => {
             if (session.id === currentSessionId) {
@@ -287,7 +292,7 @@ export function AIAssistant({ isOpen, onClose, sessionId }: AIAssistantProps) {
         role: 'assistant',
         content: '抱歉，出现了错误，请稍后重试。'
       }
-      
+
       // 更新当前会话的消息
       setSessions(prev => prev.map(session => {
         if (session.id === currentSessionId) {
@@ -359,7 +364,7 @@ export function AIAssistant({ isOpen, onClose, sessionId }: AIAssistantProps) {
   const chatInnerContent = (
     <div className="flex h-full flex-col">
       {isMobile && (
-        <motion.div 
+        <motion.div
           className="mx-auto mb-4 h-3 w-72 rounded-full bg-muted cursor-grab active:cursor-grabbing touch-none flex-shrink-0"
           onPan={(event, info) => {
             // 算出位移占屏幕高度的百分比（注意 y 的正负：往下拉 info.delta.y 为正，高度应减小）
@@ -371,7 +376,7 @@ export function AIAssistant({ isOpen, onClose, sessionId }: AIAssistantProps) {
           }}
           onPanEnd={() => {
             // 计算离哪个吸附点最近
-            const closest = SNAP_POINTS.reduce((prev, curr) => 
+            const closest = SNAP_POINTS.reduce((prev, curr) =>
               Math.abs(curr - sheetHeight) < Math.abs(prev - sheetHeight) ? curr : prev
             );
             setSheetHeight(closest);
@@ -443,7 +448,7 @@ export function AIAssistant({ isOpen, onClose, sessionId }: AIAssistantProps) {
             <p className="text-xs">我可以帮你搜索校园信息</p>
           </div>
         )}
-        
+
         {messages.map((message, index) => (
           <div key={index} className={`mb-4 ${message.role === 'user' ? 'flex justify-end' : 'flex'}`}>
             <div className={`max-w-[80%] rounded-lg p-3 text-sm ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>
@@ -468,7 +473,7 @@ export function AIAssistant({ isOpen, onClose, sessionId }: AIAssistantProps) {
             </div>
           </div>
         ))}
-        
+
         {currentThought && (
           <div className="mb-4 flex">
             <div className="max-w-[80%] rounded-lg bg-secondary p-3 text-sm text-secondary-foreground">
@@ -476,7 +481,7 @@ export function AIAssistant({ isOpen, onClose, sessionId }: AIAssistantProps) {
             </div>
           </div>
         )}
-        
+
         {currentToolCall && (
           <div className="mb-4 flex">
             <div className="max-w-[80%] rounded-lg bg-secondary p-3 text-sm text-secondary-foreground">
@@ -484,7 +489,7 @@ export function AIAssistant({ isOpen, onClose, sessionId }: AIAssistantProps) {
             </div>
           </div>
         )}
-        
+
         {isLoading && !currentThought && !currentToolCall && (
           <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
             <div className="h-2 w-2 animate-pulse rounded-full bg-primary" />
@@ -525,14 +530,17 @@ export function AIAssistant({ isOpen, onClose, sessionId }: AIAssistantProps) {
   if (isMobile) {
     return (
       <Sheet open={isOpen} onOpenChange={onClose}>
-        <SheetContent 
-          side="bottom" 
+        <SheetContent
+          side="bottom"
           className="p-4 transition-all duration-300 ease-in-out overflow-hidden flex flex-col [&>button]:hidden"
-          style={{ 
+          style={{
             height: `${sheetHeight}vh`,
             willChange: 'height'
           }}
         >
+          <SheetHeader className="sr-only">
+            <SheetTitle>AI 助手</SheetTitle>
+          </SheetHeader>
           {chatInnerContent}
         </SheetContent>
       </Sheet>
