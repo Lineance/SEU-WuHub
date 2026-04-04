@@ -207,6 +207,9 @@ class LanceDBConnection:
         """
         从 article_order 表获取按时间排序的新闻 ID 列表
 
+        注意: LanceDB 0.30.x 不支持 order_by，数据在插入时已按 ordinal 排序存储，
+        因此可以直接使用 limit/offset 获取分页数据。
+
         Args:
             offset: 偏移量
             limit: 返回数量
@@ -222,33 +225,19 @@ class LanceDBConnection:
             logger.info("Order table is empty, rebuilding...")
             self.rebuild_article_order()
 
-        # 根据是否有分类筛选选择排序字段
-        order_field = "ordinal_by_category" if category else "ordinal"
-
-        # 构建筛选条件
-        if category:
-            try:
-                results = order_table.search().where(f"category = '{category}'").order_by(order_field).limit(limit).offset(offset).to_list()
-                total = len(order_table.search().where(f"category = '{category}'").to_list())
-            except Exception as e:
-                logger.warning(f"order_by with category failed: {e}, using fallback sort")
-                # Fallback: 先按 ordinal 排序，然后在 Python 中应用 offset/limit
-                all_results = order_table.search().where(f"category = '{category}'").to_list()
-                all_results.sort(key=lambda r: r.get("ordinal", 0))
-                total = len(all_results)
-                results = all_results[offset:offset + limit]
+        # 全局排序：数据在插入时已按 ordinal 排序，直接使用 limit/offset
+        if not category:
+            total = order_table.count_rows()
+            # 数据已按 ordinal 排序存储，直接 limit/offset 即可
+            results = order_table.search().limit(limit).offset(offset).to_list()
         else:
-            # 全局排序
-            try:
-                results = order_table.search().order_by("ordinal").limit(limit).offset(offset).to_list()
-                total = order_table.count_rows()
-            except Exception as e:
-                logger.warning(f"order_by failed: {e}, using fallback sort")
-                # Fallback: 先按 ordinal 排序，然后在 Python 中应用 offset/limit
-                all_results = order_table.search().to_list()
-                all_results.sort(key=lambda r: r.get("ordinal", 0))
-                total = len(all_results)
-                results = all_results[offset:offset + limit]
+            # 分类筛选：需要过滤 + 排序（因为分类内序号 ordinal_by_category 也是插入时排序的）
+            # 由于 order_by 不可用，只能在 Python 中排序
+            all_results = order_table.search().where(f"category = '{category}'").to_list()
+            total = len(all_results)
+            # 按 ordinal_by_category 排序（数据已按此顺序插入）
+            all_results.sort(key=lambda r: r.get("ordinal_by_category", 0))
+            results = all_results[offset:offset + limit]
 
         news_ids = [r.get("news_id") for r in results if r.get("news_id")]
         return news_ids, total
