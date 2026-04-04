@@ -30,8 +30,8 @@ class AgentService:
         if not AgentService._env_loaded:
             backend_dir = Path(__file__).resolve().parents[2]  # backend/app/services -> backend
             agent_dir = backend_dir / "agent"
-            load_dotenv(agent_dir / ".env", override=False)
-            load_dotenv(backend_dir / ".env", override=False)
+            load_dotenv(agent_dir / ".env", override=True)
+            load_dotenv(backend_dir / ".env", override=True)
             AgentService._env_loaded = True
 
         self._config = config or AgentConfig()

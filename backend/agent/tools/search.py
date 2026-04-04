@@ -16,7 +16,8 @@ class SearchTool:
         self._default_limit = default_limit
 
     async def run(self, **kwargs: Any) -> ToolResult:
-        query = str(kwargs.get("query", "")).strip()
+        # Accept both 'query' and 'keyword' as the search parameter
+        query = str(kwargs.get("query", "") or kwargs.get("keyword", "")).strip()
         if not query:
             return ToolResult(ok=False, content={}, error="query is required")
 
