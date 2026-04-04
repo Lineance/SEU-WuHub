@@ -13,7 +13,7 @@ from fastapi import APIRouter, HTTPException
 # 添加项目根目录到 Python 路径
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
-from backend.app.services import search_service
+from backend.app.services import articles_service, search_service
 from backend.retrieval.engine import RetrievalEngine
 
 from ...schemas.search import SearchRequest, SearchResponse
@@ -64,6 +64,7 @@ async def search_articles(request: SearchRequest):
 async def search_get(
     q: str = "",
     limit: int = 10,
+    page: int = 1,
     category: Optional[str] = None,
     tags: Optional[str] = None,
     start_date: Optional[str] = None,
@@ -74,16 +75,54 @@ async def search_get(
 
     - **q**: 搜索关键词
     - **limit**: 返回结果数量限制
+    - **page**: 页码 (从1开始)
     - **category**: 按分类筛选
     - **tags**: 按标签筛选
     - **start_date**: 开始日期 YYYY-MM-DD
     - **end_date**: 结束日期 YYYY-MM-DD
     """
     try:
+        # 空搜索时使用 articles_service.list_articles（走 order 表优化）
+        if not q and not start_date and not end_date:
+            from backend.app.api.v1.articles import get_table
+            from backend.database.connection import get_connection
+            from backend.database.guard import SQLGuard
+            offset = (page - 1) * limit
+            result = articles_service.list_articles(
+                table=get_table(),
+                sql_guard=SQLGuard(),
+                page=page,
+                page_size=limit,
+                category=category,
+                tags=tags,
+                conn=get_connection(),
+            )
+            # 转换为搜索响应格式
+            return search_service._to_search_response(
+                query=q,
+                raw_result={
+                    "results": [
+                        {
+                            "news_id": item.id,
+                            "title": item.title,
+                            "url": item.url,
+                            "content_text": item.content or "",
+                            "source_site": item.category,
+                            "tags": item.tags,
+                            "publish_date": item.published_date,
+                        }
+                        for item in result.items
+                    ],
+                    "total": result.total,
+                },
+            )
+
+        offset = (page - 1) * limit
         return search_service.search_articles(
             engine=get_engine(),
             query=q,
             limit=limit,
+            offset=offset,
             category=category,
             tags=tags.split(",") if tags else None,
             start_date=start_date,

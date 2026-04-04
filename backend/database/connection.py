@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Any
 
 import lancedb
 
-from .schema import ARTICLES_TABLE_NAME, ArticleFields, IndexConfig, get_article_schema
+from .schema import ARTICLES_TABLE_NAME, ARTICLE_ORDER_TABLE_NAME, ArticleFields, IndexConfig, get_article_schema, get_article_order_schema
 
 if TYPE_CHECKING:
     from lancedb.db import DBConnection
@@ -91,6 +91,11 @@ class LanceDBConnection:
             return
 
         resolved_db_path = db_path or os.getenv("LANCE_DB_PATH") or DEFAULT_DB_PATH
+        # 确保路径是绝对的
+        if not os.path.isabs(resolved_db_path):
+            # 基于项目根目录解析相对路径
+            project_root = Path(__file__).resolve().parents[2]  # connection.py -> database -> backend -> 项目根
+            resolved_db_path = str(project_root / resolved_db_path)
         self._db_path = resolved_db_path
         self._ensure_db_directory()
 
@@ -169,6 +174,151 @@ class LanceDBConnection:
 
         logger.info(f"Table '{ARTICLES_TABLE_NAME}' created successfully")
         return table
+
+    def create_article_order_table(self, exist_ok: bool = True) -> "Table":
+        """
+        创建 article_order 表用于维护按时间排序的文章 ID 列表
+
+        Args:
+            exist_ok: 如果表已存在，是否返回现有表
+
+        Returns:
+            创建或获取的表对象
+        """
+        table_names = self._db.table_names()
+
+        if ARTICLE_ORDER_TABLE_NAME in table_names:
+            if exist_ok:
+                logger.info(f"Table '{ARTICLE_ORDER_TABLE_NAME}' already exists")
+                return self.get_table(ARTICLE_ORDER_TABLE_NAME)
+            raise ValueError(f"Table '{ARTICLE_ORDER_TABLE_NAME}' already exists")
+
+        logger.info(f"Creating table: {ARTICLE_ORDER_TABLE_NAME}")
+        schema = get_article_order_schema()
+        table = self._db.create_table(ARTICLE_ORDER_TABLE_NAME, schema=schema)
+
+        with self._table_lock:
+            self._tables[ARTICLE_ORDER_TABLE_NAME] = table
+
+        logger.info(f"Table '{ARTICLE_ORDER_TABLE_NAME}' created successfully")
+        return table
+
+    def get_ordered_news_ids(self, offset: int, limit: int, category: str | None = None) -> tuple[list[str], int]:
+        """
+        从 article_order 表获取按时间排序的新闻 ID 列表
+
+        Args:
+            offset: 偏移量
+            limit: 返回数量
+            category: 分类筛选，None 表示全局排序
+
+        Returns:
+            (news_ids, total_count) 元组
+        """
+        order_table = self.create_article_order_table(exist_ok=True)
+
+        # 如果 order 表为空，自动重建
+        if order_table.count_rows() == 0:
+            logger.info("Order table is empty, rebuilding...")
+            self.rebuild_article_order()
+
+        # 根据是否有分类筛选选择排序字段
+        order_field = "ordinal_by_category" if category else "ordinal"
+
+        # 构建筛选条件
+        if category:
+            try:
+                results = order_table.search().where(f"category = '{category}'").order_by(order_field).limit(limit).offset(offset).to_list()
+                total = len(order_table.search().where(f"category = '{category}'").to_list())
+            except Exception as e:
+                logger.warning(f"order_by with category failed: {e}, using fallback sort")
+                # Fallback: 先按 ordinal 排序，然后在 Python 中应用 offset/limit
+                all_results = order_table.search().where(f"category = '{category}'").to_list()
+                all_results.sort(key=lambda r: r.get("ordinal", 0))
+                total = len(all_results)
+                results = all_results[offset:offset + limit]
+        else:
+            # 全局排序
+            try:
+                results = order_table.search().order_by("ordinal").limit(limit).offset(offset).to_list()
+                total = order_table.count_rows()
+            except Exception as e:
+                logger.warning(f"order_by failed: {e}, using fallback sort")
+                # Fallback: 先按 ordinal 排序，然后在 Python 中应用 offset/limit
+                all_results = order_table.search().to_list()
+                all_results.sort(key=lambda r: r.get("ordinal", 0))
+                total = len(all_results)
+                results = all_results[offset:offset + limit]
+
+        news_ids = [r.get("news_id") for r in results if r.get("news_id")]
+        return news_ids, total
+
+    def rebuild_article_order(self) -> int:
+        """
+        重建 article_order 表，根据 publish_date 降序排序
+
+        同时计算全局 ordinal 和按分类的 ordinal_by_category
+
+        Returns:
+            排序后的记录数
+        """
+        articles_table = self.get_table(ARTICLES_TABLE_NAME)
+        order_table = self.create_article_order_table(exist_ok=True)
+
+        # 获取所有文章 - 只选择需要的列
+        try:
+            all_articles = articles_table.search().select(["news_id", "publish_date", "source_site"]).to_list()
+        except Exception as e:
+            logger.warning(f"search with select failed: {e}, falling back to pandas")
+            all_articles = articles_table.to_pandas()[["news_id", "publish_date", "source_site"]].to_dict("records")
+
+        # 按 publish_date 降序排序
+        def sort_key(item):
+            pd = item.get("publish_date")
+            if pd is None:
+                return "1970-01-01"
+            if hasattr(pd, "isoformat"):
+                return pd.isoformat()
+            return str(pd)
+
+        all_articles.sort(key=sort_key, reverse=True)
+
+        # 构建排序后的列表，同时计算分类内序号
+        order_data = []
+        category_counters: dict[str, int] = {}
+
+        for i, article in enumerate(all_articles, start=1):
+            category = article.get("source_site") or ""
+
+            # 分类内序号
+            if category not in category_counters:
+                category_counters[category] = 0
+            category_counters[category] += 1
+
+            order_data.append({
+                "ordinal": i,
+                "ordinal_by_category": category_counters[category],
+                "news_id": article.get("news_id", ""),
+                "publish_date": article.get("publish_date"),
+                "category": category,
+            })
+
+        # 清空并重新写入
+        try:
+            self._db.drop_table(ARTICLE_ORDER_TABLE_NAME)
+            with self._table_lock:
+                self._tables.pop(ARTICLE_ORDER_TABLE_NAME, None)
+            order_table = self._db.create_table(ARTICLE_ORDER_TABLE_NAME, schema=get_article_order_schema())
+            with self._table_lock:
+                self._tables[ARTICLE_ORDER_TABLE_NAME] = order_table
+        except Exception as e:
+            logger.warning(f"Failed to recreate order table: {e}")
+
+        if order_data:
+            order_table.add(order_data)
+
+        logger.info(f"Rebuilt article_order with {len(order_data)} articles")
+        return len(order_data)
 
     def create_indices(self, table_name: str = ARTICLES_TABLE_NAME) -> None:
         """

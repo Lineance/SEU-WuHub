@@ -3,6 +3,7 @@
 Encapsulates article-related business logic and keeps API routes thin.
 """
 
+import logging
 import re
 import uuid
 from datetime import datetime
@@ -18,6 +19,8 @@ from backend.app.schemas.article import (
 )
 from backend.database.guard import SQLGuard
 from backend.database.repository import ArticleRepository
+
+logger = logging.getLogger(__name__)
 
 
 def strip_html(text: str) -> str:
@@ -65,6 +68,7 @@ def list_articles(
     page_size: int,
     category: Optional[str],
     tags: Optional[str],
+    conn: Any = None,
 ) -> ArticleListResponse:
     offset = (page - 1) * page_size
 
@@ -76,6 +80,42 @@ def list_articles(
 
     where_clause = sql_guard.build_safe_where(conditions) if conditions else None
 
+    # 只有 tags 筛选时无法使用 order 表，必须用全文搜索
+    has_tags_filter = bool(tags)
+    # 无 tags 筛选时（只有 category 或无筛选），可以使用 order 表
+    can_use_order_table = not has_tags_filter and conn is not None
+
+    # 使用 article_order 表进行高效分页（仅当无 tags 筛选时）
+    if can_use_order_table:
+        try:
+            news_ids, total = conn.get_ordered_news_ids(offset, page_size, category)
+
+            # 根据 news_ids 获取文章详情
+            if news_ids:
+                # 构建 where 子句获取这些文章
+                id_list = ", ".join(f"'{nid}'" for nid in news_ids)
+                articles_results = table.search().where(f"news_id IN ({id_list})").to_list()
+
+                # 按 news_ids 的顺序排列（因为 where IN 不保证顺序）
+                articles_map = {r.get("news_id"): r for r in articles_results}
+                paginated_results = [articles_map[nid] for nid in news_ids if nid in articles_map]
+            else:
+                paginated_results = []
+
+            items = [_to_article_response(record) for record in paginated_results]
+            total_pages = (total + page_size - 1) // page_size
+
+            return ArticleListResponse(
+                items=items,
+                total=total,
+                page=page,
+                page_size=page_size,
+                total_pages=total_pages,
+            )
+        except Exception as e:
+            logger.warning(f"article_order pagination failed, falling back: {e}")
+
+    # 有筛选条件时，或 article_order 不可用时，使用原有方式
     if where_clause:
         results = table.search().where(where_clause).to_list()
         total = len(results)

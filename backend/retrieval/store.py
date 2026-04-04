@@ -300,6 +300,7 @@ class LanceStore:
         query_vector: list[float],
         vector_field: str = "content_embedding",
         limit: int = 10,
+        offset: int = 0,
         where: str | None = None,
         **kwargs: Any,
     ) -> list[dict[str, Any]]:
@@ -310,6 +311,7 @@ class LanceStore:
             query_vector: 查询向量
             vector_field: 向量字段
             limit: 返回数量
+            offset: 偏移量
             where: 过滤条件
             **kwargs: 其他参数
 
@@ -320,7 +322,7 @@ class LanceStore:
             results = self.table.search(
                 query=query_vector,
                 vector_column_name=vector_field,
-            ).limit(limit)
+            ).limit(limit).offset(offset)
 
             if where:
                 results = results.where(where)
@@ -335,6 +337,7 @@ class LanceStore:
         query: str,
         fields: list[str] | None = None,
         limit: int = 10,
+        offset: int = 0,
         where: str | None = None,
         **kwargs: Any,
     ) -> list[dict[str, Any]]:
@@ -345,6 +348,7 @@ class LanceStore:
             query: 查询文本
             fields: 搜索字段
             limit: 返回数量
+            offset: 偏移量
             where: 过滤条件
             **kwargs: 其他参数
 
@@ -359,7 +363,7 @@ class LanceStore:
             results = self.table.search(
                 query=query,
                 query_type="fts",
-            ).limit(limit)
+            ).limit(limit).offset(offset)
 
             if where:
                 results = results.where(where)
@@ -567,6 +571,7 @@ class LanceStore:
                     query_vector=title_vec,
                     vector_field="title_embedding",
                     limit=query_obj.limit * 2,
+                    offset=query_obj.offset,
                     where=query_obj.build_where_clause(),
                 )
 
@@ -574,6 +579,7 @@ class LanceStore:
                     query_vector=content_vec,
                     vector_field="content_embedding",
                     limit=query_obj.limit * 2,
+                    offset=query_obj.offset,
                     where=query_obj.build_where_clause(),
                 )
 
@@ -592,6 +598,7 @@ class LanceStore:
                 query=query_obj.keyword,
                 fields=query_obj.search_fields,
                 limit=query_obj.limit * 2,
+                offset=query_obj.offset,
                 where=query_obj.build_where_clause(),
             )
 
@@ -605,11 +612,26 @@ class LanceStore:
                         self.table.search()
                         .where(where_clause)
                         .limit(query_obj.limit)
+                        .offset(query_obj.offset)
                         .to_list()
                     )
                     return filtered_results
                 except Exception as e:
                     logger.warning(f"Filtered search failed: {e}")
+
+            # 空搜索 + 无过滤：返回最近的文章（按 last_updated 排序）
+            try:
+                return (
+                    self.table.search()
+                    .order_by("last_updated", descending=True)
+                    .limit(query_obj.limit)
+                    .offset(query_obj.offset)
+                    .to_list()
+                )
+            except Exception as e:
+                logger.warning(f"Empty search order_by failed: {e}")
+                # Fallback: 返回前 limit 条
+                return self.table.search().limit(query_obj.limit).offset(query_obj.offset).to_list()
 
         # 融合结果
         return self._fuse_results(

@@ -6,7 +6,7 @@ Articles API Router
 
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, HTTPException, Query
 
@@ -44,20 +44,27 @@ def get_repo() -> ArticleRepository:
     return _repo
 
 
+# 缓存表引用
+_table_cache: Optional[Any] = None
+
+
 def get_table():
-    """直接获取 LanceDB 表"""
-    import sys
-    from pathlib import Path
+    """直接获取 LanceDB 表（带缓存）"""
+    global _table_cache
+    if _table_cache is None:
+        import sys
+        from pathlib import Path
 
-    # 获取项目根目录 (backend 的父目录的父目录)
-    # articles.py -> api/v1 -> app -> backend -> 项目根
-    project_root = Path(__file__).resolve().parents[4]
-    sys.path.insert(0, str(project_root))
-    import lancedb
+        # 获取项目根目录 (backend 的父目录的父目录)
+        # articles.py -> api/v1 -> app -> backend -> 项目根
+        project_root = Path(__file__).resolve().parents[4]
+        sys.path.insert(0, str(project_root))
+        import lancedb
 
-    db_path = project_root / "data" / "lancedb"
-    db = lancedb.connect(str(db_path))
-    return db.open_table("articles")
+        db_path = project_root / "data" / "lancedb"
+        db = lancedb.connect(str(db_path))
+        _table_cache = db.open_table("articles")
+    return _table_cache
 
 
 def get_store() -> LanceStore:
@@ -90,6 +97,7 @@ async def list_articles(
     - **tags**: 标签筛选（逗号分隔）
     """
     try:
+        from backend.database.connection import get_connection
         return articles_service.list_articles(
             table=get_table(),
             sql_guard=_sql_guard,
@@ -97,6 +105,7 @@ async def list_articles(
             page_size=page_size,
             category=category,
             tags=tags,
+            conn=get_connection(),
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
