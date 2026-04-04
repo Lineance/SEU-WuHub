@@ -4,6 +4,8 @@ from pydantic import BaseModel, Field
 
 
 class AgentConfig(BaseModel):
+    llm_model: str = Field(default="openai/gpt-4o-mini")
+    llm_timeout_seconds: float = Field(default=20.0, gt=0)
     max_steps: int = Field(default=5, ge=1, le=10)
     history_window: int = Field(default=5, ge=1, le=20)
     tool_timeout_seconds: float = Field(default=8.0, gt=0)

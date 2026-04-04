@@ -33,8 +33,24 @@ def parse_action(text: str) -> dict[str, Any] | None:
 
     if not isinstance(payload, dict):
         return None
+
+    # Backward-compatible alias: {"action": "..."}
+    if "tool" not in payload and "action" in payload:
+        payload["tool"] = payload.pop("action")
+
     if "tool" not in payload:
         return None
-    if "input" not in payload or not isinstance(payload["input"], dict):
-        payload["input"] = {}
+
+    tool_name = str(payload.get("tool", "")).strip()
+    payload["tool"] = tool_name
+
+    raw_input = payload.get("input")
+    if not isinstance(raw_input, dict):
+        raw_input = {}
+
+    # For finish actions, allow top-level answer and normalize into input.answer.
+    if tool_name == "finish" and "answer" in payload and "answer" not in raw_input:
+        raw_input["answer"] = payload.get("answer")
+
+    payload["input"] = raw_input
     return payload

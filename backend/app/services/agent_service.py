@@ -1,8 +1,14 @@
 """Application service for agent orchestration."""
 
+import logging
 from collections.abc import AsyncIterator
 
+from litellm import acompletion
+
 from backend.agent.config import AgentConfig
+from backend.agent.llm.client import LLMDecisionClient
+
+logger = logging.getLogger(__name__)
 from backend.agent.core.agent import ReActAgent
 from backend.agent.events.stream import to_sse
 from backend.agent.memory.buffer import ConversationBuffer
@@ -31,7 +37,18 @@ class AgentService:
             )
         )
         self._registry = registry
-        self._agent = ReActAgent(tool_registry=registry, memory=self._memory, config=self._config)
+        self._decision_client = LLMDecisionClient(
+            model=self._config.llm_model,
+            temperature=self._config.temperature,
+            max_tokens=self._config.max_tokens,
+            timeout_seconds=self._config.llm_timeout_seconds,
+        )
+        self._agent = ReActAgent(
+            tool_registry=registry,
+            memory=self._memory,
+            config=self._config,
+            decision_client=self._decision_client,
+        )
 
     async def stream_chat(
         self,
@@ -44,3 +61,43 @@ class AgentService:
             query=query, session_id=session_id, history=history
         ):
             yield to_sse(event)
+
+    async def generate_title(self, content: str) -> str | None:
+        """Generate a short title from the first user message content."""
+        from backend.agent.llm.client import LLMDecisionClient
+
+        client = LLMDecisionClient(
+            model=self._config.llm_model,
+            temperature=0.3,
+            max_tokens=50,
+            timeout_seconds=10.0,
+        )
+
+        system_prompt = (
+            "你是一个校园助手。根据用户的第一条消息，生成一个简短的中文标题（不超过20个字）。"
+            "只输出标题，不要加引号、冒号或其他符号，不要任何解释。"
+        )
+
+        try:
+            response = await acompletion(
+                model=client._model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": content[:200]},
+                ],
+                temperature=0.3,
+                max_tokens=50,
+                timeout=10.0,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Title generation failed: %s", exc)
+            return None
+
+        choices = getattr(response, "choices", None)
+        if not choices:
+            return None
+
+        first_choice = choices[0]
+        message = getattr(first_choice, "message", None)
+        content_out = getattr(message, "content", "") if message is not None else ""
+        return str(content_out).strip() or None

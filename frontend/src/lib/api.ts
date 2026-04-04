@@ -258,7 +258,7 @@ export const categoriesApi = {
 // AI Chat API
 export const aiApi = {
   chatWithAI: async (query: string, history: any[]) => {
-    const url = `${API_BASE}/chat`
+    const url = `${API_BASE}/chat/stream`
     
     const response = await fetch(url, {
       method: 'POST',
@@ -288,30 +288,50 @@ export const aiApi = {
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
-          
+
           buffer += decoder.decode(value, { stream: true })
-          
-          // 按换行符分割
-          const lines = buffer.split('\n')
-          buffer = lines.pop() || ''
-          
-          for (const line of lines) {
-            if (line.trim()) {
+
+          // SSE消息以\n\n分隔
+          const messages = buffer.split('\n\n')
+          buffer = messages.pop() || ''
+
+          for (const message of messages) {
+            const lines = message.split('\n')
+            let eventType = 'message'
+            let dataStr = ''
+
+            for (const line of lines) {
+              if (line.startsWith('event: ')) {
+                eventType = line.slice(7).trim()
+              } else if (line.startsWith('data: ')) {
+                dataStr = line.slice(6).trim()
+              }
+            }
+
+            if (dataStr) {
               try {
-                yield JSON.parse(line)
+                yield JSON.parse(dataStr)
               } catch (e) {
-                console.error('Failed to parse line:', line, e)
+                console.error('Failed to parse SSE data:', dataStr, e)
               }
             }
           }
         }
-        
-        // 处理最后一行
-        if (buffer.trim()) {
-          try {
-            yield JSON.parse(buffer)
-          } catch (e) {
-            console.error('Failed to parse final line:', buffer, e)
+
+        // 处理最后残留的数据
+        if (buffer) {
+          const lines = buffer.split('\n')
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const dataStr = line.slice(6).trim()
+              if (dataStr) {
+                try {
+                  yield JSON.parse(dataStr)
+                } catch (e) {
+                  console.error('Failed to parse final SSE data:', dataStr, e)
+                }
+              }
+            }
           }
         }
       },
