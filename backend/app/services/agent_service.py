@@ -2,7 +2,9 @@
 
 import logging
 from collections.abc import AsyncIterator
+from pathlib import Path
 
+from dotenv import load_dotenv
 from litellm import acompletion
 
 from backend.agent.config import AgentConfig
@@ -22,7 +24,16 @@ from backend.retrieval.engine import RetrievalEngine
 
 
 class AgentService:
+    _env_loaded = False
+
     def __init__(self, config: AgentConfig | None = None) -> None:
+        if not AgentService._env_loaded:
+            backend_dir = Path(__file__).resolve().parents[2]  # backend/app/services -> backend
+            agent_dir = backend_dir / "agent"
+            load_dotenv(agent_dir / ".env", override=False)
+            load_dotenv(backend_dir / ".env", override=False)
+            AgentService._env_loaded = True
+
         self._config = config or AgentConfig()
         self._memory = ConversationBuffer(window_size=self._config.history_window)
 
