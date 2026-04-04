@@ -336,29 +336,7 @@ export function AIAssistant({ isOpen, onClose, sessionId }: AIAssistantProps) {
     }
   }
 
-  // 删除当前会话
-  const handleDeleteCurrentSession = () => {
-    if (confirm('确定要删除当前会话吗？')) {
-      setSessions(prev => {
-        const filteredSessions = prev.filter(session => session.id !== currentSessionId)
-        if (filteredSessions.length > 0) {
-          setCurrentSessionId(filteredSessions[0].id)
-        } else {
-          // 创建新会话
-          const newSession: Session = {
-            id: Date.now().toString(),
-            title: '新会话',
-            messages: [],
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          }
-          setCurrentSessionId(newSession.id)
-          return [newSession]
-        }
-        return filteredSessions
-      })
-    }
-  }
+
 
   // 聊天界面内容
   const chatInnerContent = (
@@ -421,21 +399,10 @@ export function AIAssistant({ isOpen, onClose, sessionId }: AIAssistantProps) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={handleDeleteCurrentSession}
-                  className="h-11 w-11 rounded-full hover:bg-secondary"
-                  title="删除会话"
-                >
-                  <X className="h-6 w-6" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
                   onClick={onClose}
                   className="h-11 w-11 rounded-full hover:bg-secondary"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  <X className="h-6 w-6" />
                 </Button>
               </div>
             </div>
