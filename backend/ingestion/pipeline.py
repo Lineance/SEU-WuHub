@@ -3,12 +3,9 @@ IngestionPipeline - ETL 数据摄取管道
 
 完整的数据处理流程: 验证 → 标准化 → 去重 → 向量化 → 写入
 
-Responsibilities:
-    - 数据验证
-    - 内容标准化 (Markdown → 纯文本)
-    - 重复检测
-    - 向量嵌入生成
-    - 原子写入 LanceDB
+写入目标:
+    - LanceDB: 原始数据存储（主存储）
+    - Meilisearch: 全文搜索索引（同步写入）
 """
 
 import logging
@@ -485,15 +482,19 @@ class IngestionPipeline:
         docs: list[dict[str, Any]],
         batch_size: int = 32,
     ) -> list[dict[str, Any]]:
-        """批量生成向量嵌入"""
+        """
+        批量生成向量嵌入
+
+        注意: 向量不再写入 LanceDB，只由 Meilisearch 自动生成
+        """
         # 提取标题和内容
         titles = [doc.get(ArticleFields.TITLE, "") for doc in docs]
         contents = [doc.get(ArticleFields.CONTENT_TEXT, "") for doc in docs]
 
-        # 批量向量化
+        # 批量向量化（用于标签匹配，向量不再存储到 LanceDB）
         title_vecs, content_vecs = self._embedder.embed_batch(titles, contents, batch_size)
 
-        # 将向量添加回文档
+        # 将向量添加回文档（仅用于标签匹配，之后会被移除）
         for i, (title_vec, content_vec) in enumerate(zip(title_vecs, content_vecs, strict=False)):
             docs[i][ArticleFields.TITLE_EMBEDDING] = title_vec
             docs[i][ArticleFields.CONTENT_EMBEDDING] = content_vec
@@ -501,8 +502,58 @@ class IngestionPipeline:
         return docs
 
     def _write(self, data: dict[str, Any]) -> bool:
-        """写入数据库"""
-        return bool(self._repository.add_one(data))
+        """
+        写入数据库
+
+        LanceDB: 存储文档元数据（不含向量）
+        Meilisearch: 存储完整文档并自动生成向量
+        """
+        # 移除向量字段（Meilisearch 会自动生成）
+        data_for_lancedb = {k: v for k, v in data.items()
+                           if k not in [ArticleFields.TITLE_EMBEDDING, ArticleFields.CONTENT_EMBEDDING]}
+
+        # 写入 LanceDB
+        success = bool(self._repository.add_one(data_for_lancedb))
+        if not success:
+            return False
+
+        # 同步到 Meilisearch（Meilisearch 会自动生成向量）
+        self._sync_to_meilisearch([data])
+
+        return True
+
+    def _sync_to_meilisearch(self, docs: list[dict[str, Any]]) -> None:
+        """同步文档到 Meilisearch"""
+        try:
+            import meilisearch
+
+            from backend.app.core.config import settings
+
+            client = meilisearch.Client(
+                settings.MEILISEARCH_HOST,
+                settings.MEILISEARCH_API_KEY,
+            )
+            index = client.index("articles")
+
+            # 清理文档，只保留必要字段
+            cleaned_docs = []
+            for doc in docs:
+                cleaned_docs.append({
+                    "news_id": str(doc.get(ArticleFields.NEWS_ID, "")),
+                    "title": str(doc.get(ArticleFields.TITLE, "")),
+                    "content_text": str(doc.get(ArticleFields.CONTENT_TEXT, "")),
+                    "publish_date": str(doc.get(ArticleFields.PUBLISH_DATE, "")) if doc.get(ArticleFields.PUBLISH_DATE) else None,
+                    "url": str(doc.get(ArticleFields.URL, "")),
+                    "source_site": str(doc.get(ArticleFields.SOURCE_SITE, "")),
+                    "author": str(doc.get(ArticleFields.AUTHOR, "")),
+                    "tags": doc.get(ArticleFields.TAGS, []),
+                })
+
+            # 添加到 Meilisearch（主键相同则更新）
+            task = index.add_documents(cleaned_docs, primary_key="news_id")
+            logger.info(f"Sync to Meilisearch: {len(cleaned_docs)} docs, task_uid={task.task_uid}")
+        except Exception as e:
+            logger.warning(f"Failed to sync to Meilisearch: {e}")
 
 
 # =============================================================================

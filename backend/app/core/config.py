@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     # Meilisearch
     MEILISEARCH_HOST: str = "http://localhost:7700"
     MEILISEARCH_API_KEY: Optional[str] = None
+    MEILISEARCH_DB_PATH: str = "./data/meilisearch.ms"
 
     # Crawler
     CRAWLER_CONFIG_PATH: str = "./config/crawler.yaml"

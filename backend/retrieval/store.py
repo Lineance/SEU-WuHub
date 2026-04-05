@@ -547,6 +547,78 @@ class LanceStore:
             logger.error(f"Meilisearch search failed: {e}")
             raise
 
+    def meilisearch_hybrid_search(
+        self,
+        query: str,
+        semantic_ratio: float = 0.5,
+        limit: int = 10,
+        offset: int = 0,
+        where: str | None = None,
+        **kwargs: Any,
+    ) -> list[dict[str, Any]]:
+        """
+        使用 Meilisearch 原生 Hybrid Search
+
+        Args:
+            query: 查询文本
+            semantic_ratio: 语义搜索权重 (0.0-1.0)
+                - 0.0: 纯关键词搜索
+                - 1.0: 纯语义搜索
+                - 0.5: 平衡模式
+            limit: 返回数量
+            offset: 偏移量
+            where: 过滤条件
+
+        Returns:
+            搜索结果列表
+        """
+        try:
+            client = self._get_meilisearch_client()
+            if client is None:
+                raise RuntimeError("Meilisearch client not available")
+
+            index = client.index("articles")
+
+            search_params: dict[str, Any] = {
+                "limit": limit,
+                "offset": offset,
+                "attributesToRetrieve": [
+                    "news_id", "title", "content_text", "publish_date",
+                    "url", "source_site", "author", "tags", "last_updated",
+                ],
+                "attributesToHighlight": ["title", "content_text"],
+                "hybrid": {
+                    "semanticRatio": semantic_ratio,
+                    "embedder": "default",
+                },
+            }
+
+            if where:
+                filter_str = self._build_meilisearch_filter(where)
+                if filter_str:
+                    search_params["filter"] = filter_str
+
+            results = index.search(query, search_params)
+
+            processed_results = []
+            for hit in results.get("hits", []):
+                if "_formatted" in hit:
+                    hit["title_highlighted"] = hit["_formatted"].get("title", hit.get("title", ""))
+                    hit["content_highlighted"] = hit["_formatted"].get("content_text", hit.get("content_text", "")[:200])
+
+                # 从混合搜索结果中提取信息
+                # Meilisearch 会在 _matchesPosition 中提供匹配信息
+                processed_results.append(hit)
+
+            logger.info(
+                f"Meilisearch hybrid search: query='{query}', "
+                f"semanticRatio={semantic_ratio}, hits={len(processed_results)}"
+            )
+            return processed_results
+        except Exception as e:
+            logger.error(f"Meilisearch hybrid search failed: {e}")
+            raise
+
     def _build_meilisearch_filter(self, where: str) -> str | None:
         """将 LanceDB where 条件转换为 Meilisearch filter"""
         if not where or where == "1=1":
@@ -624,15 +696,36 @@ class LanceStore:
 
             index = client.index("articles")
 
+            # 配置可搜索属性
             index.update_searchable_attributes([
                 "title", "content_text", "source_site", "author",
             ])
+
+            # 配置可过滤属性
             index.update_filterable_attributes([
                 "source_site", "author", "tags", "publish_date",
             ])
+
+            # 配置可排序属性
             index.update_sortable_attributes([
                 "publish_date", "last_updated",
             ])
+
+            # 配置 Hugging Face embedder（用于向量搜索）
+            # 使用 sentence-transformers 模型在本地生成向量
+            try:
+                index.update_settings({
+                    "embedders": {
+                        "default": {
+                            "source": "huggingFace",
+                            "model": "sentence-transformers/all-MiniLM-L6-v2",
+                        }
+                    }
+                })
+                logger.info("Meilisearch embedder configured: huggingFace/all-MiniLM-L6-v2")
+            except Exception as e:
+                logger.warning(f"Failed to configure embedder: {e}")
+                logger.info("Hybrid search may not work without embedder configuration")
 
             logger.info("Meilisearch index configured successfully")
         except Exception as e:
@@ -693,7 +786,7 @@ class LanceStore:
         **kwargs: Any,
     ) -> list[dict[str, Any]]:
         """
-        混合搜索 (向量 + 全文)
+        混合搜索 (向量 + 全文) - 使用 Meilisearch 原生实现
 
         Args:
             query: 查询文本
@@ -711,97 +804,41 @@ class LanceStore:
         if not is_valid:
             raise ValueError(f"Invalid query: {errors}")
 
-        # 向量搜索 - 同时搜索标题和正文
-        vector_results: list[dict[str, Any]] = []
-        title_vector_results: list[dict[str, Any]] = []
-        content_vector_results: list[dict[str, Any]] = []
+        # 尝试使用 Meilisearch 原生 Hybrid Search
+        client = self._get_meilisearch_client()
+        if client is not None and query_obj.keyword:
+            try:
+                # 计算 semantic ratio
+                # vector_weight 表示向量搜索的权重，keyword_weight 表示关键词搜索的权重
+                semantic_ratio = query_obj.vector_weight  # 使用 vector_weight 作为 semantic ratio
 
-        if query_obj.vector_query or query_obj.keyword:
-            keyword = query_obj.keyword or ""
-
-            # 混合搜索默认同时搜索标题和正文向量
-            # 只有明确指定 vector_query（预计算向量）时才单字段搜索
-            if query_obj.vector_query:
-                # 预计算向量，单字段搜索
-                vector_results = self.vector_search(
-                    query_vector=query_obj.vector_query,
-                    vector_field=query_obj.vector_field,
-                    limit=query_obj.limit * 2,
-                    where=query_obj.build_where_clause(),
-                )
-            elif query_obj.keyword:
-                # 关键词搜索，同时搜索标题和正文
-                title_vec, content_vec = self._embedder.embed_query(
-                    keyword,
-                    field="both",
-                )
-
-                # 确保是 list[float] 类型
-                title_vec = (
-                    list[float](title_vec)
-                    if isinstance(title_vec, (list, tuple))
-                    else [float(title_vec)]
-                )
-                content_vec = (
-                    list[float](content_vec)
-                    if isinstance(content_vec, (list, tuple))
-                    else [float(content_vec)]
-                )
-
-                # 并行搜索两个向量字段
-                title_vector_results = self.vector_search(
-                    query_vector=title_vec,
-                    vector_field="title_embedding",
-                    limit=query_obj.limit * 2,
+                return self.meilisearch_hybrid_search(
+                    query=query_obj.keyword,
+                    semantic_ratio=semantic_ratio,
+                    limit=query_obj.limit,
                     offset=query_obj.offset,
                     where=query_obj.build_where_clause(),
                 )
-
-                content_vector_results = self.vector_search(
-                    query_vector=content_vec,
-                    vector_field="content_embedding",
-                    limit=query_obj.limit * 2,
-                    offset=query_obj.offset,
-                    where=query_obj.build_where_clause(),
-                )
-
-                # 合并标题和正文向量搜索结果
-                vector_results = self._merge_vector_results(
-                    title_vector_results,
-                    content_vector_results,
-                    title_weight=0.3,
-                    content_weight=0.7,
-                )
-
-        # 全文搜索
-        text_results = []
-        if query_obj.keyword:
-            text_results = self.fulltext_search(
-                query=query_obj.keyword,
-                fields=query_obj.search_fields,
-                limit=query_obj.limit * 2,
-                offset=query_obj.offset,
-                where=query_obj.build_where_clause(),
-            )
+            except Exception as e:
+                logger.warning(f"Meilisearch hybrid search failed, falling back: {e}")
 
         # 当没有关键词但有过滤条件时，使用纯过滤查询
-        if not vector_results and not text_results and not query_obj.keyword:
-            where_clause = query_obj.build_where_clause()
-            if where_clause and where_clause != "1=1":
-                try:
-                    # 使用 LanceDB 的 where + limit 获取过滤结果
-                    filtered_results = (
-                        self.table.search()
-                        .where(where_clause)
-                        .limit(query_obj.limit)
-                        .offset(query_obj.offset)
-                        .to_list()
-                    )
-                    return filtered_results
-                except Exception as e:
-                    logger.warning(f"Filtered search failed: {e}")
+        where_clause = query_obj.build_where_clause()
+        if not query_obj.keyword and where_clause and where_clause != "1=1":
+            try:
+                filtered_results = (
+                    self.table.search()
+                    .where(where_clause)
+                    .limit(query_obj.limit)
+                    .offset(query_obj.offset)
+                    .to_list()
+                )
+                return filtered_results
+            except Exception as e:
+                logger.warning(f"Filtered search failed: {e}")
 
-            # 空搜索 + 无过滤：返回最近的文章（按 last_updated 排序）
+        # 空搜索 + 无过滤：返回最近的文章
+        if not query_obj.keyword:
             try:
                 return (
                     self.table.search()
@@ -812,16 +849,15 @@ class LanceStore:
                 )
             except Exception as e:
                 logger.warning(f"Empty search order_by failed: {e}")
-                # Fallback: 返回前 limit 条
                 return self.table.search().limit(query_obj.limit).offset(query_obj.offset).to_list()
 
-        # 融合结果
-        return self._fuse_results(
-            vector_results,
-            text_results,
-            query_obj.keyword_weight,
-            query_obj.vector_weight,
-            query_obj.limit,
+        # 降级到纯全文搜索
+        return self.fulltext_search(
+            query=query_obj.keyword,
+            fields=query_obj.search_fields,
+            limit=query_obj.limit,
+            offset=query_obj.offset,
+            where=where_clause,
         )
 
     def _merge_vector_results(
