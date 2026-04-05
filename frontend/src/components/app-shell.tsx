@@ -1,124 +1,90 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { toast } from "sonner"
-import { Menu, X } from "lucide-react"
-import { usePathname, useSearchParams } from "next/navigation"
+import { useSearchParams } from "next/navigation"
 import { Header } from "@/components/header"
 import { Sidebar } from "@/components/sidebar"
 import { AIAssistant } from "@/components/ai-assistant"
 import { cn } from "@/lib/utils"
 import { useReadingMode } from "@/components/reading-mode-provider"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { MobileNavFab } from "@/components/mobile-nav-fab"
 
-interface AppShellProps {
-  children: React.ReactNode
-}
-
-export function AppShell({ children }: AppShellProps) {
+export function AppShell({ children }: { children: React.ReactNode }) {
   const [isAIOpen, setIsAIOpen] = useState(false)
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [activeLayer, setActiveLayer] = useState<'main' | 'ai'>('ai')
   const { isReadingMode } = useReadingMode()
   const isMobile = useIsMobile()
-  const pathname = usePathname()
   const searchParams = useSearchParams()
 
-  // 检测无痕模式
+  // 监听 URL 自动打开 AI
   useEffect(() => {
-    const checkStorage = () => {
-      try {
-        const testKey = "__storage_test__";
-        localStorage.setItem(testKey, testKey);
-        localStorage.removeItem(testKey);
-        return true;
-      } catch (e) {
-        console.warn("Storage check failed:", e);
-        return false;
-      }
-    };
-
-    if (!checkStorage()) {
-      toast.warning("检测到存储无法写入，为防止数据丢失，建议关闭无痕模式或者启用 cookies", {
-        duration: 10000,
-        position: "top-right",
-      });
+    if (searchParams.get('sessionId')) {
+      setIsAIOpen(true)
+      setActiveLayer('ai')
     }
-  }, []); // 确保只在首次挂载时执行
+  }, [searchParams])
 
-  // 检测 URL 参数中的 sessionId
-  useEffect(() => {
-    const sessionId = searchParams.get('sessionId');
-    if (sessionId) {
-      setIsAIOpen(true);
+  // 处理 Header AI 按钮点击
+  const handleAIToggle = () => {
+    if (!isAIOpen) {
+      // 如果没开：打开并置顶
+      setIsAIOpen(true)
+      setActiveLayer('ai')
+    } else if (activeLayer === 'main') {
+      // 如果开了但在后台：强制提到前台
+      setActiveLayer('ai')
+    } else {
+      // 如果开了且在前台：关闭
+      setIsAIOpen(false)
     }
-  }, [searchParams]);
-
-  const handleAgentClick = () => {
-    setIsMobileMenuOpen(false)
-    setIsAIOpen(true)
   }
 
   return (
-    <div className="flex h-screen flex-col bg-background">
-      <Header onAIToggle={() => setIsAIOpen(!isAIOpen)} />
-      <div className="flex flex-1 overflow-hidden">
+    <div className="flex h-screen flex-col bg-background overflow-hidden font-sans antialiased">
+      {/* Header 始终在最顶层 z-50 */}
+      <Header onAIToggle={handleAIToggle} />
+
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* Sidebar：独立于层级切换逻辑外，点击它不会影响置顶状态 */}
         {!isMobile && (
-          <Sidebar
-            isCollapsed={isSidebarCollapsed || isReadingMode}
-            onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          />
+          <Sidebar isCollapsed={isReadingMode} onToggleCollapse={() => {}} />
         )}
-        <main className={cn(
-          "flex-1 overflow-auto", 
-          isReadingMode && "max-w-6xl mx-auto px-8",
-          isMobile && "w-full p-4"
-        )}>
-          {children}
-        </main>
-      </div>
-      
-      {/* 移动端抽屉导航 */}
-      {isMobile && (
-        <>
-          <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-            <SheetContent side="left" className="w-[280px] p-0 [&>button]:hidden">
-              <SheetHeader className="p-4 flex justify-between items-center border-b">
-                <SheetTitle className="text-lg font-semibold">导航</SheetTitle>
-                <SheetClose asChild>
-                  <Button variant="ghost" size="icon" className="h-11 w-11 rounded-full hover:bg-secondary">
-                    <X className="h-6 w-6" />
-                  </Button>
-                </SheetClose>
-              </SheetHeader>
-              <Sidebar
-                isCollapsed={false}
-                onToggleCollapse={() => {}}
-                isMobile
-                onActionClick={() => setIsMobileMenuOpen(false)}
-                onAgentClick={handleAgentClick}
-              />
-            </SheetContent>
-          </Sheet>
-          
-          {/* 移动端悬浮导航按钮 */}
-          {!isReadingMode && !isAIOpen && !isMobileMenuOpen && (
-            <MobileNavFab 
-              onClick={() => setIsMobileMenuOpen(true)} 
-              isVisible={!isAIOpen && !isMobileMenuOpen}
-            />
+        
+        {/* 主内容区域包裹器 */}
+        <div 
+          className={cn(
+            "flex-1 overflow-hidden transition-all duration-500 ease-in-out relative flex",
+            activeLayer === 'main' ? 'z-[40]' : 'z-[10]'
           )}
-        </>
-      )}
-      
-      <AIAssistant 
-        isOpen={isAIOpen && !isReadingMode} 
-        onClose={() => setIsAIOpen(false)} 
-        sessionId={searchParams.get('sessionId') || undefined}
-      />
+          onClick={() => {
+            if (isAIOpen && activeLayer === 'ai') {
+              setActiveLayer('main')
+            }
+          }}
+        >
+          <main className={cn(
+            "flex-1 overflow-auto bg-background p-4 md:p-6", 
+            isReadingMode && "max-w-4xl mx-auto"
+          )}>
+            {children}
+          </main>
+        </div>
+
+        {/* AI 助手 - 独立于主内容容器之外 */}
+        <AIAssistant 
+          isOpen={isAIOpen && !isReadingMode} 
+          onClose={() => setIsAIOpen(false)} 
+          sessionId={searchParams.get('sessionId') || undefined}
+          activeLayer={activeLayer}
+          onLayerActivate={() => setActiveLayer('ai')}
+        />
+
+        {/* 移动端适配 */}
+        {isMobile && !isReadingMode && (
+          <MobileNavFab onClick={() => {}} isVisible={!isAIOpen} />
+        )}
+      </div>
     </div>
   )
 }

@@ -178,7 +178,7 @@ function HeaderSearchContent({ onSearchExpand }: HeaderSearchContentProps) {
         {isSearchExpanded && (
           <div
             ref={filterPanelRef}
-            className={`${isMobile ? 'fixed left-4 right-4 top-[56px] mt-0' : 'absolute left-0 right-0 top-full mt-2'} rounded-xl border border-border bg-background p-4 shadow-lg z-50`}
+            className={`${isMobile ? 'fixed left-4 right-4 top-[56px] mt-0' : 'absolute left-0 right-0 top-full mt-2'} rounded-xl border border-border bg-background p-4 shadow-lg z-[55]`}
           >
             <div className="space-y-4">
               <div>
@@ -272,7 +272,7 @@ export function Header({ onAIToggle }: HeaderProps) {
   }
 
   return (
-    <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-card/95 px-4 shadow-sm backdrop-blur-sm">
+    <header className="sticky top-0 z-[50] flex h-14 items-center justify-between border-b border-border bg-card/95 px-4 shadow-sm backdrop-blur-sm">
       <div className={`flex items-center gap-2 ${isMobile && isSearchExpanded ? 'hidden' : ''}`}>
         <div
           className="relative flex h-8 w-8 cursor-pointer items-center justify-center overflow-hidden rounded-lg"

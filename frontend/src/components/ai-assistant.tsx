@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose } from "@/components/ui/sheet"
 import { api } from "@/lib/api"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { cn } from "@/lib/utils"
 
 interface SourceReference {
   title: string
@@ -33,9 +34,11 @@ interface AIAssistantProps {
   isOpen: boolean
   onClose: () => void
   sessionId?: string
+  activeLayer?: 'main' | 'ai'
+  onLayerActivate?: () => void
 }
 
-export function AIAssistant({ isOpen, onClose, sessionId }: AIAssistantProps) {
+export function AIAssistant({ isOpen, onClose, sessionId, activeLayer = 'ai', onLayerActivate }: AIAssistantProps) {
   const [input, setInput] = useState("")
   const [sessions, setSessions] = useState<Session[]>([])
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
@@ -391,7 +394,7 @@ export function AIAssistant({ isOpen, onClose, sessionId }: AIAssistantProps) {
           }}
         />
       )}
-      <div className="border-b border-border pb-4">
+      <div className="border-b border-border pb-4 relative z-20">
         <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
@@ -430,7 +433,7 @@ export function AIAssistant({ isOpen, onClose, sessionId }: AIAssistantProps) {
                   variant="ghost"
                   size="icon"
                   onClick={onClose}
-                  className="h-11 w-11 rounded-full hover:bg-secondary"
+                  className="h-11 w-11 rounded-full hover:bg-secondary relative z-10 pointer-events-auto"
                 >
                   <X className="h-6 w-6" />
                 </Button>
@@ -546,23 +549,34 @@ export function AIAssistant({ isOpen, onClose, sessionId }: AIAssistantProps) {
 
   return (
     <div
-      className={`fixed right-0 top-0 z-50 h-full transform transition-transform duration-300 ease-in-out ${isOpen ? "translate-x-0" : "translate-x-full"}`}
-      style={{ width: isMobile ? '100%' : `${panelWidth}px` }}
+      className={cn(
+        "fixed right-0 top-14 h-[calc(100vh-3.5rem)] transform transition-all duration-500 ease-in-out border-l border-border bg-card shadow-2xl",
+        isOpen ? "translate-x-0" : "translate-x-full",
+        activeLayer === 'main' 
+          ? 'opacity-30 z-[20] pointer-events-none' 
+          : 'opacity-100 z-[45] pointer-events-auto'
+      )}
+      style={{ width: `${panelWidth}px` }}
     >
-      {/* 拉伸手柄 */}
       <div
-        className="absolute left-0 top-0 h-full w-4 cursor-col-resize bg-transparent hover:bg-primary/10 flex items-center justify-center"
+        className="absolute left-[-8px] top-0 h-full w-4 cursor-col-resize group z-50 pointer-events-auto"
         onMouseDown={handleResizeStart}
-        style={{ zIndex: 1 }}
       >
-        {/* 可视化胶囊滑块 */}
-        <div className="w-1.5 h-12 rounded-full bg-border hover:bg-border/80 transition-colors" />
+        <div className="absolute left-1/2 top-1/2 -translate-y-1/2 w-1.5 h-12 rounded-full bg-border group-hover:bg-primary/50 transition-colors" />
       </div>
-      <Card className="h-full rounded-none border-l border-border bg-card shadow-lg">
-        <CardContent className="flex h-full flex-col p-4">
-          {chatInnerContent}
-        </CardContent>
-      </Card>
+
+      <div className="flex h-full flex-col p-4 relative pointer-events-auto">
+        {activeLayer === 'main' && (
+          <div 
+            className="absolute inset-0 z-10 bg-transparent cursor-pointer pointer-events-auto"
+            onClick={(e) => {
+              e.stopPropagation()
+              onLayerActivate?.()
+            }}
+          />
+        )}
+        {chatInnerContent}
+      </div>
     </div>
   )
 }
