@@ -32,8 +32,22 @@ services:
       - wuhub-network
     restart: unless-stopped
 
+  meilisearch:
+    image: getmeili/meilisearch:v1.12
+    ports:
+      - "7700:7700"
+    volumes:
+      - meilisearch_data:/meili_data
+    environment:
+      - MEILI_ENV=development
+      - MEILI_NO_ANALYTICS=true
+    networks:
+      - wuhub-network
+    restart: unless-stopped
+
 volumes:
   lancedb_data:
+  meilisearch_data:
 
 networks:
   wuhub-network:

@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     # LanceDB
     LANCEDB_PATH: str = "./data/lancedb"
 
+    # Meilisearch
+    MEILISEARCH_HOST: str = "http://localhost:7700"
+    MEILISEARCH_API_KEY: Optional[str] = None
+
     # Crawler
     CRAWLER_CONFIG_PATH: str = "./config/crawler.yaml"
 

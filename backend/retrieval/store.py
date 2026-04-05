@@ -26,6 +26,9 @@ from .utils.embedding import RetrievalEmbedder, get_retrieval_embedder
 
 logger = logging.getLogger(__name__)
 
+# Meilisearch 客户端
+_meilisearch_client: "meilisearch.Client | None" = None
+
 
 # =============================================================================
 # LanceStore 类
@@ -341,51 +344,22 @@ class LanceStore:
         where: str | None = None,
         **kwargs: Any,
     ) -> list[dict[str, Any]]:
-        """
-        全文搜索
-
-        Args:
-            query: 查询文本
-            fields: 搜索字段
-            limit: 返回数量
-            offset: 偏移量
-            where: 过滤条件
-            **kwargs: 其他参数
-
-        Returns:
-            搜索结果列表
-        """
+        """全文搜索（使用 Meilisearch）"""
         try:
             if fields is None:
                 fields = Article.get_searchable_fields()
 
-            # 使用 LanceDB 的全文搜索
-            results = self.table.search(
-                query=query,
-                query_type="fts",
-            ).limit(limit).offset(offset)
+            # 尝试使用 Meilisearch
+            client = self._get_meilisearch_client()
+            if client is not None:
+                return self._meilisearch_search(query, fields, limit, offset, where, **kwargs)
 
-            if where:
-                results = results.where(where)
-
-            return cast("list[dict[str, Any]]", results.to_list())
+            # 降级到 LanceDB FTS
+            logger.warning("Meilisearch unavailable, falling back to LanceDB FTS")
+            return self._lance_fts_search(query, fields, limit, offset, where)
         except Exception as e:
-            # 检查是否是倒排索引未创建的错误
-            error_msg = str(e)
-            if (
-                "Cannot perform full text search unless an INVERTED index has been created"
-                in error_msg
-            ):
-                logger.warning(
-                    f"Fulltext index not available, falling back to simple text search: {error_msg}"
-                )
-                # 降级方案：使用简单的文本搜索
-                # 此处 fields 已在上面进行了 None 检查并赋予默认值，但为了类型安全，再次确保
-                search_fields = fields if fields is not None else Article.get_searchable_fields()
-                return self._simple_text_search(query, search_fields, limit, where)
-            else:
-                logger.error(f"Fulltext search failed: {e}")
-                raise
+            logger.error(f"Fulltext search failed: {e}")
+            return self._simple_text_search(query, fields or Article.get_searchable_fields(), limit, where)
 
     def _simple_text_search(
         self,
@@ -503,6 +477,214 @@ class LanceStore:
 
         # 默认返回 True
         return True
+
+    def _get_meilisearch_client(self) -> "meilisearch.Client | None":
+        """获取 Meilisearch 客户端（单例）"""
+        global _meilisearch_client
+        if _meilisearch_client is not None:
+            return _meilisearch_client
+
+        try:
+            import meilisearch
+            from backend.app.core.config import settings
+
+            _meilisearch_client = meilisearch.Client(
+                settings.MEILISEARCH_HOST,
+                settings.MEILISEARCH_API_KEY,
+            )
+            _meilisearch_client.health()
+            logger.info(f"Meilisearch connected: {settings.MEILISEARCH_HOST}")
+            return _meilisearch_client
+        except Exception as e:
+            logger.warning(f"Meilisearch connection failed: {e}")
+            _meilisearch_client = None
+            return None
+
+    def _meilisearch_search(
+        self,
+        query: str,
+        fields: list[str],
+        limit: int,
+        offset: int,
+        where: str | None = None,
+        **kwargs: Any,
+    ) -> list[dict[str, Any]]:
+        """使用 Meilisearch 进行全文搜索"""
+        try:
+            client = self._get_meilisearch_client()
+            if client is None:
+                raise RuntimeError("Meilisearch client not available")
+
+            index = client.index("articles")
+
+            search_params: dict[str, Any] = {
+                "limit": limit,
+                "offset": offset,
+                "attributesToRetrieve": [
+                    "news_id", "title", "content_text", "publish_date",
+                    "url", "source_site", "author", "tags", "last_updated",
+                ],
+                "attributesToHighlight": ["title", "content_text"],
+            }
+
+            if where:
+                filter_str = self._build_meilisearch_filter(where)
+                if filter_str:
+                    search_params["filter"] = filter_str
+
+            results = index.search(query, search_params)
+
+            processed_results = []
+            for hit in results.get("hits", []):
+                if "_formatted" in hit:
+                    hit["title_highlighted"] = hit["_formatted"].get("title", hit.get("title", ""))
+                    hit["content_highlighted"] = hit["_formatted"].get("content_text", hit.get("content_text", "")[:200])
+                processed_results.append(hit)
+
+            logger.info(f"Meilisearch search: query='{query}', hits={len(processed_results)}")
+            return processed_results
+        except Exception as e:
+            logger.error(f"Meilisearch search failed: {e}")
+            raise
+
+    def _build_meilisearch_filter(self, where: str) -> str | None:
+        """将 LanceDB where 条件转换为 Meilisearch filter"""
+        if not where or where == "1=1":
+            return None
+
+        try:
+            filters = []
+            if "!=" in where:
+                for condition in where.split(" AND "):
+                    if "!=" in condition:
+                        field, value = condition.split("!=")
+                        field = field.strip()
+                        value = value.strip().strip("'\"")
+                        filters.append(f"{field} != '{value}'")
+                    elif "=" in condition:
+                        field, value = condition.split("=")
+                        field = field.strip()
+                        value = value.strip().strip("'\"")
+                        filters.append(f"{field} = '{value}'")
+            elif "=" in where:
+                for condition in where.split(" AND "):
+                    if "=" in condition:
+                        field, value = condition.split("=")
+                        field = field.strip()
+                        value = value.strip().strip("'\"")
+                        filters.append(f"{field} = '{value}'")
+
+            return " AND ".join(filters) if filters else None
+        except Exception as e:
+            logger.warning(f"Failed to build Meilisearch filter from '{where}': {e}")
+            return None
+
+    def _lance_fts_search(
+        self,
+        query: str,
+        fields: list[str],
+        limit: int,
+        offset: int,
+        where: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """使用 LanceDB FTS 进行全文搜索（降级方案）"""
+        try:
+            results = self.table.search(
+                query=query,
+                query_type="fts",
+            ).limit(limit).offset(offset)
+
+            if where:
+                results = results.where(where)
+
+            return cast("list[dict[str, Any]]", results.to_list())
+        except Exception as e:
+            error_msg = str(e)
+            if "Cannot perform full text search unless an INVERTED index has been created" in error_msg:
+                logger.warning(f"LanceDB FTS index not available, using simple text search")
+                return self._simple_text_search(query, fields, limit, where)
+            raise
+
+    def create_meilisearch_index(self) -> None:
+        """创建 Meilisearch 索引并配置"""
+        try:
+            client = self._get_meilisearch_client()
+            if client is None:
+                logger.warning("Meilisearch not available, skipping index creation")
+                return
+
+            try:
+                client.create_index("articles", {"primaryKey": "news_id"})
+                logger.info("Created Meilisearch index: articles")
+            except Exception as e:
+                if "index_already_exists" in str(e).lower():
+                    logger.info("Meilisearch index 'articles' already exists")
+                else:
+                    raise
+
+            index = client.index("articles")
+
+            index.update_searchable_attributes([
+                "title", "content_text", "source_site", "author",
+            ])
+            index.update_filterable_attributes([
+                "source_site", "author", "tags", "publish_date",
+            ])
+            index.update_sortable_attributes([
+                "publish_date", "last_updated",
+            ])
+
+            logger.info("Meilisearch index configured successfully")
+        except Exception as e:
+            logger.error(f"Failed to create Meilisearch index: {e}")
+            raise
+
+    def sync_to_meilisearch(self, batch_size: int = 100) -> int:
+        """将 LanceDB 中的文档同步到 Meilisearch"""
+        try:
+            client = self._get_meilisearch_client()
+            if client is None:
+                logger.warning("Meilisearch not available, skipping sync")
+                return 0
+
+            self.create_meilisearch_index()
+            index = client.index("articles")
+
+            all_docs = self.table.to_pandas().to_dict("records")
+            total = len(all_docs)
+
+            if total == 0:
+                logger.info("No documents to sync to Meilisearch")
+                return 0
+
+            synced = 0
+            for i in range(0, total, batch_size):
+                batch = all_docs[i:i + batch_size]
+
+                cleaned_batch = []
+                for doc in batch:
+                    cleaned_doc = {
+                        "news_id": doc.get("news_id"),
+                        "title": doc.get("title", ""),
+                        "content_text": doc.get("content_text", ""),
+                        "publish_date": str(doc.get("publish_date")) if doc.get("publish_date") else None,
+                        "url": doc.get("url", ""),
+                        "source_site": doc.get("source_site", ""),
+                        "author": doc.get("author", ""),
+                        "tags": doc.get("tags", []),
+                        "last_updated": str(doc.get("last_updated")) if doc.get("last_updated") else None,
+                    }
+                    cleaned_batch.append(cleaned_doc)
+
+                index.add_documents(cleaned_batch, primary_key="news_id")
+                synced += len(cleaned_batch)
+                logger.info(f"Synced {synced}/{total} documents to Meilisearch")
+
+            logger.info(f"Meilisearch sync completed: {synced} documents")
+            return synced
+        except Exception as e:
+            logger.error(f"Failed to sync to Meilisearch: {e}")
+            raise
 
     def hybrid_search(
         self,

@@ -41,6 +41,9 @@ dependencies = [
     
     # Crawler
     "crawl4ai>=0.8.0",
+
+    # Meilisearch (全文搜索)
+    "meilisearch>=0.32.0",
     "aiofiles>=25.1.0",
     "fake-useragent>=2.0.0",
     "chardet<6",
