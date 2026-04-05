@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
-import { ArrowLeft, MessageSquare, Clock, Trash2 } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { MessageSquare, Clock, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "sonner"
@@ -20,7 +20,6 @@ interface Session {
 
 export default function ChatHistoryPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const [sessions, setSessions] = useState<Session[]>([])
 
   // 从 localStorage 加载会话列表
@@ -43,15 +42,6 @@ export default function ChatHistoryPage() {
       console.warn('Failed to read sessions from localStorage:', e)
     }
   }, [])
-
-  // 处理返回按钮点击
-  const handleBack = () => {
-    if (window.history.length > 1) {
-      router.back()
-    } else {
-      router.push('/')
-    }
-  }
 
   // 处理会话卡片点击
   const handleSessionClick = (sessionId: string) => {
@@ -103,18 +93,7 @@ export default function ChatHistoryPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-6">
-      {/* 返回按钮 */}
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={handleBack}
-        className="gap-2"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        返回
-      </Button>
-
+    <div className="mx-auto max-w-4xl space-y-6 pt-6 px-6 pb-6">
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold text-foreground">历史对话</h1>
         <p className="text-muted-foreground">查看和管理您的历史对话记录</p>
