@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
-import { Send, Bot, ExternalLink, Sparkles, X, RotateCcw } from "lucide-react"
+import { Send, Bot, ExternalLink, Sparkles, X, RotateCcw, ChevronLeft, ChevronRight } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -38,6 +38,8 @@ interface AIAssistantProps {
   onLayerActivate?: () => void
 }
 
+const WIDTH_STEPS = [25, 30, 40, 50, 60]
+
 export function AIAssistant({ isOpen, onClose, sessionId, activeLayer = 'ai', onLayerActivate }: AIAssistantProps) {
   const [input, setInput] = useState("")
   const [sessions, setSessions] = useState<Session[]>([])
@@ -46,17 +48,13 @@ export function AIAssistant({ isOpen, onClose, sessionId, activeLayer = 'ai', on
   const [currentThought, setCurrentThought] = useState<string | null>(null)
   const [currentToolCall, setCurrentToolCall] = useState<string | null>(null)
   const [sheetHeight, setSheetHeight] = useState(80)
-  const [panelWidth, setPanelWidth] = useState(320)
-  const [isDragging, setIsDragging] = useState(false)
+  const [sizeIndex, setSizeIndex] = useState(0)
   const chatContainerRef = useRef<HTMLDivElement>(null)
-  const isResizing = useRef(false)
   const isMobile = useIsMobile()
 
-  // 获取当前会话
   const currentSession = sessions.find(session => session.id === currentSessionId)
   const messages = currentSession?.messages || []
 
-  // 吸附点定义
   const SNAP_POINTS = [25, 50, 80, 100]
 
   // 从 localStorage 加载会话列表
@@ -344,32 +342,16 @@ export function AIAssistant({ isOpen, onClose, sessionId, activeLayer = 'ai', on
 
 
 
-  // 拉伸手柄事件处理
-  const handleResizeStart = (e: React.MouseEvent) => {
-    e.preventDefault()
-    isResizing.current = true
-    setIsDragging(true)
-    document.addEventListener('mousemove', handleResize)
-    document.addEventListener('mouseup', handleResizeEnd)
+  const handleWiden = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setSizeIndex((prev) => Math.min(prev + 1, WIDTH_STEPS.length - 1))
   }
 
-  const handleResize = (e: MouseEvent) => {
-    if (!isResizing.current) return
-    
-    const maxWidth = Math.min(600, window.innerWidth * 0.4)
-    const newWidth = Math.max(280, maxWidth - (e.clientX - (window.innerWidth - panelWidth)))
-    
-    setPanelWidth(newWidth)
+  const handleNarrow = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setSizeIndex((prev) => Math.max(prev - 1, 0))
   }
 
-  const handleResizeEnd = () => {
-    isResizing.current = false
-    setIsDragging(false)
-    document.removeEventListener('mousemove', handleResize)
-    document.removeEventListener('mouseup', handleResizeEnd)
-  }
-
-  // 聊天界面内容
   const chatInnerContent = (
     <div className="flex h-full flex-col">
       {isMobile && (
@@ -549,19 +531,42 @@ export function AIAssistant({ isOpen, onClose, sessionId, activeLayer = 'ai', on
     <div
       className={cn(
         "fixed right-0 top-14 h-[calc(100vh-3.5rem)] border-l border-border bg-card shadow-2xl",
-        !isDragging && "transition-all duration-500 ease-in-out",
+        "transition-all duration-500 ease-in-out",
         isOpen ? "translate-x-0" : "translate-x-full",
         !isMobile && activeLayer === 'main' 
           ? 'opacity-30 z-[20] pointer-events-none' 
           : 'opacity-100 z-[45] pointer-events-auto'
       )}
-      style={{ width: `${panelWidth}px` }}
+      style={{ width: `${WIDTH_STEPS[sizeIndex]}%` }}
     >
-      <div
-        className="absolute left-[-8px] top-0 h-full w-4 cursor-col-resize group z-50 pointer-events-auto"
-        onMouseDown={handleResizeStart}
-      >
-        <div className="absolute left-1/2 top-1/2 -translate-y-1/2 w-1.5 h-12 rounded-full bg-border group-hover:bg-primary/50 transition-colors" />
+      <div className="absolute left-[-10px] top-1/2 -translate-y-1/2 z-50 pointer-events-auto flex items-center justify-center"> 
+        <div className="flex flex-col h-100 w-5 rounded-full border border-border bg-card/90 shadow-lg overflow-hidden group/handle hover:w-5.5 transition-all backdrop-blur-sm"> 
+          <button 
+            onClick={handleWiden} 
+            disabled={sizeIndex === WIDTH_STEPS.length - 1} 
+            className={cn( 
+              "flex-1 w-full flex items-center justify-center transition-colors hover:bg-accent group/btn", 
+              sizeIndex === WIDTH_STEPS.length - 1 && "opacity-20 cursor-not-allowed" 
+            )} 
+            title="加宽" 
+          > 
+            <ChevronLeft className="h-3.5 w-3.5 text-muted-foreground group-hover/btn:text-primary transition-transform group-active/btn:scale-75" /> 
+          </button> 
+          
+          <div className="h-[1px] w-full bg-border/50 mx-auto" /> 
+ 
+          <button 
+            onClick={handleNarrow} 
+            disabled={sizeIndex === 0} 
+            className={cn( 
+              "flex-1 w-full flex items-center justify-center transition-colors hover:bg-accent group/btn", 
+              sizeIndex === 0 && "opacity-20 cursor-not-allowed" 
+            )} 
+            title="变窄" 
+          > 
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground group-hover/btn:text-primary transition-transform group-active/btn:scale-75" /> 
+          </button> 
+        </div> 
       </div>
 
       <div className="flex h-full flex-col p-4 relative pointer-events-auto">
