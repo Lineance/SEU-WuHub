@@ -12,55 +12,75 @@ interface MobileNavFabProps {
 }
 
 export function MobileNavFab({ onClick, opacity = 1, isVisible = true }: MobileNavFabProps) {
-  const [position, setPosition] = useState({ x: 0, y: 0 })
+  // 1. 初始状态设为 null 或一个标志位，避免使用错误的硬编码坐标
+  const [position, setPosition] = useState<{ x: number; y: number } | null>(null)
+  const [hasInitialized, setHasInitialized] = useState(false)
 
-  // 初始化位置，避免在 SSR 中引用 window
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && !hasInitialized) {
+      // 2. 立即计算并设置正确位置
       setPosition({
         x: window.innerWidth - 80,
-        y: window.innerHeight - 150
+        y: window.innerHeight - 100
       })
+      setHasInitialized(true)
     }
-  }, [])
+  }, [hasInitialized])
 
-  if (!isVisible) {
-    return null
-  }
+  // 3. 关键修复：如果位置还没初始化，直接不渲染。
+  // 这样当它第一次 render 时，position.x 就是正确的，不会产生位移路径。
+  if (!hasInitialized || !position) return null
 
   return (
     <motion.div
       className="fixed top-0 left-0"
-      style={{ 
+      // 4. initial 设为当前位置，配合 opacity 0 实现淡入而不是滑入
+      initial={{ 
         x: position.x, 
+        y: position.y, 
+        opacity: 0, 
+        scale: 0 
+      }}
+      animate={{
+        x: position.x,
         y: position.y,
-        zIndex: 10000, // 调高 z-index，防止遮挡底部的“发送”按钮
-        opacity: opacity
+        scale: isVisible ? 1 : 0,
+        opacity: isVisible ? opacity : 0
       }}
       drag
-      dragConstraints={{ left: 0, right: window.innerWidth - 64, top: 0, bottom: window.innerHeight - 64 }}
+      dragConstraints={{
+        left: 0,
+        right: typeof window !== 'undefined' ? window.innerWidth - 64 : 0,
+        top: 0,
+        bottom: typeof window !== 'undefined' ? window.innerHeight - 64 : 0
+      }}
       onDragEnd={(event, info) => {
         const screenWidth = window.innerWidth
         const screenHeight = window.innerHeight
         const halfScreen = screenWidth / 2
         
-        // 计算新的 x 坐标（左右吸附）
+        // 吸附逻辑
         const newX = info.point.x < halfScreen ? 16 : screenWidth - 64 - 16
-        
-        // 确保 y 轴不会超出屏幕顶端和底端
         const newY = Math.max(16, Math.min(info.point.y, screenHeight - 64 - 16))
         
-        setPosition({
-          x: newX,
-          y: newY
-        })
+        setPosition({ x: newX, y: newY })
       }}
-      transition={{ type: "spring", stiffness: 200 }}
+      transition={{ 
+        type: "spring", 
+        stiffness: 300, 
+        damping: 30,
+        // 确保 opacity 和 scale 的变化有动画，但位置在第一次出现时不要有位移感
+        opacity: { duration: 0.2 } 
+      }}
+      style={{
+        zIndex: 10000,
+        pointerEvents: isVisible ? 'auto' : 'none'
+      }}
     >
       <Button
         variant="default"
         size="icon"
-        className="h-16 w-16 rounded-full shadow-lg transition-opacity duration-300 hover:opacity-100"
+        className="h-16 w-16 rounded-full shadow-2xl transition-transform active:scale-90"
         onClick={onClick}
       >
         <ChevronRight className="h-8 w-8" />

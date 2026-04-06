@@ -552,7 +552,7 @@ export function AIAssistant({ isOpen, onClose, sessionId, activeLayer = 'ai', on
       className={cn(
         "fixed right-0 top-14 h-[calc(100vh-3.5rem)] transform transition-all duration-500 ease-in-out border-l border-border bg-card shadow-2xl",
         isOpen ? "translate-x-0" : "translate-x-full",
-        activeLayer === 'main' 
+        !isMobile && activeLayer === 'main' 
           ? 'opacity-30 z-[20] pointer-events-none' 
           : 'opacity-100 z-[45] pointer-events-auto'
       )}
@@ -566,7 +566,7 @@ export function AIAssistant({ isOpen, onClose, sessionId, activeLayer = 'ai', on
       </div>
 
       <div className="flex h-full flex-col p-4 relative pointer-events-auto">
-        {activeLayer === 'main' && (
+        {!isMobile && activeLayer === 'main' && (
           <div 
             className="absolute inset-0 z-10 bg-transparent cursor-pointer pointer-events-auto"
             onClick={(e) => {

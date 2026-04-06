@@ -9,9 +9,11 @@ import { cn } from "@/lib/utils"
 import { useReadingMode } from "@/components/reading-mode-provider"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { MobileNavFab } from "@/components/mobile-nav-fab"
+import { Sheet, SheetContent } from "@/components/ui/sheet"
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [isAIOpen, setIsAIOpen] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [activeLayer, setActiveLayer] = useState<'main' | 'ai'>('ai')
   const { isReadingMode } = useReadingMode()
   const isMobile = useIsMobile()
@@ -28,14 +30,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // 处理 Header AI 按钮点击
   const handleAIToggle = () => {
     if (!isAIOpen) {
-      // 如果没开：打开并置顶
       setIsAIOpen(true)
-      setActiveLayer('ai')
-    } else if (activeLayer === 'main') {
-      // 如果开了但在后台：强制提到前台
+      if (!isMobile) {
+        setActiveLayer('ai')
+      }
+    } else if (!isMobile && activeLayer === 'main') {
       setActiveLayer('ai')
     } else {
-      // 如果开了且在前台：关闭
       setIsAIOpen(false)
     }
   }
@@ -55,9 +56,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div 
           className={cn(
             "flex-1 overflow-hidden transition-all duration-500 ease-in-out relative flex",
-            activeLayer === 'main' ? 'z-[40]' : 'z-[10]'
+            isMobile ? 'z-0' : (activeLayer === 'main' ? 'z-[40]' : 'z-[10]')
           )}
           onClick={() => {
+            if (isMobile) return
             if (isAIOpen && activeLayer === 'ai') {
               setActiveLayer('main')
             }
@@ -71,6 +73,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </main>
         </div>
 
+        {/* 移动端菜单 Sheet 容器 */}
+        {isMobile && (
+          <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+            <SheetContent side="left" className="w-[280px] p-0 [&>button]:hidden">
+              <Sidebar 
+                isCollapsed={false} 
+                onToggleCollapse={() => {}} 
+                isMobile
+                onActionClick={() => setIsMobileMenuOpen(false)}
+              />
+            </SheetContent>
+          </Sheet>
+        )}
+
         {/* AI 助手 - 独立于主内容容器之外 */}
         <AIAssistant 
           isOpen={isAIOpen && !isReadingMode} 
@@ -80,9 +96,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           onLayerActivate={() => setActiveLayer('ai')}
         />
 
-        {/* 移动端适配 */}
+        {/* 移动端悬浮导航按钮 */}
         {isMobile && !isReadingMode && (
-          <MobileNavFab onClick={() => {}} isVisible={!isAIOpen} />
+          <MobileNavFab 
+            onClick={() => setIsMobileMenuOpen(true)}
+            isVisible={!isAIOpen && !isMobileMenuOpen}
+          />
         )}
       </div>
     </div>
