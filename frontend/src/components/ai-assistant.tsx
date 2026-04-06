@@ -45,8 +45,9 @@ export function AIAssistant({ isOpen, onClose, sessionId, activeLayer = 'ai', on
   const [isLoading, setIsLoading] = useState(false)
   const [currentThought, setCurrentThought] = useState<string | null>(null)
   const [currentToolCall, setCurrentToolCall] = useState<string | null>(null)
-  const [sheetHeight, setSheetHeight] = useState(80) // 初始高度为 80%
-  const [panelWidth, setPanelWidth] = useState(320) // 默认 320px，仅对 PC 生效
+  const [sheetHeight, setSheetHeight] = useState(80)
+  const [panelWidth, setPanelWidth] = useState(320)
+  const [isDragging, setIsDragging] = useState(false)
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const isResizing = useRef(false)
   const isMobile = useIsMobile()
@@ -347,8 +348,7 @@ export function AIAssistant({ isOpen, onClose, sessionId, activeLayer = 'ai', on
   const handleResizeStart = (e: React.MouseEvent) => {
     e.preventDefault()
     isResizing.current = true
-    
-    // 添加全局鼠标事件监听
+    setIsDragging(true)
     document.addEventListener('mousemove', handleResize)
     document.addEventListener('mouseup', handleResizeEnd)
   }
@@ -356,7 +356,6 @@ export function AIAssistant({ isOpen, onClose, sessionId, activeLayer = 'ai', on
   const handleResize = (e: MouseEvent) => {
     if (!isResizing.current) return
     
-    // 计算新的宽度
     const maxWidth = Math.min(600, window.innerWidth * 0.4)
     const newWidth = Math.max(280, maxWidth - (e.clientX - (window.innerWidth - panelWidth)))
     
@@ -365,8 +364,7 @@ export function AIAssistant({ isOpen, onClose, sessionId, activeLayer = 'ai', on
 
   const handleResizeEnd = () => {
     isResizing.current = false
-    
-    // 移除全局鼠标事件监听
+    setIsDragging(false)
     document.removeEventListener('mousemove', handleResize)
     document.removeEventListener('mouseup', handleResizeEnd)
   }
@@ -550,7 +548,8 @@ export function AIAssistant({ isOpen, onClose, sessionId, activeLayer = 'ai', on
   return (
     <div
       className={cn(
-        "fixed right-0 top-14 h-[calc(100vh-3.5rem)] transform transition-all duration-500 ease-in-out border-l border-border bg-card shadow-2xl",
+        "fixed right-0 top-14 h-[calc(100vh-3.5rem)] border-l border-border bg-card shadow-2xl",
+        !isDragging && "transition-all duration-500 ease-in-out",
         isOpen ? "translate-x-0" : "translate-x-full",
         !isMobile && activeLayer === 'main' 
           ? 'opacity-30 z-[20] pointer-events-none' 
