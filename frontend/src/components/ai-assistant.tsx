@@ -38,7 +38,7 @@ interface AIAssistantProps {
   onLayerActivate?: () => void
 }
 
-const WIDTH_STEPS = [25, 30, 40, 50, 60]
+const WIDTH_STEPS = [25, 40, 50, 60]
 
 export function AIAssistant({ isOpen, onClose, sessionId, activeLayer = 'ai', onLayerActivate }: AIAssistantProps) {
   const [input, setInput] = useState("")
