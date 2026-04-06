@@ -260,6 +260,7 @@ function HeaderSearchFallback() {
 export function Header({ onAIToggle }: HeaderProps) {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
   const [logoError, setLogoError] = useState(false)
+  const [isZoomed, setIsZoomed] = useState(false)
   const isMobile = useIsMobile()
   const router = useRouter()
 
@@ -272,70 +273,106 @@ export function Header({ onAIToggle }: HeaderProps) {
   }
 
   return (
-    <header className="sticky top-0 z-[50] flex h-14 items-center justify-between border-b border-border bg-card/95 px-4 shadow-sm backdrop-blur-sm">
-      <div className={`flex items-center gap-2 ${isMobile && isSearchExpanded ? 'hidden' : ''}`}>
-        <div
-          className="relative flex h-8 w-8 cursor-pointer items-center justify-center overflow-hidden rounded-lg"
-          onClick={() => router.push('/')}
-        >
-          {logoError ? (
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-base font-bold text-primary-foreground">
-              W
-            </span>
-          ) : (
-            <Image
-              src="/logo.png"
-              alt="WuHub Logo"
-              fill
-              className="object-cover"
-              onError={() => setLogoError(true)}
-            />
-          )}
+    <>
+      <header className="sticky top-0 z-[50] flex h-14 items-center justify-between border-b border-border bg-card/95 px-4 shadow-sm backdrop-blur-sm">
+        <div className={`flex items-center gap-2 ${isMobile && isSearchExpanded ? 'hidden' : ''}`}>
+          <div
+            className="relative flex h-10 w-10 cursor-pointer items-center justify-center overflow-hidden rounded-lg transition-transform hover:scale-110 active:scale-95"
+            onClick={() => setIsZoomed(true)}
+          >
+            {logoError ? (
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-lg font-bold text-primary-foreground">
+                W
+              </span>
+            ) : (
+              <Image
+                src="/images/logo.jpg"
+                alt="WuHub Logo"
+                fill
+                className="object-cover"
+                onError={() => setLogoError(true)}
+              />
+            )}
+          </div>
+
+          <span
+            className="text-lg font-semibold text-foreground cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => router.push('/')}
+          >
+            SEU-WuHub
+          </span>
         </div>
 
-        <span className="text-lg font-semibold text-foreground">SEU-WuHub</span>
-      </div>
+        <Suspense fallback={<HeaderSearchFallback />}>
+          <HeaderSearchContent onSearchExpand={setIsSearchExpanded} />
+        </Suspense>
 
-      <Suspense fallback={<HeaderSearchFallback />}>
-        <HeaderSearchContent onSearchExpand={setIsSearchExpanded} />
-      </Suspense>
+        {!isMobile && (
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full"
+              onClick={handleFavoritesClick}
+              title="收藏夹"
+            >
+              <Star className="h-5 w-5" />
+              <span className="sr-only">收藏夹</span>
+            </Button>
 
-      {!isMobile && (
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full"
-            onClick={handleFavoritesClick}
-            title="收藏夹"
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full"
+              onClick={onAIToggle}
+              title="SEU Agent"
+            >
+              <Bot className="h-5 w-5" />
+              <span className="sr-only">AI 助手</span>
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full"
+              onClick={handleSettingsClick}
+              title="设置"
+            >
+              <Settings className="h-5 w-5" />
+              <span className="sr-only">设置</span>
+            </Button>
+          </div>
+        )}
+      </header>
+
+      {isZoomed && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md animate-in fade-in duration-300"
+          onClick={() => setIsZoomed(false)}
+        >
+          <div
+            className="relative flex flex-col items-center gap-6 animate-in zoom-in-95 duration-300"
+            onClick={(e) => e.stopPropagation()}
           >
-            <Star className="h-5 w-5" />
-            <span className="sr-only">收藏夹</span>
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full"
-            onClick={onAIToggle}
-            title="SEU Agent"
-          >
-            <Bot className="h-5 w-5" />
-            <span className="sr-only">AI 助手</span>
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full"
-            onClick={handleSettingsClick}
-            title="设置"
-          >
-            <Settings className="h-5 w-5" />
-            <span className="sr-only">设置</span>
-          </Button>
+            <div className="h-72 w-72 overflow-hidden rounded-2xl border-4 border-white/20 shadow-2xl md:h-96 md:w-96">
+              <Image
+                src="/images/logo.jpg"
+                alt="Expanded Logo"
+                width={400}
+                height={400}
+                className="h-full w-full object-cover"
+              />
+            </div>
+            <Button
+              variant="outline"
+              className="bg-white/10 text-white border-white/20 hover:bg-white/20 backdrop-blur-md"
+              onClick={() => setIsZoomed(false)}
+            >
+              点击此处或背景收起
+            </Button>
+          </div>
         </div>
       )}
-    </header>
+    </>
   )
 }
