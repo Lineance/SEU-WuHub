@@ -242,7 +242,10 @@ export default function ArticleDetailPage() {
                   }
                 }}
               >
-                {article.content_md}
+                {article.content_md.replace(
+                  /(https?:\/\/[^\s\u4e00-\u9fa5，。？！；：]+)(?=[\u4e00-\u9fa5，。？！；：])/g,
+                  '$1 '
+                )}
               </ReactMarkdown>
             ) : article.content ? (
               <p className="whitespace-pre-wrap">{article.content}</p>
