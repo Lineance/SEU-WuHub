@@ -3,10 +3,12 @@
 import { useState, useEffect } from "react"
 
 const images = [
-  "https://images.unsplash.com/photo-1562774053-701939374585?w=1920&q=80",
-  "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1920&q=80",
-  "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=1920&q=80",
-  "https://images.unsplash.com/photo-1607237138185-eedd9c632b0b?w=1920&q=80",
+  "/images/jxsy.jpg",
+  "/images/seu.png",
+  "/images/Auditorium.webp",
+  "/images/lwz_library.webp",
+  "/images/gym.jpg",
+  "/images/2026.jpg",
 ]
 
 export function HeroSection() {
