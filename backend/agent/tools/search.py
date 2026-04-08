@@ -68,4 +68,21 @@ class SearchTool:
             for row in result.get("results", [])
         ]
 
-        return ToolResult(ok=True, content={"query": query, "results": items, "total": len(items)})
+        time_window = None
+        start_date = kwargs.get("start_date")
+        end_date = kwargs.get("end_date")
+        if start_date or end_date:
+            time_window = {
+                "start_date": str(start_date or ""),
+                "end_date": str(end_date or ""),
+            }
+
+        return ToolResult(
+            ok=True,
+            content={
+                "query": query,
+                "results": items,
+                "total": len(items),
+                "applied_time_window": time_window,
+            },
+        )

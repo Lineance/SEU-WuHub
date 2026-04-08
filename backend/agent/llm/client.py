@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+from datetime import datetime
 from typing import Any
 
 from litellm import acompletion
@@ -133,17 +134,24 @@ class LLMDecisionClient:
             "Choose the next action and produce strict JSON only. "
             'Output format: {"tool":"tool_name","input":{...}}. '
             'When you already have enough evidence, output {"tool":"finish","input":{"answer":"..."}}. '
+            "Interpret recency words such as 最近/近期/本周/本月 relative to current_date in payload. "
             "Do not include markdown fences or extra text."
         )
 
+        now = datetime.now()
+
         user_payload = {
             "query": query,
+            "current_date": now.date().isoformat(),
+            "current_datetime": now.isoformat(timespec="seconds"),
+            "timezone": "Asia/Shanghai",
             "history": self._trim_history_by_budget(history, self._planner_history_char_budget),
             "available_tools": available_tools,
             "rules": [
                 "Prefer search_keyword for general campus Q&A",
                 "Treat search results as evidence, not just counts; inspect title, summary, and content_text when present",
                 "Use get_article_detail with news_id when search results are not enough or when the user asks for full content",
+                "For recent queries, always attach start_date/end_date to search_keyword input",
                 "Use sql_service for explicit filtering/counting/statistics",
                 "Use web_url_fetch only when user provides a concrete URL",
                 "After search, fetch detail only when the summary is insufficient or the user explicitly asks for source text",
@@ -227,11 +235,18 @@ class LLMDecisionClient:
         system_prompt = (
             "You are a campus assistant. Generate the final answer based only on observations. "
             "If evidence is insufficient, state uncertainty clearly and suggest a next query. "
+            "When the user asks for aggregation/listing, you may use a Markdown table for clarity if helpful. "
+            "When observations include an applied time window, mention it briefly. "
             "Answer in Chinese and keep it concise."
         )
 
+        now = datetime.now()
+
         payload = {
             "query": query,
+            "current_date": now.date().isoformat(),
+            "current_datetime": now.isoformat(timespec="seconds"),
+            "timezone": "Asia/Shanghai",
             "history": self._trim_history_by_budget(history, self._final_history_char_budget),
             "observations": self._trim_observations_by_budget(
                 observations, self._final_observations_char_budget

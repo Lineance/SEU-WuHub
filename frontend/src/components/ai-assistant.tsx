@@ -1,15 +1,16 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
-import { motion } from "framer-motion"
-import { Send, Bot, ExternalLink, Sparkles, X, RotateCcw, ChevronLeft, ChevronRight } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Textarea } from "@/components/ui/textarea"
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose } from "@/components/ui/sheet"
-import { api } from "@/lib/api"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { api } from "@/lib/api"
 import { cn } from "@/lib/utils"
+import { motion } from "framer-motion"
+import { Bot, ChevronLeft, ChevronRight, ExternalLink, RotateCcw, Send, Sparkles, X } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 
 interface SourceReference {
   title: string
@@ -376,49 +377,49 @@ export function AIAssistant({ isOpen, onClose, sessionId, activeLayer = 'ai', on
       )}
       <div className="border-b border-border pb-4 relative z-20">
         <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-                  <Bot className="h-5 w-5 text-primary-foreground" />
-                </div>
-                <div className="flex flex-col">
-                  <h3 className="text-base font-semibold text-card-foreground">AI 助手</h3>
-                  {currentSession && (
-                    <p className="text-xs text-muted-foreground truncate">{currentSession.title}</p>
-                  )}
-                </div>
-                <Sparkles className="h-4 w-4 text-accent" />
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={createNewSession}
-                  className="h-11 w-11 rounded-full hover:bg-secondary"
-                  title="新会话"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleClearCurrentSession}
-                  className="h-11 w-11 rounded-full hover:bg-secondary"
-                  title="清空对话"
-                >
-                  <RotateCcw className="h-6 w-6" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={onClose}
-                  className="h-11 w-11 rounded-full hover:bg-secondary relative z-10 pointer-events-auto"
-                >
-                  <X className="h-6 w-6" />
-                </Button>
-              </div>
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+              <Bot className="h-5 w-5 text-primary-foreground" />
             </div>
+            <div className="flex flex-col">
+              <h3 className="text-base font-semibold text-card-foreground">AI 助手</h3>
+              {currentSession && (
+                <p className="text-xs text-muted-foreground truncate">{currentSession.title}</p>
+              )}
+            </div>
+            <Sparkles className="h-4 w-4 text-accent" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={createNewSession}
+              className="h-11 w-11 rounded-full hover:bg-secondary"
+              title="新会话"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleClearCurrentSession}
+              className="h-11 w-11 rounded-full hover:bg-secondary"
+              title="清空对话"
+            >
+              <RotateCcw className="h-6 w-6" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              className="h-11 w-11 rounded-full hover:bg-secondary relative z-10 pointer-events-auto"
+            >
+              <X className="h-6 w-6" />
+            </Button>
+          </div>
+        </div>
       </div>
       <div ref={chatContainerRef} className="mb-4 flex-1 overflow-y-auto">
         {messages.length === 0 && !isLoading && (
@@ -432,7 +433,17 @@ export function AIAssistant({ isOpen, onClose, sessionId, activeLayer = 'ai', on
         {messages.map((message, index) => (
           <div key={index} className={`mb-4 ${message.role === 'user' ? 'flex justify-end' : 'flex'}`}>
             <div className={`max-w-[80%] rounded-lg p-3 text-sm ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>
-              {message.content}
+              {message.role === 'assistant' ? (
+                <div className="overflow-x-auto prose prose-sm max-w-none dark:prose-invert prose-table:table-auto prose-table:w-full prose-th:whitespace-nowrap prose-td:align-top">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                  >
+                    {message.content}
+                  </ReactMarkdown>
+                </div>
+              ) : (
+                <span className="whitespace-pre-wrap">{message.content}</span>
+              )}
               {message.sources && message.sources.length > 0 && (
                 <div className="mt-2 space-y-1">
                   <p className="text-xs font-medium text-muted-foreground">参考来源</p>
@@ -533,45 +544,45 @@ export function AIAssistant({ isOpen, onClose, sessionId, activeLayer = 'ai', on
         "fixed right-0 top-14 h-[calc(100vh-3.5rem)] border-l border-border bg-card shadow-2xl",
         "transition-all duration-500 ease-in-out",
         isOpen ? "translate-x-0" : "translate-x-full",
-        !isMobile && activeLayer === 'main' 
-          ? 'opacity-30 z-[20] pointer-events-none' 
+        !isMobile && activeLayer === 'main'
+          ? 'opacity-30 z-[20] pointer-events-none'
           : 'opacity-100 z-[45] pointer-events-auto'
       )}
       style={{ width: `${WIDTH_STEPS[sizeIndex]}%` }}
     >
-      <div className="absolute left-[-10px] top-1/2 -translate-y-1/2 z-50 pointer-events-auto flex items-center justify-center"> 
-        <div className="flex flex-col h-100 w-5 rounded-full border border-border bg-card/90 shadow-lg overflow-hidden group/handle hover:w-5.5 transition-all backdrop-blur-sm"> 
-          <button 
-            onClick={handleWiden} 
-            disabled={sizeIndex === WIDTH_STEPS.length - 1} 
-            className={cn( 
-              "flex-1 w-full flex items-center justify-center transition-colors hover:bg-accent group/btn", 
-              sizeIndex === WIDTH_STEPS.length - 1 && "opacity-20 cursor-not-allowed" 
-            )} 
-            title="加宽" 
-          > 
-            <ChevronLeft className="h-3.5 w-3.5 text-muted-foreground group-hover/btn:text-primary transition-transform group-active/btn:scale-75" /> 
-          </button> 
-          
-          <div className="h-[1px] w-full bg-border/50 mx-auto" /> 
- 
-          <button 
-            onClick={handleNarrow} 
-            disabled={sizeIndex === 0} 
-            className={cn( 
-              "flex-1 w-full flex items-center justify-center transition-colors hover:bg-accent group/btn", 
-              sizeIndex === 0 && "opacity-20 cursor-not-allowed" 
-            )} 
-            title="变窄" 
-          > 
-            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground group-hover/btn:text-primary transition-transform group-active/btn:scale-75" /> 
-          </button> 
-        </div> 
+      <div className="absolute left-[-10px] top-1/2 -translate-y-1/2 z-50 pointer-events-auto flex items-center justify-center">
+        <div className="flex flex-col h-100 w-5 rounded-full border border-border bg-card/90 shadow-lg overflow-hidden group/handle hover:w-5.5 transition-all backdrop-blur-sm">
+          <button
+            onClick={handleWiden}
+            disabled={sizeIndex === WIDTH_STEPS.length - 1}
+            className={cn(
+              "flex-1 w-full flex items-center justify-center transition-colors hover:bg-accent group/btn",
+              sizeIndex === WIDTH_STEPS.length - 1 && "opacity-20 cursor-not-allowed"
+            )}
+            title="加宽"
+          >
+            <ChevronLeft className="h-3.5 w-3.5 text-muted-foreground group-hover/btn:text-primary transition-transform group-active/btn:scale-75" />
+          </button>
+
+          <div className="h-[1px] w-full bg-border/50 mx-auto" />
+
+          <button
+            onClick={handleNarrow}
+            disabled={sizeIndex === 0}
+            className={cn(
+              "flex-1 w-full flex items-center justify-center transition-colors hover:bg-accent group/btn",
+              sizeIndex === 0 && "opacity-20 cursor-not-allowed"
+            )}
+            title="变窄"
+          >
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground group-hover/btn:text-primary transition-transform group-active/btn:scale-75" />
+          </button>
+        </div>
       </div>
 
       <div className="flex h-full flex-col p-4 relative pointer-events-auto">
         {!isMobile && activeLayer === 'main' && (
-          <div 
+          <div
             className="absolute inset-0 z-10 bg-transparent cursor-pointer pointer-events-auto"
             onClick={(e) => {
               e.stopPropagation()

@@ -1,9 +1,11 @@
 """ReAct-style agent loop with tool orchestration."""
 
 import asyncio
+import inspect
 import json
 import re
 from collections.abc import AsyncIterator
+from datetime import datetime, timedelta
 from typing import Any, Protocol
 
 from backend.agent.config import AgentConfig
@@ -67,6 +69,87 @@ class ReActAgent:
 
         return {"intent": "fuzzy_qa", "reason": "default fallback for general campus QA"}
 
+    @staticmethod
+    def _infer_recent_time_window(query: str, now: datetime | None = None) -> dict[str, str] | None:
+        text = query.strip().lower()
+        now_dt = now or datetime.now()
+        today = now_dt.date()
+
+        # 动态窗口：近X天/周/月
+        explicit = re.search(r"近\s*(\d{1,3})\s*(天|日|周|星期|个月|月)", text)
+        if explicit:
+            value = max(1, int(explicit.group(1)))
+            unit = explicit.group(2)
+            if unit in {"天", "日"}:
+                delta = timedelta(days=value)
+                label = f"近{value}天"
+            elif unit in {"周", "星期"}:
+                delta = timedelta(days=value * 7)
+                label = f"近{value}周"
+            else:
+                # 月按 30 天近似
+                delta = timedelta(days=value * 30)
+                label = f"近{value}月"
+
+            start_date = today - delta + timedelta(days=1)
+            return {
+                "label": label,
+                "start_date": f"{start_date.isoformat()}T00:00:00",
+                "end_date": f"{today.isoformat()}T23:59:59",
+            }
+
+        # 本周：周一到今天
+        if "本周" in query:
+            start_date = today - timedelta(days=today.weekday())
+            return {
+                "label": "本周",
+                "start_date": f"{start_date.isoformat()}T00:00:00",
+                "end_date": f"{today.isoformat()}T23:59:59",
+            }
+
+        # 本月：月初到今天
+        if "本月" in query:
+            start_date = today.replace(day=1)
+            return {
+                "label": "本月",
+                "start_date": f"{start_date.isoformat()}T00:00:00",
+                "end_date": f"{today.isoformat()}T23:59:59",
+            }
+
+        # 近期/最近/最新：默认近 30 天
+        if any(token in text for token in ["近期", "最近", "最新", "recent"]):
+            start_date = today - timedelta(days=29)
+            return {
+                "label": "近期(近30天)",
+                "start_date": f"{start_date.isoformat()}T00:00:00",
+                "end_date": f"{today.isoformat()}T23:59:59",
+            }
+
+        return None
+
+    @classmethod
+    def _apply_recent_time_window(
+        cls,
+        *,
+        tool_name: str,
+        tool_params: dict[str, Any],
+        query: str,
+    ) -> tuple[dict[str, Any], dict[str, str] | None]:
+        if tool_name != "search_keyword":
+            return tool_params, None
+
+        if tool_params.get("start_date") or tool_params.get("end_date"):
+            return tool_params, None
+
+        window = cls._infer_recent_time_window(query)
+        if not window:
+            return tool_params, None
+
+        patched = dict(tool_params)
+        patched["start_date"] = window["start_date"]
+        patched["end_date"] = window["end_date"]
+        return patched, window
+
     def _pick_tool_fallback(self, query: str) -> tuple[str, dict[str, Any], dict[str, str]]:
         intent_info = (
             self._classify_intent(query)
@@ -97,11 +180,16 @@ class ReActAgent:
                 intent_info,
             )
 
-        return (
-            "search_keyword",
-            {"query": query, "limit": self._config.default_search_limit},
-            intent_info,
+        search_params = {"query": query, "limit": self._config.default_search_limit}
+        search_params, recent_window = self._apply_recent_time_window(
+            tool_name="search_keyword",
+            tool_params=search_params,
+            query=query,
         )
+        if recent_window:
+            intent_info = {**intent_info, "time_window": recent_window.get("label", "近期")}
+
+        return ("search_keyword", search_params, intent_info)
 
     @staticmethod
     def _derive_followup_query(original_query: str, detail: dict[str, Any]) -> str | None:
@@ -153,6 +241,12 @@ class ReActAgent:
                 if isinstance(params, dict) and (
                     tool_name in available_tools or tool_name == "finish"
                 ):
+                    if tool_name in available_tools:
+                        params, _ = self._apply_recent_time_window(
+                            tool_name=tool_name,
+                            tool_params=params,
+                            query=query,
+                        )
                     return tool_name, params, "llm", None
 
             tool_name, params, route = self._pick_tool_fallback(query)
@@ -273,6 +367,29 @@ class ReActAgent:
     def _compose_answer(self, query: str, tool_name: str, tool_content: dict[str, Any]) -> str:
         results = tool_content.get("results")
         if isinstance(results, list) and results:
+            aggregate_query = any(
+                token in query for token in ["聚合", "汇总", "列表", "表格", "近期", "最近"]
+            )
+            if aggregate_query and len(results) >= 2:
+                lines = [f"根据你的问题“{query}”，我整理了以下结果："]
+                lines.append("| 序号 | 标题 | 来源 | 日期 | 链接 |")
+                lines.append("|---|---|---|---|---|")
+                for idx, item in enumerate(results[:8], start=1):
+                    title = str(item.get("title", "(无标题)")).replace("|", " ").strip()
+                    category = str(item.get("category", "未知来源")).replace("|", " ").strip()
+                    date_str = str(item.get("published_date", "")).strip() or "未知日期"
+                    url = str(item.get("url", "")).strip()
+                    lines.append(f"| {idx} | {title} | {category} | {date_str} | {url} |")
+
+                applied_window = tool_content.get("applied_time_window")
+                if isinstance(applied_window, dict):
+                    start = str(applied_window.get("start_date", "")).strip()
+                    end = str(applied_window.get("end_date", "")).strip()
+                    if start or end:
+                        lines.append(f"\n已按时间窗口过滤：{start} ~ {end}。")
+                lines.append("如需，我可以继续按标签、来源或更严格时间范围进一步筛选。")
+                return "\n".join(lines)
+
             lines = [f"根据你的问题“{query}”，我找到以下相关信息："]
             for idx, item in enumerate(results[:5], start=1):
                 title = item.get("title", "(无标题)")
@@ -320,11 +437,12 @@ class ReActAgent:
         if self._decision_client is not None:
             generator = getattr(self._decision_client, "generate_final_answer", None)
             if callable(generator):
-                llm_answer = await generator(
+                result = generator(
                     query=query,
                     history=self._memory.read(session_id),
                     observations=observations,
                 )
+                llm_answer = await result if inspect.isawaitable(result) else None
                 if llm_answer:
                     return llm_answer
 
