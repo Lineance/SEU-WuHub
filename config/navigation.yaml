@@ -1,0 +1,23 @@
+# config/navigation.yaml
+# 侧边栏平级导航配置
+
+nav_items:
+  - id: "nav_intro"
+    name: "网站入门"
+    icon: "compass"
+    type: "search"  # 标识点击后触发搜索
+    
+  - id: "nav_hub"
+    name: "重要网站汇总与导航"
+    icon: "link"
+    type: "search"
+    
+  - id: "nav_news"
+    name: "东大新闻网"
+    icon: "newspaper"
+    type: "search"
+    
+  - id: "nav_jwc"
+    name: "教务处"
+    icon: "graduation-cap"
+    type: "search"
