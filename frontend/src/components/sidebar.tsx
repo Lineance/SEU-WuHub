@@ -2,11 +2,10 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ChevronRight, BookOpen, Compass, Bell, Link2, FileText, GraduationCap, Lightbulb, Trophy, Home, HelpCircle, Building, Users, Globe, Loader2, AlertCircle, PanelLeftClose, PanelLeftOpen, Bot, Settings, Star } from "lucide-react"
+import { ChevronRight, BookOpen, Compass, Bell, Link2, FileText, GraduationCap, Lightbulb, Trophy, Home, HelpCircle, Building, Users, Globe, Loader2, AlertCircle, PanelLeftClose, PanelLeftOpen, Bot, Settings, Star, Newspaper } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { api } from "@/lib/api"
 import { Button } from "@/components/ui/button"
-import type { Category } from "@/lib/types"
 
 const iconMap: Record<string, React.ReactNode> = {
   'book': <BookOpen className="h-4 w-4" />,
@@ -22,10 +21,19 @@ const iconMap: Record<string, React.ReactNode> = {
   'building': <Building className="h-4 w-4" />,
   'users': <Users className="h-4 w-4" />,
   'globe': <Globe className="h-4 w-4" />,
+  'newspaper': <Newspaper className="h-4 w-4" />,
+}
+
+interface NavItem {
+  id: string
+  name: string
+  icon?: string
+  type?: string
+  children?: NavItem[]
 }
 
 interface NavItemComponentProps {
-  item: Category
+  item: NavItem
   level?: number
   isCollapsed?: boolean
   onActionClick?: () => void
@@ -93,27 +101,27 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isCollapsed = false, onToggleCollapse, isMobile = false, onActionClick, onAgentClick }: SidebarProps) {
-  const [categories, setCategories] = useState<Category[]>([])
+  const [navItems, setNavItems] = useState<NavItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
-    async function loadCategories() {
+    async function loadNavItems() {
       try {
         setLoading(true)
         setError(null)
-        const response = await api.getCategories()
-        setCategories(response.data)
+        const response = await api.getMetadata()
+        setNavItems(response.navigation || [])
       } catch (err) {
-        console.error('加载分类失败:', err)
+        console.error('加载导航失败:', err)
         setError(err instanceof Error ? err.message : '加载失败')
       } finally {
         setLoading(false)
       }
     }
 
-    loadCategories()
+    loadNavItems()
   }, [])
 
   const handleAgentClick = () => {
@@ -166,10 +174,10 @@ export function Sidebar({ isCollapsed = false, onToggleCollapse, isMobile = fals
         </div>
       )}
 
-      {!loading && !error && categories.length === 0 && (
+      {!loading && !error && navItems.length === 0 && (
         <div className={cn("flex flex-col items-center justify-center py-8 text-center", !isCollapsed && "px-2")}>
           <FileText className="mb-2 h-6 w-6 text-muted-foreground" />
-          <p className={cn("text-sm text-muted-foreground", !isCollapsed && "truncate")}>暂无分类</p>
+          <p className={cn("text-sm text-muted-foreground", !isCollapsed && "truncate")}>暂无导航</p>
         </div>
       )}
 
@@ -177,9 +185,9 @@ export function Sidebar({ isCollapsed = false, onToggleCollapse, isMobile = fals
         "space-y-1",
         isMobile && "pb-20"
       )}>
-        {!loading && !error && categories.length > 0 && (
+        {!loading && !error && navItems.length > 0 && (
           <nav className="space-y-1">
-            {categories.map((item) => (
+            {navItems.map((item) => (
               <NavItemComponent
                 key={item.id}
                 item={item}
