@@ -31,8 +31,10 @@ class AgentService:
         if not AgentService._env_loaded:
             backend_dir = Path(__file__).resolve().parents[2]  # backend/app/services -> backend
             agent_dir = backend_dir / "agent"
-            load_dotenv(agent_dir / ".env", override=True)
-            load_dotenv(backend_dir / ".env", override=True)
+            # Keep process env (e.g. start script args) as highest priority.
+            # .env files only fill missing values.
+            load_dotenv(agent_dir / ".env", override=False)
+            load_dotenv(backend_dir / ".env", override=False)
             AgentService._env_loaded = True
 
         self._config = config or AgentConfig()

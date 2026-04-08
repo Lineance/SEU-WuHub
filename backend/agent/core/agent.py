@@ -48,9 +48,13 @@ class ReActAgent:
         q = query.strip()
         lower = q.lower()
 
-        if re.search(r"https?://[^\s]+", q) or any(
-            token in lower for token in ["链接", "网址", "网页", "核验", "验证", "真伪"]
-        ):
+        has_url = re.search(r"https?://[^\s]+", q) is not None
+        has_link_cue = any(token in lower for token in ["链接", "网址", "网页", "url", "http"])
+        has_verify_cue = any(token in lower for token in ["核验", "真伪"])
+
+        # Only treat as link verification when there is an actual URL,
+        # or verification terms appear together with explicit link cues.
+        if has_url or (has_link_cue and has_verify_cue):
             return {
                 "intent": "link_verification",
                 "reason": "query contains URL or link-check cues",

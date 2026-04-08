@@ -11,7 +11,10 @@ def _default_llm_model() -> str:
 
 class AgentConfig(BaseModel):
     llm_model: str = Field(default_factory=_default_llm_model)
-    llm_timeout_seconds: float = Field(default=20.0, gt=0)
+    llm_timeout_seconds: float = Field(
+        default_factory=lambda: float(os.getenv("SEU_WUHUB_LLM_TIMEOUT_SECONDS", "45")),
+        gt=0,
+    )
     max_steps: int = Field(default=6, ge=1, le=10)
     history_window: int = Field(default=8, ge=1, le=20)
     tool_timeout_seconds: float = Field(default=8.0, gt=0)
