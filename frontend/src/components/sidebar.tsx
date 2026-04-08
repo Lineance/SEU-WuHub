@@ -40,7 +40,7 @@ function NavItemComponent({ item, level = 0, isCollapsed = false, onActionClick 
     if (hasChildren) {
       setIsOpen(!isOpen)
     } else if (item.name) {
-      router.push(`/search?q=${encodeURIComponent(item.name)}`)
+      router.push(`/search?source=${encodeURIComponent(item.name)}`)
       onActionClick?.()
     }
   }
