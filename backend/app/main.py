@@ -21,6 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .api.v1.articles import router as articles_router
 from .api.v1.chat import router as chat_router
+from .api.v1.metadata import router as metadata_router
 from .api.v1.search import router as search_router
 from .core.config import settings
 from .schemas.common import HealthResponse
@@ -46,6 +47,7 @@ app.add_middleware(
 app.include_router(articles_router, prefix="/api/v1")
 app.include_router(search_router, prefix="/api/v1")
 app.include_router(chat_router, prefix="/api/v1")
+app.include_router(metadata_router, prefix="/api/v1")
 
 
 @app.on_event("startup")
