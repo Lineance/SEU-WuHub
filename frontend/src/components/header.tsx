@@ -2,12 +2,14 @@
 
 import { Suspense, useState, useRef, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Search, Bot, Star, Settings, Loader2, Newspaper, X } from "lucide-react"
+import { Search, Bot, Star, Settings, Loader2, Newspaper, X, Sparkles } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { DatePicker } from "@/components/date-picker"
 import Image from "next/image"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { api, MetadataResponse } from "@/lib/api"
+import { cn } from "@/lib/utils"
 
 interface HeaderProps {
   onAIToggle: () => void
@@ -21,62 +23,76 @@ function HeaderSearchContent({ onSearchExpand }: HeaderSearchContentProps) {
   const searchParams = useSearchParams()
   const [searchQuery, setSearchQuery] = useState('')
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
+  const [metadata, setMetadata] = useState<MetadataResponse | null>(null)
+  const [isLoadingMetadata, setIsLoadingMetadata] = useState(false)
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
   const router = useRouter()
   const searchContainerRef = useRef<HTMLDivElement>(null)
   const filterPanelRef = useRef<HTMLDivElement>(null)
   const isMobile = useIsMobile()
 
-  // 当搜索展开状态变化时，通知父组件
   useEffect(() => {
     onSearchExpand(isSearchExpanded)
   }, [isSearchExpanded, onSearchExpand])
 
-  const updateSearchParam = (key: string, value: string | null) => {
-    const params = new URLSearchParams(searchParams.toString())
-
-    if (value) {
-      params.set(key, value)
+  useEffect(() => {
+    const tagsParam = searchParams.get('tags')
+    if (tagsParam) {
+      setSelectedTags(tagsParam.split(',').filter(Boolean))
     } else {
-      params.delete(key)
+      setSelectedTags([])
     }
+  }, [searchParams])
 
+  useEffect(() => {
+    if (isSearchExpanded && !metadata && !isLoadingMetadata) {
+      setIsLoadingMetadata(true)
+      api.getMetadata()
+        .then(setMetadata)
+        .catch(console.error)
+        .finally(() => setIsLoadingMetadata(false))
+    }
+  }, [isSearchExpanded, metadata, isLoadingMetadata])
+
+  const updateSearchParams = (updates: Record<string, string | null>) => {
+    const params = new URLSearchParams(searchParams.toString())
+    
+    for (const [key, value] of Object.entries(updates)) {
+      if (value) {
+        params.set(key, value)
+      } else {
+        params.delete(key)
+      }
+    }
+    
     router.push(`/search?${params.toString()}`)
   }
 
   const handleSourceChange = (source: string) => {
-    updateSearchParam('source', source === 'all' ? null : source)
+    updateSearchParams({ category: source === 'all' ? null : source })
   }
 
-  const handleTagChange = (tag: string) => {
-    updateSearchParam('tag', tag === 'all' ? null : tag)
+  const handleTagToggle = (tagName: string) => {
+    const newSelectedTags = selectedTags.includes(tagName)
+      ? selectedTags.filter(t => t !== tagName)
+      : [...selectedTags, tagName]
+    
+    setSelectedTags(newSelectedTags)
+    updateSearchParams({ tags: newSelectedTags.length > 0 ? newSelectedTags.join(',') : null })
   }
 
   const handleTimeRangeChange = (range: string) => {
-    const params = new URLSearchParams(searchParams.toString())
-
-    if (range) {
-      params.set('time', range)
-      params.delete('date')
-    } else {
-      params.delete('time')
-      params.delete('date')
-    }
-
-    router.push(`/search?${params.toString()}`)
+    updateSearchParams({ 
+      time: range || null, 
+      date: null 
+    })
   }
 
   const handleDateChange = (date: string) => {
-    const params = new URLSearchParams(searchParams.toString())
-
-    if (date) {
-      params.set('date', date)
-      params.delete('time')
-    } else {
-      params.delete('date')
-      params.delete('time')
-    }
-
-    router.push(`/search?${params.toString()}`)
+    updateSearchParams({ 
+      date: date || null, 
+      time: null 
+    })
   }
 
   useEffect(() => {
@@ -108,9 +124,140 @@ function HeaderSearchContent({ onSearchExpand }: HeaderSearchContentProps) {
     }
   }
 
+  const currentCategory = searchParams.get('category')
+  const currentTime = searchParams.get('time')
+
+  const renderFilterPanel = () => (
+    <div className="space-y-4">
+      {isLoadingMetadata ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : metadata ? (
+        <>
+          {metadata.tags.special && metadata.tags.special.length > 0 && (
+            <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                <label className="text-xs font-medium text-amber-700 dark:text-amber-300">特殊标签</label>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {metadata.tags.special.map((tag) => (
+                  <Button
+                    key={tag.id}
+                    variant={selectedTags.includes(tag.name) ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => handleTagToggle(tag.name)}
+                    className={cn(
+                      "h-7 text-xs transition-all",
+                      selectedTags.includes(tag.name) 
+                        ? "bg-amber-500 hover:bg-amber-600 text-white border-amber-500" 
+                        : "border-amber-300 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/30"
+                    )}
+                  >
+                    {tag.name}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {(metadata.sources.length > 0 || !currentCategory) && (
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-2 block">来源</label>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant={!currentCategory ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleSourceChange('all')}
+                  className="h-7 text-xs"
+                >
+                  全部
+                </Button>
+                {metadata.sources.map((source) => (
+                  <Button
+                    key={source}
+                    variant={currentCategory === source ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => handleSourceChange(source)}
+                    className="h-7 text-xs"
+                  >
+                    {source}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {metadata.categories.map((category) => {
+            const categoryTags = metadata.tags[category.id] || []
+            if (categoryTags.length === 0) return null
+            
+            return (
+              <div key={category.id}>
+                <label className="text-xs font-medium text-muted-foreground mb-2 block">
+                  {category.name}
+                </label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {categoryTags.map((tag) => (
+                    <Button
+                      key={tag.id}
+                      variant={selectedTags.includes(tag.name) ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => handleTagToggle(tag.name)}
+                      className="h-7 text-xs justify-start"
+                    >
+                      {tag.name}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-2 block">时间范围</label>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { value: '', label: '不限' },
+                { value: 'today', label: '今天' },
+                { value: '7days', label: '近7天' },
+                { value: '30days', label: '近30天' },
+                { value: '6months', label: '近半年' },
+                { value: '1year', label: '近一年' },
+              ].map((item) => (
+                <Button
+                  key={item.value}
+                  variant={currentTime === (item.value || null) ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleTimeRangeChange(item.value)}
+                  className="h-7 text-xs"
+                >
+                  {item.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-2 block">日期选择</label>
+            <DatePicker
+              selectedDate={searchParams.get('date')}
+              onSelectDate={handleDateChange}
+            />
+          </div>
+        </>
+      ) : (
+        <div className="text-center py-4 text-muted-foreground text-sm">
+          加载失败，请重试
+        </div>
+      )}
+    </div>
+  )
+
   return (
     <div className="flex flex-1 items-center justify-center px-4">
-      <div className="relative w-full max-w-md flex items-center gap-2">
+      <div className="relative w-full max-w-2xl flex items-center gap-2">
         {isMobile ? (
           <div 
             ref={searchContainerRef} 
@@ -178,68 +325,9 @@ function HeaderSearchContent({ onSearchExpand }: HeaderSearchContentProps) {
         {isSearchExpanded && (
           <div
             ref={filterPanelRef}
-            className={`${isMobile ? 'fixed left-4 right-4 top-[56px] mt-0' : 'absolute left-0 right-0 top-full mt-2'} rounded-xl border border-border bg-background p-4 shadow-lg z-[55]`}
+            className={`${isMobile ? 'fixed left-4 right-4 top-[56px] mt-0' : 'absolute left-1/2 -translate-x-1/2 top-full mt-2 w-[600px]'} rounded-xl border border-border bg-background p-4 shadow-lg z-[55] max-h-[70vh] overflow-y-auto`}
           >
-            <div className="space-y-4">
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-2 block">来源</label>
-                <div className="flex flex-wrap gap-2">
-                  {['all', 'news', 'notice', 'resource'].map((source) => (
-                    <Button
-                      key={source}
-                      variant={searchParams.get('source') === (source === 'all' ? null : source) ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => handleSourceChange(source)}
-                      className="h-7 text-xs"
-                    >
-                      {source === 'all' ? '全部' : source === 'news' ? '新闻' : source === 'notice' ? '通知' : '资源'}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-2 block">标签</label>
-                <div className="flex flex-wrap gap-2">
-                  {['all', 'academic', 'activity', 'job', 'other'].map((tag) => (
-                    <Button
-                      key={tag}
-                      variant={searchParams.get('tag') === (tag === 'all' ? null : tag) ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => handleTagChange(tag)}
-                      className="h-7 text-xs"
-                    >
-                      {tag === 'all' ? '全部' : tag === 'academic' ? '学术' : tag === 'activity' ? '活动' : tag === 'job' ? '招聘' : '其他'}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-2 block">时间范围</label>
-                <div className="flex flex-wrap gap-2">
-                  {['', 'today', '7days', '30days', '6months', '1year'].map((range) => (
-                    <Button
-                      key={range}
-                      variant={searchParams.get('time') === (range === '' ? null : range) ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => handleTimeRangeChange(range)}
-                      className="h-7 text-xs"
-                    >
-                      {range === '' ? '不限' : range === 'today' ? '今天' : range === '7days' ? '近7天' : range === '30days' ? '近30天' : range === '6months' ? '近半年' : '近一年'}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-2 block">日期选择</label>
-                <DatePicker
-                  selectedDate={searchParams.get('date')}
-                  onSelectDate={handleDateChange}
-                />
-              </div>
-            </div>
+            {renderFilterPanel()}
           </div>
         )}
       </div>

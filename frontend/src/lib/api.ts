@@ -152,6 +152,12 @@ export const healthApi = {
 
 export type { Article, ArticleListResponse, SearchResponse, SearchResult }
 
+export interface MetadataResponse {
+  categories: Array<{ id: string; name: string; description: string }>
+  tags: Record<string, Array<{ id: string; name: string; description: string; priority: number; is_manual?: boolean }>>
+  sources: string[]
+}
+
 export interface SearchArticlesParams {
   q?: string
   page?: number
@@ -461,5 +467,8 @@ export const api = {
     }
 
     return response.json()
+  },
+  getMetadata: async (): Promise<MetadataResponse> => {
+    return fetchApi<MetadataResponse>('/metadata')
   },
 }
