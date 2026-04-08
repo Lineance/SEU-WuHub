@@ -12,32 +12,26 @@ categories:
   academic:
     name: "学术科研"
     description: "学术研究、科研成果、学术活动"
-    color: "#4285F4"  # 谷歌蓝
     
   campus_life:
     name: "校园生活"
     description: "学生活动、社团组织、校园服务"
-    color: "#34A853"  # 谷歌绿
     
   administration:
     name: "行政通知"
     description: "学校通知、政策法规、管理规定"
-    color: "#FBBC05"  # 谷歌黄
     
   admissions:
     name: "招生就业"
     description: "招生信息、就业指导、招聘信息"
-    color: "#EA4335"  # 谷歌红
     
   department:
     name: "院系动态"
     description: "各院系新闻、专业发展、学科建设"
-    color: "#8E44AD"  # 紫色
     
   research:
-    name: "科学研究"
-    description: "研究项目、实验室建设、科研合作"
-    color: "#3498DB"  # 蓝色
+    name: "学科竞赛"
+    description: "学科竞赛、学科活动、学科比赛"
 
 # 预定义标签 - 自动生成向量嵌入
 tags:
@@ -141,25 +135,19 @@ tags:
     description: "学科建设、学科评估、学科发展"
     category: "department"
     priority: 2
-    
-  # 科学研究 category
+
   - id: "tag_lab_construction"
     name: "实验室建设"
     description: "实验室建设、实验设备、实验平台"
     category: "research"
     priority: 1
     
-  - id: "tag_scientific_achievement"
-    name: "科研成果"
-    description: "科研成果、技术突破、创新成果"
+  # 学科竞赛 category 
+  - id: "tag_discipline_competition"
+    name: "学科竞赛"
+    description: "学科竞赛、学科活动、学科比赛"
     category: "research"
     priority: 1
-    
-  - id: "tag_academic_exchange"
-    name: "学术交流"
-    description: "国内外交流、访问学者、合作研究"
-    category: "research"
-    priority: 2
 
 # 手动标签 - 这些不进行向量匹配，而是手动分配
 manual_tags:
