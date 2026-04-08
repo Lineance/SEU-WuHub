@@ -1,7 +1,7 @@
 """
 Metadata API Router
 
-提供元数据相关的 API 接口，包括分类、标签和来源站点。
+提供元数据相关的 API 接口，包括分类、标签、来源站点和精选导航。
 """
 
 import logging
@@ -18,6 +18,7 @@ router = APIRouter(prefix="/metadata", tags=["metadata"])
 CONFIG_DIR = Path(__file__).resolve().parents[4] / "config"
 TAGS_FILE = CONFIG_DIR / "tags.yaml"
 WEBSITES_DIR = CONFIG_DIR / "websites"
+NAVIGATION_FILE = CONFIG_DIR / "navigation.yaml"
 
 
 def load_yaml_file(file_path: Path) -> dict[str, Any] | None:
@@ -97,6 +98,30 @@ def get_website_sources() -> list[str]:
     return sorted(sources)
 
 
+def get_navigation_items() -> list[dict[str, Any]]:
+    nav_data = load_yaml_file(NAVIGATION_FILE)
+    
+    if nav_data is None:
+        return []
+    
+    nav_items = nav_data.get("nav_items", [])
+    if not isinstance(nav_items, list):
+        logger.warning("navigation.yaml: nav_items is not a list")
+        return []
+    
+    result = []
+    for item in nav_items:
+        if isinstance(item, dict):
+            result.append({
+                "id": item.get("id", ""),
+                "name": item.get("name", ""),
+                "icon": item.get("icon", ""),
+                "type": item.get("type", "search")
+            })
+    
+    return result
+
+
 @router.get("")
 async def get_metadata():
     tags_data = load_yaml_file(TAGS_FILE)
@@ -107,9 +132,11 @@ async def get_metadata():
     categories = get_categories(tags_data)
     tags_by_category = get_tags_by_category(tags_data)
     sources = get_website_sources()
+    navigation = get_navigation_items()
     
     return {
         "categories": categories,
         "tags": tags_by_category,
-        "sources": sources
+        "sources": sources,
+        "navigation": navigation
     }

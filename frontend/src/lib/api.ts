@@ -223,6 +223,7 @@ export interface MetadataResponse {
   categories: Array<{ id: string; name: string; description: string }>
   tags: Record<string, Array<{ id: string; name: string; description: string; priority: number; is_manual?: boolean }>>
   sources: string[]
+  navigation: Array<{ id: string; name: string; icon: string; type: string }>
 }
 
 export interface SearchArticlesParams {
