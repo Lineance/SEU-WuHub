@@ -7,7 +7,7 @@ from typing import Any
 
 from litellm import acompletion
 
-from backend.agent.core.parser import parse_action
+from backend.agent.core.parser import parse_action_detailed
 
 logger = logging.getLogger(__name__)
 
@@ -20,11 +20,99 @@ class LLMDecisionClient:
         temperature: float,
         max_tokens: int,
         timeout_seconds: float,
+        planner_history_char_budget: int = 6000,
+        final_history_char_budget: int = 9000,
+        final_observations_char_budget: int = 12000,
+        planner_retry_parse_once: bool = True,
+        planner_retry_max_tokens: int = 256,
     ) -> None:
         self._model = model
         self._temperature = temperature
         self._max_tokens = max_tokens
         self._timeout_seconds = timeout_seconds
+        self._planner_history_char_budget = planner_history_char_budget
+        self._final_history_char_budget = final_history_char_budget
+        self._final_observations_char_budget = final_observations_char_budget
+        self._planner_retry_parse_once = planner_retry_parse_once
+        self._planner_retry_max_tokens = planner_retry_max_tokens
+
+    @staticmethod
+    def _trim_history_by_budget(
+        history: list[dict[str, Any]], budget_chars: int
+    ) -> list[dict[str, Any]]:
+        if budget_chars <= 0:
+            return history[-6:]
+
+        selected: list[dict[str, Any]] = []
+        used = 0
+        for item in reversed(history):
+            role = str(item.get("role", ""))
+            content = str(item.get("content", ""))
+            cost = len(role) + len(content)
+            if selected and used + cost > budget_chars:
+                break
+            selected.append({"role": role, "content": content})
+            used += cost
+        selected.reverse()
+        return selected
+
+    @staticmethod
+    def _trim_observations_by_budget(
+        observations: list[dict[str, Any]], budget_chars: int
+    ) -> list[dict[str, Any]]:
+        if budget_chars <= 0:
+            return observations[-6:]
+
+        selected: list[dict[str, Any]] = []
+        used = 0
+        for item in reversed(observations):
+            cost = len(json.dumps(item, ensure_ascii=False))
+            if selected and used + cost > budget_chars:
+                break
+            selected.append(item)
+            used += cost
+        selected.reverse()
+        return selected
+
+    async def _retry_parse_action_once(
+        self,
+        *,
+        raw_output: str,
+        parse_error: str,
+        available_tools: list[str],
+    ) -> dict[str, Any] | None:
+        correction_prompt = (
+            "Your previous output could not be parsed as a valid action JSON. "
+            "Return JSON only and strictly follow this schema: "
+            '{"tool":"tool_name","input":{...}}. '
+            "If enough evidence exists, return finish with answer. "
+            f"Available tools: {available_tools}. "
+            f"Parse error: {parse_error}. "
+            f"Previous output: {raw_output}"
+        )
+        try:
+            response = await acompletion(
+                model=self._model,
+                messages=[{"role": "user", "content": correction_prompt}],
+                temperature=0,
+                max_tokens=min(self._planner_retry_max_tokens, self._max_tokens),
+                timeout=self._timeout_seconds,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Planner correction retry failed: %s", exc)
+            return None
+
+        choices = getattr(response, "choices", None)
+        if not choices:
+            return None
+
+        message = getattr(choices[0], "message", None)
+        content = getattr(message, "content", "") if message is not None else ""
+        if not content:
+            return None
+
+        parsed, _ = parse_action_detailed(content, available_tools=available_tools)
+        return parsed
 
     @staticmethod
     def default_model() -> str:
@@ -50,12 +138,15 @@ class LLMDecisionClient:
 
         user_payload = {
             "query": query,
-            "history": history[-6:],
+            "history": self._trim_history_by_budget(history, self._planner_history_char_budget),
             "available_tools": available_tools,
             "rules": [
                 "Prefer search_keyword for general campus Q&A",
+                "Treat search results as evidence, not just counts; inspect title, summary, and content_text when present",
+                "Use get_article_detail with news_id when search results are not enough or when the user asks for full content",
                 "Use sql_service for explicit filtering/counting/statistics",
                 "Use web_url_fetch only when user provides a concrete URL",
+                "After search, fetch detail only when the summary is insufficient or the user explicitly asks for source text",
                 "Use finish when no further tool call is needed",
             ],
         }
@@ -85,8 +176,16 @@ class LLMDecisionClient:
         if not content:
             return None
 
-        parsed = parse_action(content)
+        parsed, parse_error = parse_action_detailed(content, available_tools=available_tools)
+        if not parsed and self._planner_retry_parse_once:
+            parsed = await self._retry_parse_action_once(
+                raw_output=content,
+                parse_error=parse_error or "unknown parse error",
+                available_tools=available_tools,
+            )
         if not parsed:
+            if parse_error:
+                logger.warning("Planner output parse failed: %s", parse_error)
             return None
 
         tool_name = parsed.get("tool")
@@ -133,8 +232,10 @@ class LLMDecisionClient:
 
         payload = {
             "query": query,
-            "history": history[-8:],
-            "observations": observations,
+            "history": self._trim_history_by_budget(history, self._final_history_char_budget),
+            "observations": self._trim_observations_by_budget(
+                observations, self._final_observations_char_budget
+            ),
         }
 
         try:

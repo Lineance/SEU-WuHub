@@ -11,6 +11,11 @@ RUN npm install -g pnpm@9 && pnpm install --frozen-lockfile
 FROM base AS builder
 WORKDIR /app
 
+ARG NEXT_PUBLIC_API_URL=/api/v1
+ARG BACKEND_INTERNAL_URL=http://backend:8000
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV BACKEND_INTERNAL_URL=${BACKEND_INTERNAL_URL}
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
@@ -21,6 +26,8 @@ FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV NEXT_PUBLIC_API_URL=/api/v1
+ENV BACKEND_INTERNAL_URL=http://backend:8000
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs

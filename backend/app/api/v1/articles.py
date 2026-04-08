@@ -81,6 +81,7 @@ def get_engine() -> RetrievalEngine:
     return _engine
 
 
+@router.get("", response_model=ArticleListResponse, include_in_schema=False)
 @router.get("/", response_model=ArticleListResponse)
 async def list_articles(
     page: int = Query(default=1, ge=1),
@@ -98,6 +99,7 @@ async def list_articles(
     """
     try:
         from backend.database.connection import get_connection
+
         return articles_service.list_articles(
             table=get_table(),
             sql_guard=_sql_guard,

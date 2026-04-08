@@ -1,6 +1,7 @@
 """ReAct-style agent loop with tool orchestration."""
 
 import asyncio
+import json
 import re
 from collections.abc import AsyncIterator
 from typing import Any, Protocol
@@ -35,20 +36,110 @@ class ReActAgent:
         self._config = config
         self._decision_client = decision_client
 
-    def _pick_tool_fallback(self, query: str) -> tuple[str, dict[str, Any]]:
-        url_match = re.search(r"https?://[^\s]+", query)
-        if url_match:
-            return "web_url_fetch", {"url": url_match.group(0)}
+    @staticmethod
+    def _detect_news_id(query: str) -> str | None:
+        pattern = re.compile(r"\b\d{6,8}[_-][A-Za-z0-9_-]+\b")
+        match = pattern.search(query)
+        return match.group(0) if match else None
 
-        if any(token in query for token in ["统计", "数量", "多少", "count", "筛选"]):
+    def _classify_intent(self, query: str) -> dict[str, str]:
+        q = query.strip()
+        lower = q.lower()
+
+        if re.search(r"https?://[^\s]+", q) or any(
+            token in lower for token in ["链接", "网址", "网页", "核验", "验证", "真伪"]
+        ):
+            return {
+                "intent": "link_verification",
+                "reason": "query contains URL or link-check cues",
+            }
+
+        if any(token in lower for token in ["统计", "数量", "多少", "count", "筛选", "占比"]):
+            return {"intent": "statistics", "reason": "query asks for counts or structured filters"}
+
+        if self._detect_news_id(q) or any(
+            token in lower for token in ["详情", "全文", "原文", "附件"]
+        ):
+            return {
+                "intent": "detail",
+                "reason": "query asks for full text/detail or has a news_id",
+            }
+
+        return {"intent": "fuzzy_qa", "reason": "default fallback for general campus QA"}
+
+    def _pick_tool_fallback(self, query: str) -> tuple[str, dict[str, Any], dict[str, str]]:
+        intent_info = (
+            self._classify_intent(query)
+            if self._config.enable_intent_routing
+            else {
+                "intent": "fuzzy_qa",
+                "reason": "intent routing disabled",
+            }
+        )
+        intent = intent_info["intent"]
+
+        url_match = re.search(r"https?://[^\s]+", query)
+        news_id = self._detect_news_id(query)
+
+        if intent == "link_verification" and url_match:
+            return "web_url_fetch", {"url": url_match.group(0)}, intent_info
+
+        if intent == "detail" and news_id:
+            return "get_article_detail", {"news_id": news_id}, intent_info
+
+        if intent == "statistics":
             conditions: dict[str, Any] = {}
             if "教务" in query:
                 conditions["source_site"] = "jwc"
-            return "sql_service", {"conditions": conditions, "limit": 10}
+            return (
+                "sql_service",
+                {"conditions": conditions, "limit": self._config.default_stats_limit},
+                intent_info,
+            )
 
-        return "search_keyword", {"query": query, "limit": 5}
+        return (
+            "search_keyword",
+            {"query": query, "limit": self._config.default_search_limit},
+            intent_info,
+        )
 
-    async def _pick_tool(self, session_id: str, query: str) -> tuple[str, dict[str, Any], str]:
+    @staticmethod
+    def _derive_followup_query(original_query: str, detail: dict[str, Any]) -> str | None:
+        if not detail:
+            return None
+
+        q = original_query.lower()
+        title = str(detail.get("title", "")).strip()
+        attachments = detail.get("attachments")
+        content_truncated = bool(detail.get("content_truncated"))
+        url = str(detail.get("url", "")).strip()
+        publish_date = str(detail.get("publish_date", "")).strip()
+
+        if (
+            any(token in q for token in ["附件", "下载", "文件"])
+            and isinstance(attachments, list)
+            and attachments
+        ):
+            return f"{title} 附件 下载 链接"
+
+        if (
+            any(token in q for token in ["全文", "原文", "细节", "完整内容"])
+            and content_truncated
+            and url
+        ):
+            return url
+
+        if (
+            any(token in q for token in ["日期", "时间", "什么时候", "deadline"])
+            and not publish_date
+        ):
+            return f"{title} 发布时间"
+
+        return None
+
+    async def _pick_tool(
+        self, session_id: str, query: str
+    ) -> tuple[str, dict[str, Any], str, dict[str, str] | None]:
         available_tools = self._tools.list_tools()
         if self._decision_client is not None:
             action = await self._decision_client.decide_action(
@@ -62,19 +153,95 @@ class ReActAgent:
                 if isinstance(params, dict) and (
                     tool_name in available_tools or tool_name == "finish"
                 ):
-                    return tool_name, params, "llm"
+                    return tool_name, params, "llm", None
 
-            tool_name, params = self._pick_tool_fallback(query)
-            return tool_name, params, "heuristic"
+            tool_name, params, route = self._pick_tool_fallback(query)
+            return tool_name, params, "heuristic", route
 
-        tool_name, params = self._pick_tool_fallback(query)
-        return tool_name, params, "heuristic"
+        tool_name, params, route = self._pick_tool_fallback(query)
+        return tool_name, params, "heuristic", route
 
     @staticmethod
-    def _observation_text(tool_name: str, tool_result: dict[str, Any]) -> str:
+    def _truncate_text(value: Any, limit: int = 240) -> str:
+        text = str(value or "").strip()
+        if len(text) <= limit:
+            return text
+        return text[:limit].rstrip() + "…"
+
+    @classmethod
+    def _compact_rows(cls, rows: list[dict[str, Any]], limit: int = 3) -> list[dict[str, Any]]:
+        compact: list[dict[str, Any]] = []
+        for row in rows[:limit]:
+            item: dict[str, Any] = {}
+            for key in ("id", "title", "url", "category", "published_date", "score"):
+                value = row.get(key)
+                if value not in (None, ""):
+                    item[key] = value
+            summary = row.get("summary") or row.get("content_text")
+            if summary:
+                item["summary"] = cls._truncate_text(summary, 220)
+            content_text = row.get("content_text")
+            if content_text:
+                item["content_preview"] = cls._truncate_text(content_text, 360)
+            compact.append(item)
+        return compact
+
+    @classmethod
+    def _observation_text(cls, tool_name: str, tool_result: dict[str, Any]) -> str:
         total = tool_result.get("total")
-        if isinstance(total, int):
-            return f"{tool_name} returned {total} records"
+        results = tool_result.get("results")
+        if isinstance(results, list):
+            payload: dict[str, Any] = {"tool": tool_name}
+            if isinstance(total, int):
+                payload["total"] = total
+            compact_rows = cls._compact_rows([row for row in results if isinstance(row, dict)])
+            if compact_rows:
+                payload["results"] = compact_rows
+            if isinstance(tool_result.get("query"), str) and tool_result.get("query"):
+                payload["query"] = tool_result["query"]
+            if len(results) > len(compact_rows):
+                payload["more_results"] = len(results) - len(compact_rows)
+            return json.dumps(payload, ensure_ascii=False)
+
+        if tool_name == "get_article_detail":
+            payload = {"tool": tool_name}
+            for key in (
+                "news_id",
+                "title",
+                "publish_date",
+                "url",
+                "source_site",
+                "author",
+                "tags",
+                "attachments",
+                "content_truncated",
+            ):
+                value = tool_result.get(key)
+                if value not in (None, "", []):
+                    payload[key] = value
+            for key in ("content_markdown", "content_text"):
+                value = tool_result.get(key)
+                if value:
+                    payload[key] = cls._truncate_text(value, 900)
+            return json.dumps(payload, ensure_ascii=False)
+
+        if tool_name == "web_url_fetch":
+            payload = {"tool": tool_name}
+            for key in ("url", "status", "snippet", "content_text"):
+                value = tool_result.get(key)
+                if value:
+                    payload[key] = cls._truncate_text(
+                        value, 500 if key in {"snippet", "content_text"} else 240
+                    )
+            return json.dumps(payload, ensure_ascii=False)
+
+        if tool_result:
+            payload = {"tool": tool_name}
+            for key, value in tool_result.items():
+                if value not in (None, ""):
+                    payload[key] = value
+            return json.dumps(payload, ensure_ascii=False)
+
         return f"{tool_name} completed"
 
     @staticmethod
@@ -83,8 +250,15 @@ class ReActAgent:
         seen: set[str] = set()
         for observation in observations:
             result = observation.get("result", {})
-            rows = result.get("results") if isinstance(result, dict) else None
+            if not isinstance(result, dict):
+                continue
+
+            rows = result.get("results")
             if not isinstance(rows, list):
+                url = str(result.get("url", "")).strip()
+                if url and url not in seen:
+                    seen.add(url)
+                    sources.append(url)
                 continue
             for row in rows:
                 if not isinstance(row, dict):
@@ -104,13 +278,33 @@ class ReActAgent:
                 title = item.get("title", "(无标题)")
                 category = item.get("category", "未知来源")
                 url = item.get("url", "")
+                summary = item.get("summary") or item.get("content_text") or ""
                 lines.append(f"{idx}. {title} [{category}] {url}")
+                if summary:
+                    lines.append(f"   {self._truncate_text(summary, 140)}")
             lines.append("如需，我可以继续按时间范围或标签进一步筛选。")
             return "\n".join(lines)
 
-        if tool_name == "web_url_fetch" and tool_content.get("snippet"):
-            snippet = str(tool_content.get("snippet", ""))
-            return f"我已抓取到网页内容片段，可用于事实核查：\n{snippet[:500]}"
+        if tool_name == "web_url_fetch":
+            snippet = tool_content.get("snippet") or tool_content.get("content_text")
+            if snippet:
+                return (
+                    f"我已抓取到网页内容片段，可用于事实核查：\n{self._truncate_text(snippet, 500)}"
+                )
+
+        if tool_name == "get_article_detail":
+            lines = []
+            title = tool_content.get("title") or "(无标题)"
+            url = tool_content.get("url") or ""
+            publish_date = tool_content.get("publish_date") or "未知日期"
+            source_site = tool_content.get("source_site") or "未知来源"
+            lines.append(f"我已读取文章详情：{title} [{source_site}] {publish_date}")
+            if url:
+                lines.append(f"来源：{url}")
+            body = tool_content.get("content_markdown") or tool_content.get("content_text") or ""
+            if body:
+                lines.append(self._truncate_text(body, 500))
+            return "\n".join(lines)
 
         return "我已完成查询，但没有找到可用结果。你可以换个关键词或增加筛选条件。"
 
@@ -145,16 +339,19 @@ class ReActAgent:
     ) -> AsyncIterator[AgentEvent]:
         step = 1
         history = history or []
+        original_query = query
+        active_query = query
         last_success_tool = ""
         last_success_content: dict[str, Any] = {}
         observations: list[dict[str, Any]] = []
+        auto_followup_used = False
 
         for item in history[-self._config.history_window :]:
             role = str(item.get("role", "user"))
             content = str(item.get("content", ""))
             self._memory.append(session_id, role=role, content=content)
 
-        self._memory.append(session_id, role="user", content=query)
+        self._memory.append(session_id, role="user", content=original_query)
 
         while step <= self._config.max_steps:
             yield AgentEvent(
@@ -166,7 +363,9 @@ class ReActAgent:
                 },
             )
 
-            tool_name, tool_params, planner = await self._pick_tool(session_id, query)
+            tool_name, tool_params, planner, route_info = await self._pick_tool(
+                session_id, active_query
+            )
             call_id = f"step-{step}-{tool_name}"
             yield AgentEvent(
                 type="tool_call",
@@ -176,13 +375,20 @@ class ReActAgent:
             )
 
             if planner == "heuristic":
+                route_message = ""
+                if route_info:
+                    route_message = (
+                        f"；回退意图={route_info.get('intent', 'unknown')}，"
+                        f"原因={route_info.get('reason', 'n/a')}"
+                    )
                 yield AgentEvent(
                     type="warning",
                     step=step,
                     call_id=call_id,
                     payload={
-                        "message": "LLM 规划不可用，已回退到规则策略",
+                        "message": f"LLM 规划不可用，已回退到规则策略{route_message}",
                         "recoverable": True,
+                        "route": route_info or {},
                     },
                 )
 
@@ -199,7 +405,7 @@ class ReActAgent:
                             }
                         )
                         answer = await self._build_final_answer(
-                            query=query,
+                            query=original_query,
                             session_id=session_id,
                             observations=observations,
                             fallback_tool_name=last_success_tool,
@@ -288,14 +494,42 @@ class ReActAgent:
             self._memory.append(
                 session_id,
                 role="tool",
-                content=self._observation_text(tool_name, tool_result.content),
+                content=self._truncate_text(
+                    self._observation_text(tool_name, tool_result.content),
+                    self._config.observation_memory_char_budget,
+                ),
             )
+
+            if (
+                tool_name == "get_article_detail"
+                and not auto_followup_used
+                and step < self._config.max_steps
+            ):
+                followup_query = self._derive_followup_query(active_query, tool_result.content)
+                if followup_query:
+                    auto_followup_used = True
+                    active_query = followup_query
+                    self._memory.append(
+                        session_id,
+                        role="user",
+                        content=f"[auto_followup] {followup_query}",
+                    )
+                    yield AgentEvent(
+                        type="warning",
+                        step=step,
+                        call_id=call_id,
+                        payload={
+                            "message": "已触发详情二跳推理模板，将继续补充检索证据",
+                            "recoverable": True,
+                            "followup_query": followup_query,
+                        },
+                    )
 
             step += 1
 
         if last_success_tool:
             answer = await self._build_final_answer(
-                query=query,
+                query=original_query,
                 session_id=session_id,
                 observations=observations,
                 fallback_tool_name=last_success_tool,

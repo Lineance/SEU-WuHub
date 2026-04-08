@@ -1,5 +1,5 @@
 PYTHON ?= uv run python
-NPM ?= npm
+NPM ?= pnpm
 COMPOSE ?= docker compose
 RUFF ?= ruff
 BANDIT ?= bandit
@@ -34,19 +34,19 @@ backend-dev:
 
 # Frontend
 frontend-install:
-	$(NPM) install --prefix frontend
+	cd frontend && $(NPM) install
 
 frontend-lint:
-	$(NPM) run --prefix frontend lint
+	cd frontend && $(NPM) run lint
 
 frontend-format:
-	$(NPM) run --prefix frontend format
+	cd frontend && $(NPM) run format
 
 frontend-test:
-	$(NPM) run --prefix frontend test -- --run
+	cd frontend && $(NPM) run test -- --run
 
 frontend-dev:
-	$(NPM) run --prefix frontend dev
+	cd frontend && $(NPM) run dev
 
 # Combined
 lint: backend-lint frontend-lint
@@ -60,8 +60,8 @@ dev:
 	@echo "Backend: http://localhost:8000"
 	@echo "Frontend: http://localhost:3000"
 	@echo ""
-	make backend-dev &
-	make frontend-dev
+	$(MAKE) backend-dev &
+	$(MAKE) frontend-dev
 
 # Docker
 docker-build:

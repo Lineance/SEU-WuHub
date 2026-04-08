@@ -9,11 +9,27 @@ from .protocol import ToolResult
 
 class SearchTool:
     name = "search_keyword"
-    description = "Search relevant campus articles by query and filters."
+    description = (
+        "Search relevant campus articles by query and filters, returning summary and content text."
+    )
 
-    def __init__(self, engine: RetrievalEngine, default_limit: int = 5) -> None:
+    def __init__(
+        self,
+        engine: RetrievalEngine,
+        default_limit: int = 5,
+        summary_chars: int = 220,
+        content_chars: int = 4000,
+    ) -> None:
         self._engine = engine
         self._default_limit = default_limit
+        self._summary_chars = summary_chars
+        self._content_chars = content_chars
+
+    def _truncate(self, text: Any, limit: int) -> str:
+        value = str(text or "").strip()
+        if len(value) <= limit:
+            return value
+        return value[:limit].rstrip() + "…"
 
     async def run(self, **kwargs: Any) -> ToolResult:
         # Accept both 'query' and 'keyword' as the search parameter
@@ -42,11 +58,14 @@ class SearchTool:
                 "id": row.get("news_id"),
                 "title": row.get("title"),
                 "url": row.get("url"),
-                "summary": row.get("content_text", "")[:200],
+                "summary": self._truncate(row.get("content_text", ""), self._summary_chars),
+                "content_text": self._truncate(row.get("content_text", ""), self._content_chars),
                 "category": row.get("source_site"),
+                "published_date": str(row.get("publish_date", ""))[:10],
                 "score": row.get("_score", 0),
+                "content_truncated": len(str(row.get("content_text", ""))) > self._content_chars,
             }
             for row in result.get("results", [])
         ]
 
-        return ToolResult(ok=True, content={"results": items, "total": len(items)})
+        return ToolResult(ok=True, content={"query": query, "results": items, "total": len(items)})

@@ -1,15 +1,15 @@
 "use client"
 
-import { Suspense, useState, useRef, useEffect } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
-import { Search, Bot, Star, Settings, Loader2, Newspaper, X, Sparkles } from "lucide-react"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
 import { DatePicker } from "@/components/date-picker"
-import Image from "next/image"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { api, MetadataResponse } from "@/lib/api"
 import { cn } from "@/lib/utils"
+import { Bot, Loader2, Newspaper, Search, Settings, Sparkles, Star, X } from "lucide-react"
+import Image from "next/image"
+import { useRouter, useSearchParams } from "next/navigation"
+import { Suspense, useEffect, useRef, useState } from "react"
 
 interface HeaderProps {
   onAIToggle: () => void
@@ -56,7 +56,7 @@ function HeaderSearchContent({ onSearchExpand }: HeaderSearchContentProps) {
 
   const updateSearchParams = (updates: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams.toString())
-    
+
     for (const [key, value] of Object.entries(updates)) {
       if (value) {
         params.set(key, value)
@@ -64,7 +64,7 @@ function HeaderSearchContent({ onSearchExpand }: HeaderSearchContentProps) {
         params.delete(key)
       }
     }
-    
+
     router.push(`/search?${params.toString()}`)
   }
 
@@ -76,22 +76,22 @@ function HeaderSearchContent({ onSearchExpand }: HeaderSearchContentProps) {
     const newSelectedTags = selectedTags.includes(tagName)
       ? selectedTags.filter(t => t !== tagName)
       : [...selectedTags, tagName]
-    
+
     setSelectedTags(newSelectedTags)
     updateSearchParams({ tags: newSelectedTags.length > 0 ? newSelectedTags.join(',') : null })
   }
 
   const handleTimeRangeChange = (range: string) => {
-    updateSearchParams({ 
-      time: range || null, 
-      date: null 
+    updateSearchParams({
+      time: range || null,
+      date: null
     })
   }
 
   const handleDateChange = (date: string) => {
-    updateSearchParams({ 
-      date: date || null, 
-      time: null 
+    updateSearchParams({
+      date: date || null,
+      time: null
     })
   }
 
@@ -150,8 +150,8 @@ function HeaderSearchContent({ onSearchExpand }: HeaderSearchContentProps) {
                     onClick={() => handleTagToggle(tag.name)}
                     className={cn(
                       "h-7 text-xs transition-all",
-                      selectedTags.includes(tag.name) 
-                        ? "bg-amber-500 hover:bg-amber-600 text-white border-amber-500" 
+                      selectedTags.includes(tag.name)
+                        ? "bg-amber-500 hover:bg-amber-600 text-white border-amber-500"
                         : "border-amber-300 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/30"
                     )}
                   >
@@ -192,7 +192,7 @@ function HeaderSearchContent({ onSearchExpand }: HeaderSearchContentProps) {
           {metadata.categories.map((category) => {
             const categoryTags = metadata.tags[category.id] || []
             if (categoryTags.length === 0) return null
-            
+
             return (
               <div key={category.id}>
                 <label className="text-xs font-medium text-muted-foreground mb-2 block">
@@ -259,17 +259,17 @@ function HeaderSearchContent({ onSearchExpand }: HeaderSearchContentProps) {
     <div className="flex flex-1 items-center justify-center px-4">
       <div className="relative w-full max-w-2xl flex items-center gap-2">
         {isMobile ? (
-          <div 
-            ref={searchContainerRef} 
+          <div
+            ref={searchContainerRef}
             className={`relative flex-1 ${isSearchExpanded ? 'max-w-none' : 'max-w-[300px]'}`}
             onClick={() => !isSearchExpanded && setIsSearchExpanded(true)}
           >
             <div className="relative flex items-center">
-              <div 
+              <div
                 className={`relative transition-all duration-300 ${isSearchExpanded ? 'w-full' : 'w-9'}`}
               >
-                <Search 
-                  className={`absolute top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground z-10 ${isSearchExpanded ? 'left-3' : 'left-1/2 -translate-x-1/2'}`} 
+                <Search
+                  className={`absolute top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground z-10 ${isSearchExpanded ? 'left-3' : 'left-1/2 -translate-x-1/2'}`}
                 />
                 <Input
                   type="search"
@@ -376,8 +376,9 @@ export function Header({ onAIToggle }: HeaderProps) {
               <Image
                 src="/images/logo.jpg"
                 alt="WuHub Logo"
-                fill
-                className="object-cover"
+                width={40}
+                height={40}
+                className="h-full w-full object-cover"
                 onError={() => setLogoError(true)}
               />
             )}

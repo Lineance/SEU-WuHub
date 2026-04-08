@@ -41,6 +41,7 @@ def format_date(dt):
     return search_service.format_date(dt)
 
 
+@router.post("", response_model=SearchResponse, include_in_schema=False)
 @router.post("/", response_model=SearchResponse)
 async def search_articles(request: SearchRequest):
     """
@@ -60,6 +61,7 @@ async def search_articles(request: SearchRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("", include_in_schema=False)
 @router.get("/")
 async def search_get(
     q: str = "",
@@ -87,6 +89,7 @@ async def search_get(
             from backend.app.api.v1.articles import get_table
             from backend.database.connection import get_connection
             from backend.database.guard import SQLGuard
+
             offset = (page - 1) * limit
             result = articles_service.list_articles(
                 table=get_table(),

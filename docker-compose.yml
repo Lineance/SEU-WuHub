@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   backend:
     build:
@@ -17,20 +15,37 @@ services:
     networks:
       - wuhub-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: /api/v1
+        BACKEND_INTERNAL_URL: http://backend:8000
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://backend:8000
+      - NEXT_PUBLIC_API_URL=/api/v1
+      - BACKEND_INTERNAL_URL=http://backend:8000
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - wuhub-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:3000/"]
+      interval: 20s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
 volumes:
   lancedb_data:

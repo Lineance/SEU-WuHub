@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 from backend.agent.core.agent import ReActAgent
 from backend.agent.events.stream import to_sse
 from backend.agent.memory.buffer import ConversationBuffer
+from backend.agent.tools.detail import DetailTool
 from backend.agent.tools.fetch import FetchTool
 from backend.agent.tools.registry import ToolRegistry
 from backend.agent.tools.search import SearchTool
@@ -38,8 +39,10 @@ class AgentService:
         self._memory = ConversationBuffer(window_size=self._config.history_window)
 
         registry = ToolRegistry()
+        article_repo = ArticleRepository()
         registry.register(SearchTool(RetrievalEngine()))
-        registry.register(SQLTool(ArticleRepository(), SQLGuard()))
+        registry.register(DetailTool(article_repo))
+        registry.register(SQLTool(article_repo, SQLGuard()))
         registry.register(
             FetchTool(
                 allowed_domains=self._config.allowed_fetch_domains,
@@ -53,6 +56,11 @@ class AgentService:
             temperature=self._config.temperature,
             max_tokens=self._config.max_tokens,
             timeout_seconds=self._config.llm_timeout_seconds,
+            planner_history_char_budget=self._config.planner_history_char_budget,
+            final_history_char_budget=self._config.final_history_char_budget,
+            final_observations_char_budget=self._config.final_observations_char_budget,
+            planner_retry_parse_once=self._config.planner_retry_parse_once,
+            planner_retry_max_tokens=self._config.planner_retry_max_tokens,
         )
         self._agent = ReActAgent(
             tool_registry=registry,
@@ -82,6 +90,11 @@ class AgentService:
             temperature=0.3,
             max_tokens=50,
             timeout_seconds=10.0,
+            planner_history_char_budget=self._config.planner_history_char_budget,
+            final_history_char_budget=self._config.final_history_char_budget,
+            final_observations_char_budget=self._config.final_observations_char_budget,
+            planner_retry_parse_once=self._config.planner_retry_parse_once,
+            planner_retry_max_tokens=self._config.planner_retry_max_tokens,
         )
 
         system_prompt = (

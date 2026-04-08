@@ -4,7 +4,76 @@
  * Provides typed API calls to the backend FastAPI service.
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api/v1'
+const API_PREFIX = '/api/v1'
+
+function normalizeApiBase(rawBase: string): string {
+  const trimmed = rawBase.trim()
+  if (!trimmed) return API_PREFIX
+
+  if (trimmed.startsWith('/')) {
+    const normalized = trimmed.replace(/\/+$/, '')
+    if (normalized === API_PREFIX || normalized.endsWith(API_PREFIX)) {
+      return normalized
+    }
+    return `${normalized}${API_PREFIX}`
+  }
+
+  try {
+    const parsed = new URL(trimmed)
+    const pathname = parsed.pathname.replace(/\/+$/, '')
+    if (!pathname || pathname === '') {
+      parsed.pathname = API_PREFIX
+    } else if (!pathname.endsWith(API_PREFIX)) {
+      parsed.pathname = `${pathname}${API_PREFIX}`
+    }
+    return parsed.toString().replace(/\/+$/, '')
+  } catch {
+    return API_PREFIX
+  }
+}
+
+function shouldUseRelativeApiBase(apiBase: string): boolean {
+  if (typeof window === 'undefined') return false
+  if (apiBase.startsWith('/')) return false
+
+  try {
+    const parsed = new URL(apiBase)
+    // Browser cannot resolve Docker internal hostnames like "backend".
+    return parsed.hostname === 'backend'
+  } catch {
+    return true
+  }
+}
+
+const configuredBase = normalizeApiBase(process.env.NEXT_PUBLIC_API_URL || '')
+const API_BASE = shouldUseRelativeApiBase(configuredBase) ? API_PREFIX : configuredBase
+const API_FALLBACK_BASE = API_PREFIX
+
+function buildApiUrl(base: string, endpoint: string): string {
+  return `${base}${endpoint}`
+}
+
+async function fetchWithFallback(
+  endpoint: string,
+  options?: RequestInit
+): Promise<Response> {
+  const primaryUrl = buildApiUrl(API_BASE, endpoint)
+  const fallbackUrl = buildApiUrl(API_FALLBACK_BASE, endpoint)
+  const canFallback = fallbackUrl !== primaryUrl
+
+  try {
+    const response = await fetch(primaryUrl, options)
+    if (canFallback && [404, 502, 503, 504].includes(response.status)) {
+      return fetch(fallbackUrl, options)
+    }
+    return response
+  } catch (primaryError) {
+    if (!canFallback) {
+      throw primaryError
+    }
+    return fetch(fallbackUrl, options)
+  }
+}
 
 interface Article {
   id: string
@@ -55,10 +124,8 @@ async function fetchApi<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<T> {
-  const url = `${API_BASE}${endpoint}`
-
   try {
-    const response = await fetch(url, {
+    const response = await fetchWithFallback(endpoint, {
       headers: {
         'Content-Type': 'application/json',
         ...options?.headers,
@@ -264,9 +331,7 @@ export const categoriesApi = {
 // AI Chat API
 export const aiApi = {
   chatWithAI: async (query: string, history: any[]) => {
-    const url = `${API_BASE}/chat/stream`
-
-    const response = await fetch(url, {
+    const response = await fetchWithFallback('/chat/stream', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -288,6 +353,22 @@ export const aiApi = {
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
     let buffer = ''
+
+    const normalizeChunk = (chunk: string) => chunk.replace(/\r\n/g, '\n')
+
+    const extractDataPayload = (eventBlock: string): string => {
+      const dataLines: string[] = []
+      const lines = eventBlock.split('\n')
+
+      for (const line of lines) {
+        if (line.startsWith('data:')) {
+          const value = line.slice(5)
+          dataLines.push(value.startsWith(' ') ? value.slice(1) : value)
+        }
+      }
+
+      return dataLines.join('\n').trim()
+    }
 
     const normalizeEvent = (raw: any) => {
       if (!raw || typeof raw !== 'object') return null
@@ -328,21 +409,14 @@ export const aiApi = {
           const { done, value } = await reader.read()
           if (done) break
 
-          buffer += decoder.decode(value, { stream: true })
+          buffer += normalizeChunk(decoder.decode(value, { stream: true }))
 
           // 分割消息 - SSE 事件以空行分隔
-          const messages = buffer.split('\\n\\n')
+          const messages = buffer.split('\n\n')
           buffer = messages.pop() || ''
 
           for (const message of messages) {
-            const lines = message.split('\\n')
-            let dataStr = ''
-
-            for (const line of lines) {
-              if (line.startsWith('data: ')) {
-                dataStr = line.slice(6).trim()
-              }
-            }
+            const dataStr = extractDataPayload(message)
 
             if (dataStr) {
               try {
@@ -359,20 +433,15 @@ export const aiApi = {
 
         // 处理最后残留的数据
         if (buffer) {
-          const lines = buffer.split('\\n')
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const dataStr = line.slice(6).trim()
-              if (dataStr) {
-                try {
-                  const normalized = normalizeEvent(JSON.parse(dataStr))
-                  if (normalized) {
-                    yield normalized
-                  }
-                } catch (e) {
-                  console.error('Failed to parse final SSE data:', dataStr, e)
-                }
+          const finalData = extractDataPayload(normalizeChunk(buffer))
+          if (finalData) {
+            try {
+              const normalized = normalizeEvent(JSON.parse(finalData))
+              if (normalized) {
+                yield normalized
               }
+            } catch (e) {
+              console.error('Failed to parse final SSE data:', finalData, e)
             }
           }
         }
@@ -452,9 +521,7 @@ export const api = {
   },
   chatWithAI: aiApi.chatWithAI,
   generateTitle: async (content: string) => {
-    const url = `${API_BASE}/chat/title`
-
-    const response = await fetch(url, {
+    const response = await fetchWithFallback('/chat/title', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

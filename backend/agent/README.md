@@ -9,6 +9,9 @@
 - LLM/规则混合决策，支持回退
 - SSE 流式输出，前端可实时消费
 
+当前实现里，`search_keyword` 不再只返回计数摘要，而是会返回标题、摘要和较长的正文片段字段；agent 在 memory 里也会写入结构化 observation，方便后续多步推理与最终回答。
+新增 `get_article_detail` 用于按 `news_id` 读取单篇文章详情，适合 search 之后继续读取正文、附件和标签。
+
 ## 目录结构
 
 - `core/`：Agent 主循环、决策与事件流
@@ -56,16 +59,17 @@
    - `message`：最终答案
    - `done`：流程结束
    - `error`：异常
+   - SSE 序列化需严格使用标准格式：`event: <type>\ndata: <json>\n\n`，前端在 `frontend/src/lib/api.ts` 依赖 `data: ` 前缀解析事件。
 
 5. **自定义工具**
    - 实现 `ToolProtocol` 并注册到 `ToolRegistry`
-   - 参考 `tools/search.py`、`tools/sql.py`
+   - 参考 `tools/search.py`、`tools/sql.py`、`tools/detail.py`
 
 ## 典型调用流程
 
 1. 用户提问，Agent 记录上下文
 2. LLM/规则决策工具与参数
-3. 工具执行，结果回写 memory
+3. 工具执行，结果回写 memory，并保留结构化结果摘要
 4. 多步循环，直到 finish 或超步
 5. LLM 汇总 observation 生成最终答案
 6. 事件流推送至前端
