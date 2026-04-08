@@ -162,9 +162,9 @@ function HeaderSearchContent({ onSearchExpand }: HeaderSearchContentProps) {
             </div>
           )}
 
-          {(metadata.sources.length > 0 || !currentSource) && (
-            <div>
-              <label className="text-xs font-medium text-muted-foreground mb-2 block">来源</label>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-2 block">来源</label>
+            {metadata.sources.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 <Button
                   variant={!currentSource ? 'default' : 'outline'}
@@ -186,8 +186,10 @@ function HeaderSearchContent({ onSearchExpand }: HeaderSearchContentProps) {
                   </Button>
                 ))}
               </div>
-            </div>
-          )}
+            ) : (
+              <p className="text-xs text-muted-foreground">暂无可选来源</p>
+            )}
+          </div>
 
           {metadata.categories.map((category) => {
             const categoryTags = metadata.tags[category.id] || []
