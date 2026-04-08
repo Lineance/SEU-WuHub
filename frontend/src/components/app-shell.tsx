@@ -89,6 +89,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 isCollapsed={false} 
                 onToggleCollapse={() => {}} 
                 isMobile
+                onAgentClick={handleAIToggle}
                 onActionClick={() => setIsMobileMenuOpen(false)}
               />
             </SheetContent>
