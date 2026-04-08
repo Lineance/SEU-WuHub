@@ -67,7 +67,7 @@ async def search_get(
     q: str = "",
     limit: int = 10,
     page: int = 1,
-    category: Optional[str] = None,
+    source: Optional[str] = None,
     tags: Optional[str] = None,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
@@ -78,13 +78,12 @@ async def search_get(
     - **q**: 搜索关键词
     - **limit**: 返回结果数量限制
     - **page**: 页码 (从1开始)
-    - **category**: 按分类筛选
+    - **source**: 按来源站点筛选
     - **tags**: 按标签筛选
     - **start_date**: 开始日期 YYYY-MM-DD
     - **end_date**: 结束日期 YYYY-MM-DD
     """
     try:
-        # 空搜索时使用 articles_service.list_articles（走 order 表优化）
         if not q and not start_date and not end_date:
             from backend.app.api.v1.articles import get_table
             from backend.database.connection import get_connection
@@ -96,11 +95,10 @@ async def search_get(
                 sql_guard=SQLGuard(),
                 page=page,
                 page_size=limit,
-                category=category,
+                category=source,
                 tags=tags,
                 conn=get_connection(),
             )
-            # 转换为搜索响应格式
             return search_service._to_search_response(
                 query=q,
                 raw_result={
@@ -126,7 +124,7 @@ async def search_get(
             query=q,
             limit=limit,
             offset=offset,
-            category=category,
+            category=source,
             tags=tags.split(",") if tags else None,
             start_date=start_date,
             end_date=end_date,

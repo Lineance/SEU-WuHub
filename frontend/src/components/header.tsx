@@ -69,7 +69,7 @@ function HeaderSearchContent({ onSearchExpand }: HeaderSearchContentProps) {
   }
 
   const handleSourceChange = (source: string) => {
-    updateSearchParams({ category: source === 'all' ? null : source })
+    updateSearchParams({ source: source === 'all' ? null : source })
   }
 
   const handleTagToggle = (tagName: string) => {
@@ -124,7 +124,7 @@ function HeaderSearchContent({ onSearchExpand }: HeaderSearchContentProps) {
     }
   }
 
-  const currentCategory = searchParams.get('category')
+  const currentSource = searchParams.get('source')
   const currentTime = searchParams.get('time')
 
   const renderFilterPanel = () => (
@@ -162,12 +162,12 @@ function HeaderSearchContent({ onSearchExpand }: HeaderSearchContentProps) {
             </div>
           )}
 
-          {(metadata.sources.length > 0 || !currentCategory) && (
+          {(metadata.sources.length > 0 || !currentSource) && (
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-2 block">来源</label>
               <div className="flex flex-wrap gap-2">
                 <Button
-                  variant={!currentCategory ? 'default' : 'outline'}
+                  variant={!currentSource ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => handleSourceChange('all')}
                   className="h-7 text-xs"
@@ -177,7 +177,7 @@ function HeaderSearchContent({ onSearchExpand }: HeaderSearchContentProps) {
                 {metadata.sources.map((source) => (
                   <Button
                     key={source}
-                    variant={currentCategory === source ? 'default' : 'outline'}
+                    variant={currentSource === source ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => handleSourceChange(source)}
                     className="h-7 text-xs"

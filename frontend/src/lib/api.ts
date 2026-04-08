@@ -151,13 +151,13 @@ export const articleApi = {
   list: (params?: {
     page?: number
     page_size?: number
-    category?: string
+    source?: string
     tags?: string
   }): Promise<ArticleListResponse> => {
     const searchParams = new URLSearchParams()
     if (params?.page) searchParams.set('page', String(params.page))
     if (params?.page_size) searchParams.set('page_size', String(params.page_size))
-    if (params?.category) searchParams.set('category', params.category)
+    if (params?.source) searchParams.set('source', params.source)
     if (params?.tags) searchParams.set('tags', params.tags)
 
     const query = searchParams.toString()
@@ -194,14 +194,14 @@ export const searchApi = {
   search: (params: {
     query: string
     limit?: number
-    category?: string
+    source?: string
     tags?: string[]
     start_date?: string
     end_date?: string
   }): Promise<SearchResponse> => {
     const searchParams = new URLSearchParams({ q: params.query })
     if (params.limit) searchParams.set('limit', String(params.limit))
-    if (params.category) searchParams.set('category', params.category)
+    if (params.source) searchParams.set('source', params.source)
     if (params.tags) searchParams.set('tags', params.tags.join(','))
     if (params.start_date) searchParams.set('start_date', params.start_date)
     if (params.end_date) searchParams.set('end_date', params.end_date)
@@ -244,7 +244,7 @@ export interface SearchQueryParams {
   limit?: number
   start_date?: string
   end_date?: string
-  category?: string
+  source?: string
   tags?: string[]
 }
 
@@ -279,7 +279,7 @@ export function buildSearchQueryParams(params: SearchArticlesParams): SearchQuer
     limit: params.page_size || 20,
     start_date,
     end_date,
-    category: params.source,
+    source: params.source,
     tags: params.tag ? [params.tag] : undefined,
   }
 }
@@ -287,13 +287,13 @@ export function buildSearchQueryParams(params: SearchArticlesParams): SearchQuer
 export function buildSearchParams(params: {
   page?: number
   page_size?: number
-  category?: string
+  source?: string
   tags?: string
 }): URLSearchParams {
   const searchParams = new URLSearchParams()
   if (params.page) searchParams.set('page', String(params.page))
   if (params.page_size) searchParams.set('page_size', String(params.page_size))
-  if (params.category) searchParams.set('category', params.category)
+  if (params.source) searchParams.set('source', params.source)
   if (params.tags) searchParams.set('tags', params.tags)
   return searchParams
 }
@@ -458,9 +458,8 @@ export const api = {
   health: healthApi,
   ai: aiApi,
   getCategories: categoriesApi.getCategories,
-  getArticles: async (params: { category_id?: string; page?: number; page_size?: number }) => {
-    // 将 category_id 转换为 category 以匹配后端 API
-    const response = await articleApi.list({ page: params.page, page_size: params.page_size, category: params.category_id ? decodeURIComponent(params.category_id) : undefined })
+  getArticles: async (params: { source?: string; page?: number; page_size?: number }) => {
+    const response = await articleApi.list({ page: params.page, page_size: params.page_size, source: params.source ? decodeURIComponent(params.source) : undefined })
     // 转换格式以匹配前端期望的结构
     const transformedItems = response.items.map(item => ({
       id: item.id,

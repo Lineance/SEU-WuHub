@@ -86,7 +86,7 @@ def get_engine() -> RetrievalEngine:
 async def list_articles(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=10, ge=1, le=100),
-    category: Optional[str] = None,
+    source: Optional[str] = None,
     tags: Optional[str] = None,
 ):
     """
@@ -94,7 +94,7 @@ async def list_articles(
 
     - **page**: 页码
     - **page_size**: 每页数量
-    - **category**: 分类筛选
+    - **source**: 来源站点筛选
     - **tags**: 标签筛选（逗号分隔）
     """
     try:
@@ -105,7 +105,7 @@ async def list_articles(
             sql_guard=_sql_guard,
             page=page,
             page_size=page_size,
-            category=category,
+            category=source,
             tags=tags,
             conn=get_connection(),
         )
