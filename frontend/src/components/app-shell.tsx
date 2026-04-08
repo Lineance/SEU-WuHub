@@ -15,11 +15,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [isAIOpen, setIsAIOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [activeLayer, setActiveLayer] = useState<'main' | 'ai'>('ai')
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const { isReadingMode } = useReadingMode()
   const isMobile = useIsMobile()
   const searchParams = useSearchParams()
 
-  // 监听 URL 自动打开 AI
   useEffect(() => {
     if (searchParams.get('sessionId')) {
       setIsAIOpen(true)
@@ -27,7 +27,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, [searchParams])
 
-  // 处理 Header AI 按钮点击
+  useEffect(() => {
+    if (isReadingMode) {
+      setIsSidebarCollapsed(true)
+    }
+  }, [isReadingMode])
+
   const handleAIToggle = () => {
     if (!isAIOpen) {
       setIsAIOpen(true)
@@ -41,18 +46,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const handleToggleSidebar = () => {
+    setIsSidebarCollapsed(!isSidebarCollapsed)
+  }
+
   return (
     <div className="flex h-screen flex-col bg-background overflow-hidden font-sans antialiased">
-      {/* Header 始终在最顶层 z-50 */}
       <Header onAIToggle={handleAIToggle} />
 
       <div className="flex flex-1 overflow-hidden relative">
-        {/* Sidebar：独立于层级切换逻辑外，点击它不会影响置顶状态 */}
         {!isMobile && (
-          <Sidebar isCollapsed={isReadingMode} onToggleCollapse={() => {}} />
+          <Sidebar 
+            isCollapsed={isSidebarCollapsed} 
+            onToggleCollapse={handleToggleSidebar} 
+          />
         )}
         
-        {/* 主内容区域包裹器 */}
         <div 
           className={cn(
             "flex-1 overflow-hidden transition-all duration-500 ease-in-out relative flex",
@@ -66,14 +75,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           }}
         >
           <main className={cn(
-            "flex-1 overflow-auto bg-background p-4 md:p-6", 
+            "flex-1 overflow-auto bg-background p-4 md:p-6 transition-all duration-300", 
             isReadingMode && "max-w-4xl mx-auto"
           )}>
             {children}
           </main>
         </div>
 
-        {/* 移动端菜单 Sheet 容器 */}
         {isMobile && (
           <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
             <SheetContent side="left" className="w-[280px] p-0 [&>button]:hidden">
@@ -87,7 +95,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Sheet>
         )}
 
-        {/* AI 助手 - 独立于主内容容器之外 */}
         <AIAssistant 
           isOpen={isAIOpen && !isReadingMode} 
           onClose={() => setIsAIOpen(false)} 
@@ -96,7 +103,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           onLayerActivate={() => setActiveLayer('ai')}
         />
 
-        {/* 移动端悬浮导航按钮 */}
         {isMobile && !isReadingMode && (
           <MobileNavFab 
             onClick={() => setIsMobileMenuOpen(true)}
