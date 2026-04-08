@@ -291,3 +291,5 @@ node_modules/
 .DS_Store
 
 nginx.conf
+
+CLAUDE.md
