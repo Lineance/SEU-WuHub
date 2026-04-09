@@ -38,9 +38,9 @@ flowchart LR
     C[Crawler + ETL] --> D
 ```
 
-- 详细架构说明： [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-- 技术叙事报告： [docs/TECHNICAL_NARRATIVE.md](docs/TECHNICAL_NARRATIVE.md)
-- 模块集成说明： [docs/MODULE_INTEGRATION.md](docs/MODULE_INTEGRATION.md)
+- 详细架构说明：[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- 技术叙事报告：[docs/TECHNICAL_NARRATIVE.md](docs/TECHNICAL_NARRATIVE.md)
+- 模块集成说明：[docs/MODULE_INTEGRATION.md](docs/MODULE_INTEGRATION.md)
 
 ## 项目结构
 
@@ -92,9 +92,9 @@ make frontend-dev
 
 访问地址：
 
-- 前端： http://localhost:3000
-- 后端： http://localhost:8000
-- OpenAPI： http://localhost:8000/docs
+- 前端：http://localhost:3000
+- 后端：http://localhost:8000
+- OpenAPI：http://localhost:8000/docs
 
 ### 3. Docker 一键启动
 
@@ -130,7 +130,10 @@ make test
 - `GET /api/v1/articles`
 - `GET /api/v1/articles/{id}`
 - `GET /api/v1/search`
+- `POST /api/v1/search`
+- `GET /api/v1/metadata`
 - `POST /api/v1/chat/stream`
+- `POST /api/v1/chat/title`
 - `GET /health`
 
 详细说明：
@@ -140,7 +143,7 @@ make test
 
 ## 数据与检索
 
-- 数据库路径： `data/lancedb`（容器内映射）
+- 数据库路径：`data/lancedb`（容器内映射）
 - 检索模式：向量检索 + 全文检索（融合）
 - 关键模块：
   - [backend/retrieval/engine.py](backend/retrieval/engine.py)
@@ -149,10 +152,10 @@ make test
 
 ## 文档导航
 
-- 架构文档： [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-- 部署文档： [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
-- 模块集成： [docs/MODULE_INTEGRATION.md](docs/MODULE_INTEGRATION.md)
-- 技术报告： [docs/TECHNICAL_NARRATIVE.md](docs/TECHNICAL_NARRATIVE.md)
+- 架构文档：[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- 部署文档：[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
+- 模块集成：[docs/MODULE_INTEGRATION.md](docs/MODULE_INTEGRATION.md)
+- 技术报告：[docs/TECHNICAL_NARRATIVE.md](docs/TECHNICAL_NARRATIVE.md)
 
 ## 贡献指南
 
@@ -164,4 +167,4 @@ make test
 
 ## 许可证
 
-本项目采用 MIT License（当前可参考 [backend/pyproject.toml](backend/pyproject.toml) 中 license 字段）。
+本项目采用 MIT License（当前可参考 [backend/pyproject.toml](backend/pyproject.toml) 中的 license 字段）。

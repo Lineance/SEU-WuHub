@@ -17,15 +17,15 @@
 [![Architecture](https://img.shields.io/badge/docs-Architecture-2563EB)](docs/ARCHITECTURE.md)
 [![API](https://img.shields.io/badge/docs-API-0EA5E9)](docs/backend/api.md)
 
-SEU-WuHub aggregates campus announcements from multiple sources (e.g., Academic Affairs Office, Library) and provides natural-language question answering powered by hybrid retrieval and a ReAct agent.
+SEU-WuHub aggregates campus announcements from multiple sources (for example, the Academic Affairs Office and Library) and provides natural-language question answering powered by hybrid retrieval and a ReAct agent.
 
 ## Highlights
 
-- Multi-source ingestion: Config-driven crawler pipelines (YAML-first).
-- Hybrid retrieval: Vector retrieval + full-text retrieval for both semantic and keyword matching.
-- Agent QA: ReAct workflow with tool invocation and streaming response.
+- Multi-source ingestion: Config-driven crawler pipelines with YAML-first onboarding.
+- Hybrid retrieval: Vector retrieval plus full-text retrieval for both semantic and keyword matching.
+- Agent QA: ReAct workflow with tool invocation and streaming responses.
 - Realtime UX: SSE-based incremental answer rendering.
-- Unified storage: LanceDB for structured data, vector index, and full-text index.
+- Unified storage: LanceDB stores structured data, vector indexes, and full-text indexes together.
 
 ## Architecture Overview
 
@@ -130,7 +130,10 @@ Primary endpoints (subject to implementation):
 - `GET /api/v1/articles`
 - `GET /api/v1/articles/{id}`
 - `GET /api/v1/search`
+- `POST /api/v1/search`
+- `GET /api/v1/metadata`
 - `POST /api/v1/chat/stream`
+- `POST /api/v1/chat/title`
 - `GET /health`
 
 References:
@@ -140,8 +143,8 @@ References:
 
 ## Data & Retrieval
 
-- Database path: `data/lancedb` (mounted in container)
-- Retrieval mode: Vector + full-text hybrid search
+- Database path: `data/lancedb` (mounted in the container)
+- Retrieval mode: Hybrid vector + full-text search
 - Key modules:
   - [backend/retrieval/engine.py](backend/retrieval/engine.py)
   - [backend/retrieval/store.py](backend/retrieval/store.py)
@@ -156,11 +159,11 @@ References:
 
 ## Contributing
 
-Contributions are welcome via Issues and Pull Requests.
+Contributions are welcome through Issues and Pull Requests.
 
 1. Fork the repository and create your feature branch.
 2. Run `make lint && make test` before submitting.
-3. Clearly describe context, approach, and validation in your PR.
+3. Clearly describe context, approach, and validation in your PR, and keep docs in sync with implementation.
 
 ## License
 
