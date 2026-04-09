@@ -302,13 +302,17 @@ export default function ArticleDetailPage() {
           </div>
         )}
 
+        {/* 
+        * attachments 字段降级为非主路径
+        * 当前附件主要通过文章的 content_md（Markdown）中的链接来解析和展示
+        * 此渲染逻辑暂时注释，保留代码结构以便后续恢复
+        *
         {article.attachments && article.attachments.length > 0 && (
           <div className="mt-4">
             <h2 className="mb-4 text-xl font-semibold text-foreground">
               附件
             </h2>
-            {/* 如果文章没有正文内容（PDF-only），显示"查看原文"按钮 */}
-            {!article.content_md && !article.content ? (
+            { !article.content_md && !article.content ? (
               <Card className="bg-muted/50">
                 <CardContent className="flex flex-col items-center justify-center p-6 text-center">
                   <FileText className="mb-3 h-12 w-12 text-muted-foreground" />
@@ -330,10 +334,8 @@ export default function ArticleDetailPage() {
                 </CardContent>
               </Card>
             ) : (
-              /* 文章有正文内容，显示附件卡片 */
               <div className="grid gap-3 md:grid-cols-2">
                 {article.attachments.map((attachment, index) => {
-                  // attachment可能是Attachment对象或字符串URL
                   const url = typeof attachment === 'string' ? attachment : attachment.url
                   const name = typeof attachment === 'string'
                     ? decodeURIComponent(url.split("/").pop()?.replace(/\.pdf$/i, "") || "附件")
@@ -366,6 +368,7 @@ export default function ArticleDetailPage() {
             )}
           </div>
         )}
+        */}
       </article>
     </div>
   )
