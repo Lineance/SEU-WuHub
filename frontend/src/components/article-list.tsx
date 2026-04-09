@@ -34,12 +34,17 @@ export function ArticleList() {
       try {
         const response = await api.searchArticles({
           q: query,
-          page: 1,
-          page_size: currentPage * 10,
-          source: source
+          page: currentPage,
+          page_size: 10,
+          source,
         })
-        
-        setArticles(response.data || [])
+
+        if (currentPage === 1) {
+          setArticles(response.data || [])
+        } else {
+          setArticles((prev) => [...prev, ...(response.data || [])])
+        }
+
         setTotal(response.pagination?.total || 0)
       } catch (error) {
         console.error("加载文章失败:", error)
