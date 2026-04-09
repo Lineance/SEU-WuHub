@@ -110,7 +110,7 @@ Tests for API search parameter construction.
 - `buildSearchParams()` - Handles empty parameters
 - `buildSearchParams()` - Handles only page parameter
 - `buildSearchParams()` - Handles only page_size parameter
-- `buildSearchParams()` - Handles only category parameter
+- `buildSearchParams()` - Handles only source parameter
 - `buildSearchParams()` - Handles only tags parameter
 - `buildSearchParams()` - Handles all parameters
 - `buildSearchParams()` - Does not include undefined values

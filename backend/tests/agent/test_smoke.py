@@ -39,7 +39,7 @@ class SmokeSearchTool:
             {
                 "title": f"smoke result #{idx + 1} for {query}",
                 "url": f"https://example.com/smoke/{idx + 1}",
-                "category": "smoke",
+                "source": "smoke",
             }
             for idx in range(max(1, min(limit, 5)))
         ]
