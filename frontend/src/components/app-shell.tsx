@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { Header } from "@/components/header"
 import { Sidebar } from "@/components/sidebar"
@@ -11,13 +11,14 @@ import { useIsMobile } from "@/hooks/use-mobile"
 import { MobileNavFab } from "@/components/mobile-nav-fab"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+function AppShellContent({ children }: { children: React.ReactNode }) {
   const [isAIOpen, setIsAIOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [activeLayer, setActiveLayer] = useState<'main' | 'ai'>('ai')
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const { isReadingMode } = useReadingMode()
   const isMobile = useIsMobile()
+
   const searchParams = useSearchParams()
 
   useEffect(() => {
@@ -112,5 +113,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         )}
       </div>
     </div>
+  )
+}
+
+export function AppShell({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={null}>
+      <AppShellContent>{children}</AppShellContent>
+    </Suspense>
   )
 }
