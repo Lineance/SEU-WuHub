@@ -40,7 +40,7 @@ def _to_search_response(query: str, raw_result: dict[str, Any]) -> SearchRespons
                 if item.get("content_text")
                 else None,
                 score=item.get("_score", 0.9),
-                category=item.get("source_site", ""),
+                source=item.get("source_site", ""),
                 tags=item.get("tags", []),
                 published_date=format_date(item.get("publish_date")),
             )
@@ -55,7 +55,7 @@ def search_articles(
     query: str,
     limit: int,
     offset: int = 0,
-    category: Optional[str],
+    source: Optional[str],
     tags: Optional[list[str]],
     start_date: Optional[str],
     end_date: Optional[str],
@@ -65,7 +65,7 @@ def search_articles(
         search_type="hybrid",
         limit=limit,
         offset=offset,
-        source_site=category,
+        source_site=source,
         tags=tags,
         keyword_weight=0.7,
         vector_weight=0.3,

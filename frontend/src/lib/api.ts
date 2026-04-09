@@ -84,7 +84,7 @@ interface Article {
   author?: string
   published_date?: string
   tags: string[]
-  category?: string
+  source?: string
   attachments?: string[]
 }
 
@@ -102,7 +102,7 @@ interface SearchResult {
   url: string
   summary?: string
   score: number
-  category?: string
+  source?: string
   tags: string[]
   published_date?: string
 }
@@ -310,13 +310,12 @@ export function buildSearchUrlParams(params: SearchArticlesParams): URLSearchPar
 // Categories API - 从文章数据中提取分类
 export const categoriesApi = {
   getCategories: async (): Promise<{ data: Array<{ id: string; name: string; count: number }> }> => {
-    // 从后端获取所有文章并提取分类
     const response = await articleApi.list({ page_size: 100 })
     const categoryMap = new Map<string, number>()
 
     for (const article of response.items) {
-      const category = article.category || "未分类"
-      categoryMap.set(category, (categoryMap.get(category) || 0) + 1)
+      const source = article.source || "未分类"
+      categoryMap.set(source, (categoryMap.get(source) || 0) + 1)
     }
 
     const data = Array.from(categoryMap.entries()).map(([name, count]) => ({
@@ -460,13 +459,12 @@ export const api = {
   getCategories: categoriesApi.getCategories,
   getArticles: async (params: { source?: string; page?: number; page_size?: number }) => {
     const response = await articleApi.list({ page: params.page, page_size: params.page_size, source: params.source ? decodeURIComponent(params.source) : undefined })
-    // 转换格式以匹配前端期望的结构
     const transformedItems = response.items.map(item => ({
       id: item.id,
       title: item.title,
       summary: item.summary || item.content?.slice(0, 200) || "",
       published_at: item.published_date,
-      source: item.category,
+      source: item.source,
       tags: item.tags || [],
       url: item.url,
     }))
@@ -482,14 +480,13 @@ export const api = {
   searchArticles: async (params: SearchArticlesParams) => {
     const queryParams = buildSearchQueryParams(params)
     const response = await searchApi.search(queryParams)
-    // 去除 HTML 标签并映射字段
     const stripHtml = (html: string) => html ? html.replace(/<[^>]*>/g, '').slice(0, 200) : ''
     const data = response.results.map(r => ({
       id: r.id,
       title: r.title,
       summary: stripHtml(r.summary || ''),
       published_at: r.published_date,
-      source: r.category,
+      source: r.source,
       tags: r.tags || [],
       url: r.url,
     }))
@@ -508,10 +505,10 @@ export const api = {
       data: {
         id: response.id,
         title: response.title,
-        content_md: response.content || "",  // Markdown content for ReactMarkdown
+        content_md: response.content || "",
         summary: response.summary || "",
         published_at: response.published_date,
-        source: response.category,
+        source: response.source,
         source_url: response.url,
         tags: response.tags || [],
         url: response.url,

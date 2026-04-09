@@ -7,7 +7,6 @@ export interface Article {
   author?: string
   published_at?: string
   tags: string[]
-  category?: string
   source?: string
 }
 

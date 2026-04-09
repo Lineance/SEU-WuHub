@@ -11,8 +11,8 @@ class ArticleBase(BaseModel):
     author: Optional[str] = None
     published_date: Optional[str] = None
     tags: List[str] = Field(default_factory=list)
-    category: Optional[str] = None
-    attachments: List[str] = Field(default_factory=list)  # PDF等附件URL列表
+    source: Optional[str] = None
+    attachments: List[str] = Field(default_factory=list)
 
 
 class ArticleCreate(ArticleBase):
@@ -24,7 +24,7 @@ class ArticleUpdate(BaseModel):
     content: Optional[str] = None
     summary: Optional[str] = None
     tags: Optional[List[str]] = None
-    category: Optional[str] = None
+    source: Optional[str] = None
 
 
 class ArticleResponse(ArticleBase):

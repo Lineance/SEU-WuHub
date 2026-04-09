@@ -17,7 +17,7 @@ class SearchResult(BaseModel):
     url: str
     summary: Optional[str] = None
     score: float
-    category: Optional[str] = None
+    source: Optional[str] = None
     tags: List[str] = Field(default_factory=list)
     published_date: Optional[str] = None
 

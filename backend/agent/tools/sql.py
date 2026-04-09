@@ -41,7 +41,7 @@ class SQLTool:
                 "id": row.get("news_id"),
                 "title": row.get("title"),
                 "url": row.get("url"),
-                "category": row.get("source_site"),
+                "source": row.get("source_site"),
                 "published_date": str(row.get("publish_date", ""))[:10],
             }
             for row in rows

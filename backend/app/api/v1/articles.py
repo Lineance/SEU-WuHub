@@ -105,7 +105,7 @@ async def list_articles(
             sql_guard=_sql_guard,
             page=page,
             page_size=page_size,
-            category=source,
+            source=source,
             tags=tags,
             conn=get_connection(),
         )

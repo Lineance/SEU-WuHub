@@ -32,13 +32,12 @@ class SearchTool:
         return value[:limit].rstrip() + "…"
 
     async def run(self, **kwargs: Any) -> ToolResult:
-        # Accept both 'query' and 'keyword' as the search parameter
         query = str(kwargs.get("query", "") or kwargs.get("keyword", "")).strip()
         if not query:
             return ToolResult(ok=False, content={}, error="query is required")
 
         limit = int(kwargs.get("limit", self._default_limit))
-        category = kwargs.get("category")
+        source = kwargs.get("source") or kwargs.get("category")
         tags = kwargs.get("tags")
         if tags and isinstance(tags, str):
             tags = [item.strip() for item in tags.split(",") if item.strip()]
@@ -47,7 +46,7 @@ class SearchTool:
             query=query,
             search_type="hybrid",
             limit=limit,
-            source_site=category,
+            source_site=source,
             tags=tags,
             start_date=kwargs.get("start_date"),
             end_date=kwargs.get("end_date"),
@@ -60,7 +59,7 @@ class SearchTool:
                 "url": row.get("url"),
                 "summary": self._truncate(row.get("content_text", ""), self._summary_chars),
                 "content_text": self._truncate(row.get("content_text", ""), self._content_chars),
-                "category": row.get("source_site"),
+                "source": row.get("source_site"),
                 "published_date": str(row.get("publish_date", ""))[:10],
                 "score": row.get("_score", 0),
                 "content_truncated": len(str(row.get("content_text", ""))) > self._content_chars,

@@ -271,7 +271,7 @@ class ReActAgent:
         compact: list[dict[str, Any]] = []
         for row in rows[:limit]:
             item: dict[str, Any] = {}
-            for key in ("id", "title", "url", "category", "published_date", "score"):
+            for key in ("id", "title", "url", "source", "published_date", "score"):
                 value = row.get(key)
                 if value not in (None, ""):
                     item[key] = value
@@ -380,10 +380,10 @@ class ReActAgent:
                 lines.append("|---|---|---|---|---|")
                 for idx, item in enumerate(results[:8], start=1):
                     title = str(item.get("title", "(无标题)")).replace("|", " ").strip()
-                    category = str(item.get("category", "未知来源")).replace("|", " ").strip()
+                    source = str(item.get("source", "未知来源")).replace("|", " ").strip()
                     date_str = str(item.get("published_date", "")).strip() or "未知日期"
                     url = str(item.get("url", "")).strip()
-                    lines.append(f"| {idx} | {title} | {category} | {date_str} | {url} |")
+                    lines.append(f"| {idx} | {title} | {source} | {date_str} | {url} |")
 
                 applied_window = tool_content.get("applied_time_window")
                 if isinstance(applied_window, dict):
@@ -394,13 +394,13 @@ class ReActAgent:
                 lines.append("如需，我可以继续按标签、来源或更严格时间范围进一步筛选。")
                 return "\n".join(lines)
 
-            lines = [f"根据你的问题“{query}”，我找到以下相关信息："]
+            lines = [f"根据你的问题"{query}"，我找到以下相关信息："]
             for idx, item in enumerate(results[:5], start=1):
                 title = item.get("title", "(无标题)")
-                category = item.get("category", "未知来源")
+                source = item.get("source", "未知来源")
                 url = item.get("url", "")
                 summary = item.get("summary") or item.get("content_text") or ""
-                lines.append(f"{idx}. {title} [{category}] {url}")
+                lines.append(f"{idx}. {title} [{source}] {url}")
                 if summary:
                     lines.append(f"   {self._truncate_text(summary, 140)}")
             lines.append("如需，我可以继续按时间范围或标签进一步筛选。")

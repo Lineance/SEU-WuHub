@@ -10,7 +10,6 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException
 
-# 添加项目根目录到 Python 路径
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from backend.app.services import articles_service, search_service
@@ -20,7 +19,6 @@ from ...schemas.search import SearchRequest, SearchResponse
 
 router = APIRouter(prefix="/search", tags=["search"])
 
-# 初始化组件
 _engine: Optional[RetrievalEngine] = None
 
 
@@ -52,7 +50,7 @@ async def search_articles(request: SearchRequest):
             engine=get_engine(),
             query=request.query,
             limit=request.limit,
-            category=request.source,
+            source=request.source,
             tags=request.tags,
             start_date=request.start_date,
             end_date=request.end_date,
@@ -95,7 +93,7 @@ async def search_get(
                 sql_guard=SQLGuard(),
                 page=page,
                 page_size=limit,
-                category=source,
+                source=source,
                 tags=tags,
                 conn=get_connection(),
             )
@@ -108,7 +106,7 @@ async def search_get(
                             "title": item.title,
                             "url": item.url,
                             "content_text": item.content or "",
-                            "source_site": item.category,
+                            "source_site": item.source,
                             "tags": item.tags,
                             "publish_date": item.published_date,
                         }
@@ -124,7 +122,7 @@ async def search_get(
             query=q,
             limit=limit,
             offset=offset,
-            category=source,
+            source=source,
             tags=tags.split(",") if tags else None,
             start_date=start_date,
             end_date=end_date,
