@@ -24,7 +24,6 @@ export function ArticleList() {
   const [isLoading, setIsLoading] = useState(true)
   const [total, setTotal] = useState(0)
 
-  const query = searchParams.get("q") || ""
   const currentPage = Number(searchParams.get("page")) || 1
   const source = searchParams.get("source") || ""
 
@@ -32,11 +31,10 @@ export function ArticleList() {
     const fetchArticles = async () => {
       setIsLoading(true)
       try {
-        const response = await api.searchArticles({
-          q: query,
+        const response = await api.getArticles({
           page: currentPage,
           page_size: 10,
-          source,
+          source: source || undefined,
         })
 
         if (currentPage === 1) {
@@ -56,7 +54,7 @@ export function ArticleList() {
     }
 
     fetchArticles()
-  }, [query, currentPage, source])
+  }, [currentPage, source])
 
   const handleLoadMore = () => {
     const nextPage = currentPage + 1

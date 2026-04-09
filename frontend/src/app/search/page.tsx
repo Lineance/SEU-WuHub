@@ -1,8 +1,8 @@
 "use client"
 
-import { Suspense, useState, useEffect, useMemo } from "react"
+import { Suspense, useState, useEffect } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
-import { Search, AlertCircle, FileText } from "lucide-react"
+import { Search, AlertCircle, FileText, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ArticleCard } from "@/components/article-card"
@@ -31,6 +31,8 @@ function SearchContent() {
   const [articles, setArticles] = useState<Article[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [totalPages, setTotalPages] = useState(0)
+  const [total, setTotal] = useState(0)
 
   useEffect(() => {
     async function search() {
@@ -48,6 +50,8 @@ function SearchContent() {
           page_size: 20,
         })
         setArticles(response.data)
+        setTotalPages(response.pagination.total_pages)
+        setTotal(response.pagination.total)
       } catch (err) {
         console.error('搜索失败:', err)
         setError('搜索失败，请稍后再试')
@@ -59,51 +63,14 @@ function SearchContent() {
     search()
   }, [query, source, tagsParam, time, date, exactMatch, safePage])
 
-  const filteredArticles = useMemo(() => {
-    return articles.filter((article) => {
-      // 精确匹配：仅当开启时过滤
-      if (exactMatch && query && !article.title.includes(query) && !article.summary?.includes(query)) {
-        return false
-      }
-
-      if (source && article.source !== source) {
-        return false
-      }
-
-      if (selectedTags.length > 0 && !selectedTags.some(t => article.tags?.includes(t))) {
-        return false
-      }
-
-      if (time) {
-        const now = new Date()
-        const articleDate = article.published_at ? new Date(article.published_at) : new Date()
-        const diffDays = (now.getTime() - articleDate.getTime()) / (1000 * 60 * 60 * 24)
-        const timeRangeMap: Record<string, number> = {
-          'today': 1,
-          '7days': 7,
-          '30days': 30,
-          '6months': 180,
-          '1year': 365,
-        }
-        const range = timeRangeMap[time]
-        if (range && diffDays > range) {
-          return false
-        }
-      }
-
-      if (date) {
-        const articleDateStr = article.published_at ? new Date(article.published_at).toISOString().split('T')[0] : ''
-        if (articleDateStr !== date) {
-          return false
-        }
-      }
-
-      return true
-    })
-  }, [articles, query, source, selectedTags, time, date, exactMatch])
-
   const sources = Array.from(new Set(articles.map((a) => a.source).filter(Boolean)))
   const tags = Array.from(new Set(articles.flatMap((a) => a.tags || [])))
+
+  const goToPage = (newPage: number) => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('page', String(newPage))
+    router.push(`/search?${params.toString()}`)
+  }
 
   return (
     <div className="p-6">
@@ -114,8 +81,8 @@ function SearchContent() {
           {query && (
             <span className="font-semibold text-foreground">{query}</span>
           )}
-          {!loading && !error && filteredArticles.length > 0 && (
-            <span className="ml-2 text-sm">({filteredArticles.length} 条)</span>
+          {!loading && !error && total > 0 && (
+            <span className="ml-2 text-sm">(共 {total} 条)</span>
           )}
         </div>
       </div>
@@ -130,6 +97,7 @@ function SearchContent() {
               onClick={() => {
                 const params = new URLSearchParams(searchParams.toString())
                 params.delete('source')
+                params.delete('page')
                 router.push(`/search?${params.toString()}`)
               }}
             >
@@ -143,6 +111,7 @@ function SearchContent() {
                 onClick={() => {
                   const params = new URLSearchParams(searchParams.toString())
                   params.set('source', s)
+                  params.delete('page')
                   router.push(`/search?${params.toString()}`)
                 }}
               >
@@ -161,6 +130,7 @@ function SearchContent() {
               onClick={() => {
                 const params = new URLSearchParams(searchParams.toString())
                 params.delete('tags')
+                params.delete('page')
                 router.push(`/search?${params.toString()}`)
               }}
             >
@@ -181,6 +151,7 @@ function SearchContent() {
                   } else {
                     params.delete('tags')
                   }
+                  params.delete('page')
                   router.push(`/search?${params.toString()}`)
                 }}
               >
@@ -200,6 +171,7 @@ function SearchContent() {
                 const params = new URLSearchParams(searchParams.toString())
                 params.delete('time')
                 params.delete('date')
+                params.delete('page')
                 router.push(`/search?${params.toString()}`)
               }}
             >
@@ -212,6 +184,7 @@ function SearchContent() {
                 const params = new URLSearchParams(searchParams.toString())
                 params.set('time', 'today')
                 params.delete('date')
+                params.delete('page')
                 router.push(`/search?${params.toString()}`)
               }}
             >
@@ -224,6 +197,7 @@ function SearchContent() {
                 const params = new URLSearchParams(searchParams.toString())
                 params.set('time', '7days')
                 params.delete('date')
+                params.delete('page')
                 router.push(`/search?${params.toString()}`)
               }}
             >
@@ -236,6 +210,7 @@ function SearchContent() {
                 const params = new URLSearchParams(searchParams.toString())
                 params.set('time', '30days')
                 params.delete('date')
+                params.delete('page')
                 router.push(`/search?${params.toString()}`)
               }}
             >
@@ -248,6 +223,7 @@ function SearchContent() {
                 const params = new URLSearchParams(searchParams.toString())
                 params.set('time', '6months')
                 params.delete('date')
+                params.delete('page')
                 router.push(`/search?${params.toString()}`)
               }}
             >
@@ -260,6 +236,7 @@ function SearchContent() {
                 const params = new URLSearchParams(searchParams.toString())
                 params.set('time', '1year')
                 params.delete('date')
+                params.delete('page')
                 router.push(`/search?${params.toString()}`)
               }}
             >
@@ -276,6 +253,7 @@ function SearchContent() {
                   params.delete('date')
                   params.delete('time')
                 }
+                params.delete('page')
                 router.push(`/search?${params.toString()}`)
               }}
             />
@@ -295,6 +273,7 @@ function SearchContent() {
                 } else {
                   params.delete('exact')
                 }
+                params.delete('page')
                 router.push(`/search?${params.toString()}`)
               }}
             />
@@ -321,7 +300,7 @@ function SearchContent() {
         </div>
       )}
 
-      {!loading && !error && filteredArticles.length === 0 && (
+      {!loading && !error && articles.length === 0 && (
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <FileText className="mb-3 h-12 w-12 text-muted-foreground" />
           <p className="text-lg text-muted-foreground">未找到相关文章</p>
@@ -331,25 +310,59 @@ function SearchContent() {
         </div>
       )}
 
-      {!loading && !error && filteredArticles.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {filteredArticles.map((article) => (
-            <div
-              key={article.id}
-              className="cursor-pointer"
-              onClick={() => router.push(`/article/${article.id}`)}
-            >
-              <ArticleCard
-                id={article.id}
-                title={article.title}
-                summary={article.summary}
-                time={article.published_at ? new Date(article.published_at).toLocaleDateString('zh-CN') : ''}
-                source={article.source}
-                tags={article.tags}
-              />
+      {!loading && !error && articles.length > 0 && (
+        <>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {articles.map((article) => (
+              <div
+                key={article.id}
+                className="cursor-pointer"
+                onClick={() => router.push(`/article/${article.id}`)}
+              >
+                <ArticleCard
+                  id={article.id}
+                  title={article.title}
+                  summary={article.summary}
+                  time={article.published_at ? new Date(article.published_at).toLocaleDateString('zh-CN') : ''}
+                  source={article.source}
+                  tags={article.tags}
+                />
+              </div>
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="mt-8 flex items-center justify-center gap-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => goToPage(safePage - 1)}
+                disabled={safePage <= 1}
+                className="gap-1"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                上一页
+              </Button>
+              
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>第 {safePage} 页</span>
+                <span>/</span>
+                <span>共 {totalPages} 页</span>
+              </div>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => goToPage(safePage + 1)}
+                disabled={safePage >= totalPages}
+                className="gap-1"
+              >
+                下一页
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
     </div>
   )

@@ -194,6 +194,7 @@ export const searchApi = {
   search: (params: {
     query: string
     limit?: number
+    page?: number
     source?: string
     tags?: string[]
     start_date?: string
@@ -201,6 +202,7 @@ export const searchApi = {
   }): Promise<SearchResponse> => {
     const searchParams = new URLSearchParams({ q: params.query })
     if (params.limit) searchParams.set('limit', String(params.limit))
+    if (params.page) searchParams.set('page', String(params.page))
     if (params.source) searchParams.set('source', params.source)
     if (params.tags) searchParams.set('tags', params.tags.join(','))
     if (params.start_date) searchParams.set('start_date', params.start_date)
@@ -242,6 +244,7 @@ export interface SearchArticlesParams {
 export interface SearchQueryParams {
   query: string
   limit?: number
+  page?: number
   start_date?: string
   end_date?: string
   source?: string
@@ -277,6 +280,7 @@ export function buildSearchQueryParams(params: SearchArticlesParams): SearchQuer
   return {
     query: params.q || '',
     limit: params.page_size || 20,
+    page: params.page,
     start_date,
     end_date,
     source: params.source,
