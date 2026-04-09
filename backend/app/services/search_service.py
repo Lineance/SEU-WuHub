@@ -72,4 +72,8 @@ def search_articles(
         start_date=start_date,
         end_date=end_date,
     )
-    return _to_search_response(query=query, raw_result=raw_result)
+    return SearchResponse(
+    query=query,
+    results=search_results,
+    total=raw_result.get("total", len(search_results)),
+)
