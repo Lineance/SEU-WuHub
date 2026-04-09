@@ -52,7 +52,7 @@ async def search_articles(request: SearchRequest):
             engine=get_engine(),
             query=request.query,
             limit=request.limit,
-            category=request.category,
+            category=request.source,
             tags=request.tags,
             start_date=request.start_date,
             end_date=request.end_date,

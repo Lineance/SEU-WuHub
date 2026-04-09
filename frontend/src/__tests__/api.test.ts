@@ -102,9 +102,9 @@ describe('api.ts - Search Parameters', () => {
       expect(result.toString()).toBe('page_size=50')
     })
 
-    it('should handle only category parameter', () => {
-      const result = buildSearchParams({ category: 'tech' })
-      expect(result.toString()).toBe('category=tech')
+    it('should handle only source parameter', () => {
+      const result = buildSearchParams({ source: 'tech' })
+      expect(result.toString()).toBe('source=tech')
     })
 
     it('should handle only tags parameter', () => {
@@ -116,13 +116,13 @@ describe('api.ts - Search Parameters', () => {
       const result = buildSearchParams({
         page: 2,
         page_size: 50,
-        category: 'tech',
+        source: 'tech',
         tags: 'tag1,tag2',
       })
       const params = result.toString()
       expect(params).toContain('page=2')
       expect(params).toContain('page_size=50')
-      expect(params).toContain('category=tech')
+      expect(params).toContain('source=tech')
       expect(params).toContain('tags=tag1%2Ctag2')
     })
 
@@ -130,7 +130,7 @@ describe('api.ts - Search Parameters', () => {
       const result = buildSearchParams({
         page: undefined,
         page_size: undefined,
-        category: undefined,
+        source: undefined,
         tags: undefined,
       })
       expect(result.toString()).toBe('')

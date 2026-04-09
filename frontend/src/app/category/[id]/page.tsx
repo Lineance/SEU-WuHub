@@ -11,7 +11,7 @@ import type { Article } from "@/lib/types"
 export default function CategoryPage() {
   const params = useParams()
   const router = useRouter()
-  const categoryId = params.id as string
+  const sourceId = params.id as string
 
   const [articles, setArticles] = useState<Article[]>([])
   const [loading, setLoading] = useState(true)
@@ -25,7 +25,7 @@ export default function CategoryPage() {
       setLoading(true)
       setError(null)
       const response = await api.getArticles({
-        category_id: categoryId,
+        source: sourceId,
         page: pageNum,
         page_size: 20,
       })
@@ -43,7 +43,7 @@ export default function CategoryPage() {
 
   useEffect(() => {
     loadArticles(1)
-  }, [categoryId])
+  }, [sourceId])
 
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {
@@ -56,7 +56,7 @@ export default function CategoryPage() {
     <div className="p-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">
-          分类: {decodeURIComponent(categoryId)}
+          来源: {decodeURIComponent(sourceId)}
         </h1>
         {!loading && !error && (
           <p className="mt-1 text-sm text-muted-foreground">

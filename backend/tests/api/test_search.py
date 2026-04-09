@@ -76,13 +76,13 @@ class TestSearchPostEndpoint:
         assert len(data["results"]) == 1
         assert data["results"][0]["title"] == "测试文章"
 
-    def test_search_post_with_category_filter(self, client: TestClient, mock_engine) -> None:
-        """测试分类筛选"""
+    def test_search_post_with_source_filter(self, client: TestClient, mock_engine) -> None:
+        """测试来源筛选"""
         mock_engine.search.return_value = {"results": [], "total": 0}
 
         response = client.post(
             "/api/v1/search/",
-            json={"query": "测试", "limit": 10, "category": "jwc"},
+            json={"query": "测试", "limit": 10, "source": "jwc"},
         )
 
         assert response.status_code == 200

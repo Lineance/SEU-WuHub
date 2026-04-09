@@ -66,12 +66,12 @@ class TestListArticlesEndpoint:
         assert data["page"] == 2
         assert data["page_size"] == 20
 
-    def test_list_articles_category_filter(self, client: TestClient, mock_table) -> None:
-        """测试分类筛选"""
+    def test_list_articles_source_filter(self, client: TestClient, mock_table) -> None:
+        """测试来源筛选"""
         mock_table.search.return_value.where.return_value.limit.return_value.offset.return_value.to_list.return_value = []
         mock_table.count_rows.return_value = 0
 
-        response = client.get("/api/v1/articles/?category=jwc")
+        response = client.get("/api/v1/articles/?source=jwc")
 
         assert response.status_code == 200
 
