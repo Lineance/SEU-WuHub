@@ -304,6 +304,10 @@ export function buildSearchUrlParams(params: SearchArticlesParams): URLSearchPar
   if (queryParams.limit) searchParams.set('limit', String(queryParams.limit))
   if (queryParams.start_date) searchParams.set('start_date', queryParams.start_date)
   if (queryParams.end_date) searchParams.set('end_date', queryParams.end_date)
+  if (queryParams.source) searchParams.set('source', queryParams.source)
+  if (queryParams.tags) searchParams.set('tags', queryParams.tags.join(','))
+  if (params.page) searchParams.set('page', String(params.page))
+  if (params.exact) searchParams.set('exact', 'true')
   return searchParams
 }
 

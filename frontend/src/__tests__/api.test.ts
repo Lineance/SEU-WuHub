@@ -186,5 +186,51 @@ describe('api.ts - Search Parameters', () => {
       expect(params).toContain('start_date=2024-01-01')
       expect(params).toContain('end_date=2024-12-31')
     })
+
+    it('should handle source parameter', () => {
+      const result = buildSearchUrlParams({ q: 'test', source: 'jwc' })
+      expect(result.get('source')).toBe('jwc')
+    })
+
+    it('should handle tags parameter', () => {
+      const result = buildSearchUrlParams({ q: 'test', tags: 'tag1,tag2' })
+      expect(result.get('tags')).toBe('tag1,tag2')
+    })
+
+    it('should handle page parameter', () => {
+      const result = buildSearchUrlParams({ q: 'test', page: 2 })
+      expect(result.get('page')).toBe('2')
+    })
+
+    it('should handle exact parameter', () => {
+      const result = buildSearchUrlParams({ q: 'test', exact: true })
+      expect(result.get('exact')).toBe('true')
+    })
+
+    it('should not include exact when false', () => {
+      const result = buildSearchUrlParams({ q: 'test', exact: false })
+      expect(result.get('exact')).toBeNull()
+    })
+
+    it('should handle complete search params', () => {
+      const result = buildSearchUrlParams({
+        q: 'test',
+        page: 2,
+        page_size: 50,
+        source: 'jwc',
+        tags: 'tag1,tag2',
+        start_date: '2024-01-01',
+        end_date: '2024-12-31',
+        exact: true,
+      })
+      expect(result.get('q')).toBe('test')
+      expect(result.get('page')).toBe('2')
+      expect(result.get('limit')).toBe('50')
+      expect(result.get('source')).toBe('jwc')
+      expect(result.get('tags')).toBe('tag1,tag2')
+      expect(result.get('start_date')).toBe('2024-01-01')
+      expect(result.get('end_date')).toBe('2024-12-31')
+      expect(result.get('exact')).toBe('true')
+    })
   })
 })
