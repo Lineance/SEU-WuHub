@@ -234,7 +234,7 @@ export interface SearchArticlesParams {
   start_date?: string
   end_date?: string
   source?: string
-  tag?: string
+  tags?: string
   date?: string
   exact?: boolean
 }
@@ -280,7 +280,7 @@ export function buildSearchQueryParams(params: SearchArticlesParams): SearchQuer
     start_date,
     end_date,
     source: params.source,
-    tags: params.tag ? [params.tag] : undefined,
+    tags: params.tags ? params.tags.split(',').map(t => t.trim()).filter(Boolean) : undefined,
   }
 }
 

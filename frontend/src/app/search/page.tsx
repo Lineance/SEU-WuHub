@@ -18,7 +18,8 @@ function SearchContent() {
   const router = useRouter()
   const query = searchParams.get('q') || ""
   const source = searchParams.get('source')
-  const tag = searchParams.get('tag')
+  const tagsParam = searchParams.get('tags')
+  const selectedTags = tagsParam ? tagsParam.split(',').map(t => t.trim()).filter(Boolean) : []
   const time = searchParams.get('time')
   const date = searchParams.get('date')
   const exactParam = searchParams.get('exact')
@@ -39,7 +40,7 @@ function SearchContent() {
         const response = await api.searchArticles({
           q: query || undefined,
           source: source || undefined,
-          tag: tag || undefined,
+          tags: tagsParam || undefined,
           time: time || undefined,
           date: date || undefined,
           exact: exactMatch,
@@ -56,7 +57,7 @@ function SearchContent() {
     }
 
     search()
-  }, [query, source, tag, time, date, exactMatch, safePage])
+  }, [query, source, tagsParam, time, date, exactMatch, safePage])
 
   const filteredArticles = useMemo(() => {
     return articles.filter((article) => {
@@ -69,7 +70,7 @@ function SearchContent() {
         return false
       }
 
-      if (tag && !article.tags?.includes(tag)) {
+      if (selectedTags.length > 0 && !selectedTags.some(t => article.tags?.includes(t))) {
         return false
       }
 
@@ -99,7 +100,7 @@ function SearchContent() {
 
       return true
     })
-  }, [articles, query, source, tag, time, date, exactMatch])
+  }, [articles, query, source, selectedTags, time, date, exactMatch])
 
   const sources = Array.from(new Set(articles.map((a) => a.source).filter(Boolean)))
   const tags = Array.from(new Set(articles.flatMap((a) => a.tags || [])))
@@ -155,11 +156,11 @@ function SearchContent() {
           <div className="mb-2 text-sm font-medium text-foreground">标签</div>
           <div className="flex flex-wrap gap-2">
             <Button
-              variant={tag === null ? 'default' : 'outline'}
+              variant={selectedTags.length === 0 ? 'default' : 'outline'}
               size="sm"
               onClick={() => {
                 const params = new URLSearchParams(searchParams.toString())
-                params.delete('tag')
+                params.delete('tags')
                 router.push(`/search?${params.toString()}`)
               }}
             >
@@ -168,11 +169,18 @@ function SearchContent() {
             {tags.map((t) => (
               <Button
                 key={t}
-                variant={tag === t ? 'default' : 'outline'}
+                variant={selectedTags.includes(t) ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => {
                   const params = new URLSearchParams(searchParams.toString())
-                  params.set('tag', t)
+                  const newSelectedTags = selectedTags.includes(t)
+                    ? selectedTags.filter(tag => tag !== t)
+                    : [...selectedTags, t]
+                  if (newSelectedTags.length > 0) {
+                    params.set('tags', newSelectedTags.join(','))
+                  } else {
+                    params.delete('tags')
+                  }
                   router.push(`/search?${params.toString()}`)
                 }}
               >
