@@ -1,0 +1,60 @@
+# JWC list incremental crawling config
+
+website:
+  name: "教务处"
+
+  # Multiple list channels under the same site; each list will keep independent incremental state.
+  start_urls:
+    - "https://jwc.seu.edu.cn/jwxx/list.htm"
+    - "https://jwc.seu.edu.cn/zxdt/list.htm"
+    - "https://jwc.seu.edu.cn/xjgl/list.htm"
+    - "https://jwc.seu.edu.cn/sjjx/list.htm"
+    - "https://jwc.seu.edu.cn/gjjl/list.psp"
+    - "https://jwc.seu.edu.cn/cbxx/list.htm"
+
+  list_incremental:
+    max_pages: 999
+    state_file: "tmp/jwc_seen_urls.json"
+    cache_base_directory: "tmp/crawl4ai_jwc_cache"
+
+    # Keep article detail pages and exclude list/navigation pages
+    include_patterns:
+      - "jwc\\.seu\\.edu\\.cn/\\d{4}/\\d{4}/c\\w+/page\\.htm$"
+    exclude_patterns:
+      - "/list\\d*\\.htm$"
+      - "javascript:"
+      - "_upload/tpl/"
+
+  overrides:
+    # List-page crawling stage overrides
+    list_crawler:
+      cache_mode: "ENABLED"
+      check_cache_freshness: true
+      cache_validation_timeout: 3600
+      word_count_threshold: 20
+      page_timeout: 45000
+      remove_overlay_elements: true
+      exclude_external_links: true
+
+    # Article crawling stage overrides
+    article_crawler:
+      cache_mode: "DISABLED"
+      check_cache_freshness: false
+      cache_validation_timeout: 3600
+      word_count_threshold: 20
+      page_timeout: 45000
+      remove_overlay_elements: true
+      exclude_external_links: true
+      # Use CSS selector for clean article content
+      css_selector: ".Article_Content"
+      markdown_generator:
+        type: "default"
+        content_source: "fit_html"
+        options:
+          ignore_images: false
+          skip_internal_links: true
+          body_width: 0
+
+    browser:
+      headless: true
+      light_mode: true

@@ -1,13 +1,27 @@
-FROM python:3.13-alpine AS builder
-WORKDIR /app
-RUN apk add --no-cache gcc musl-dev
-COPY pyproject.toml .
-RUN pip install --no-cache-dir granian uvicorn
+FROM python:3.13-slim
 
-FROM python:3.13-alpine AS runtime
 WORKDIR /app
-COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
-COPY --from=builder /usr/local/bin/granian /usr/local/bin/granian
-COPY . .
+
+# 安装系统依赖
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# 复制依赖文件
+COPY backend/pyproject.toml backend/uv.lock ./
+
+# 安装 uv
+RUN pip install uv
+
+# 安装 Python 依赖
+RUN uv sync --frozen --no-install-project
+
+# 复制应用代码
+COPY backend/ ./backend/
+COPY config/ ./config/
+
+# 暴露端口
 EXPOSE 8000
-CMD ["granian", "--interface", "asgi", "--host", "0.0.0.0", "--port", "8000", "--workers", "4", "app.main:app"]
+
+# 启动命令
+CMD ["uv", "run", "python", "-m", "backend.app.main"]

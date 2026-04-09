@@ -1,11 +1,11 @@
 PYTHON ?= uv run python
-NPM ?= npm
+NPM ?= pnpm
 COMPOSE ?= docker compose
 RUFF ?= ruff
 BANDIT ?= bandit
 MYPY ?= mypy
 
-.PHONY: backend-install backend-lint backend-format backend-typecheck backend-security backend-test frontend-install frontend-lint frontend-format frontend-test lint format typecheck security test docker-build docker-up docker-down
+.PHONY: backend-install backend-lint backend-format backend-typecheck backend-typecheck-strict backend-security backend-test backend-dev frontend-install frontend-lint frontend-format frontend-test frontend-dev lint format typecheck security test docker-build docker-up docker-down dev
 
 # Backend
 backend-install:
@@ -20,24 +20,33 @@ backend-format:
 backend-typecheck:
 	$(MYPY) backend
 
+backend-typecheck-strict:
+	cd backend && uv run python -m mypy --strict --explicit-package-bases .
+
 backend-security:
 	$(BANDIT) -c backend/pyproject.toml -r backend
 
 backend-test:
-	cd backend && uv run pytest tests
+	uv run --project backend python -m pytest backend/tests
+
+backend-dev:
+	cd backend && uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 # Frontend
 frontend-install:
-	$(NPM) install --prefix frontend
+	cd frontend && $(NPM) install
 
 frontend-lint:
-	$(NPM) run --prefix frontend lint
+	cd frontend && $(NPM) run lint
 
 frontend-format:
-	$(NPM) run --prefix frontend format
+	cd frontend && $(NPM) run format
 
 frontend-test:
-	$(NPM) run --prefix frontend test -- --run
+	cd frontend && $(NPM) run test -- --run
+
+frontend-dev:
+	cd frontend && $(NPM) run dev
 
 # Combined
 lint: backend-lint frontend-lint
@@ -45,6 +54,14 @@ format: backend-format frontend-format
 typecheck: backend-typecheck
 security: backend-security
 test: backend-test frontend-test
+
+dev:
+	@echo "Starting development servers..."
+	@echo "Backend: http://localhost:8000"
+	@echo "Frontend: http://localhost:3000"
+	@echo ""
+	$(MAKE) backend-dev &
+	$(MAKE) frontend-dev
 
 # Docker
 docker-build:

@@ -1,33 +1,55 @@
 services:
-	backend:
-		build:
-			context: ./backend
-			dockerfile: Dockerfile
-		working_dir: /app
-		volumes:
-			- ./backend:/app
-			- ./config:/workspace-config:ro
-			- ./data:/workspace-data
-		environment:
-			PYTHONUNBUFFERED: "1"
-			PYTHONDONTWRITEBYTECODE: "1"
-		ports:
-			- "8000:8000"
-		command: sleep infinity
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=true
+      - LANCEDB_PATH=/app/data/lancedb
+    volumes:
+      - ./backend:/app/backend
+      - ./config:/app/config
+      - lancedb_data:/app/data/lancedb
+    networks:
+      - wuhub-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
-	frontend:
-		build:
-			context: ./frontend
-			dockerfile: Dockerfile
-		working_dir: /app
-		volumes:
-			- ./frontend:/app
-			- frontend-node-modules:/app/node_modules
-		environment:
-			CHOKIDAR_USEPOLLING: "true"
-		ports:
-			- "5173:5173"
-		command: npm run dev -- --host 0.0.0.0 --port 5173
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: /api/v1
+        BACKEND_INTERNAL_URL: http://backend:8000
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=/api/v1
+      - BACKEND_INTERNAL_URL=http://backend:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - wuhub-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:3000/"]
+      interval: 20s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
 volumes:
-	frontend-node-modules:
+  lancedb_data:
+
+networks:
+  wuhub-network:
+    driver: bridge

@@ -1,10 +1,24 @@
-"""
-Configuration Management - Pydantic Settings with environment variables
+from pydantic_settings import BaseSettings
+from typing import Optional
 
-Responsibilities:
-    - LANCE_DB_PATH validation
-    - LLM API key management
-    - Crawler execution paths for local-only operations
-"""
 
-# TODO: Implement business logic following architecture specifications
+class Settings(BaseSettings):
+    APP_NAME: str = "SEU-WuHub API"
+    APP_VERSION: str = "0.1.0"
+    DEBUG: bool = True
+
+    # CORS
+    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+
+    # LanceDB
+    LANCEDB_PATH: str = "./data/lancedb"
+
+    # Crawler
+    CRAWLER_CONFIG_PATH: str = "./config/crawler.yaml"
+
+    class Config:
+        env_file = ".env"
+        case_sensitive = True
+
+
+settings = Settings()

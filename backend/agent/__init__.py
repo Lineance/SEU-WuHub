@@ -1,9 +1,6 @@
-"""
-Agent Package - ReAct reasoning engine for RAG
+"""Agent package exports."""
 
-Responsibilities:
-    - Export ReActAgent, Tool, AgentAction
-    - Tool registry initialization
-"""
+from .config import AgentConfig
+from .core.agent import ReActAgent
 
-# TODO: Implement business logic following architecture specifications
+__all__ = ["AgentConfig", "ReActAgent"]
