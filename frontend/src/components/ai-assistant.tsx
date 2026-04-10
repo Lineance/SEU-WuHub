@@ -550,7 +550,11 @@ export function AIAssistant({ isOpen, onClose, sessionId, activeLayer = 'ai', on
       )}
       style={{ width: `${WIDTH_STEPS[sizeIndex]}%` }}
     >
-      <div className="absolute left-[-10px] top-1/2 -translate-y-1/2 z-50 pointer-events-auto flex items-center justify-center">
+      <div className={cn(
+        "absolute left-[-10px] top-1/2 -translate-y-1/2 z-50 pointer-events-auto flex items-center justify-center",
+        "transition-all duration-300",
+        isOpen ? "opacity-100 visible" : "opacity-0 invisible"
+      )}>
         <div className="flex flex-col h-100 w-5 rounded-full border border-border bg-card/90 shadow-lg overflow-hidden group/handle hover:w-5.5 transition-all backdrop-blur-sm">
           <button
             onClick={handleWiden}
