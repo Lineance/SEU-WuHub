@@ -56,7 +56,7 @@ export function AIAssistant({ isOpen, onClose, sessionId, activeLayer = 'ai', on
   const currentSession = sessions.find(session => session.id === currentSessionId)
   const messages = currentSession?.messages || []
 
-  const SNAP_POINTS = [25, 40, 50, 80]
+  const SNAP_POINTS = [30, 40, 50, 60, 80]
 
   // 从 localStorage 加载会话列表
   useEffect(() => {
