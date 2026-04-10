@@ -63,7 +63,7 @@ async def search_articles(request: SearchRequest):
 @router.get("/")
 async def search_get(
     q: str = "",
-    limit: int = 10,
+    limit: int = 20,
     page: int = 1,
     source: Optional[str] = None,
     tags: Optional[str] = None,

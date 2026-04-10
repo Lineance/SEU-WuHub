@@ -46,7 +46,7 @@ def _to_search_response(query: str, raw_result: dict[str, Any]) -> SearchRespons
             )
         )
 
-    return SearchResponse(query=query, results=search_results, total=len(search_results))
+    return SearchResponse(query=query, results=search_results, total=raw_result.get("total", len(search_results)))
 
 
 def search_articles(
@@ -72,8 +72,4 @@ def search_articles(
         start_date=start_date,
         end_date=end_date,
     )
-    return SearchResponse(
-    query=query,
-    results=search_results,
-    total=raw_result.get("total", len(search_results)),
-)
+    return _to_search_response(query, raw_result)
