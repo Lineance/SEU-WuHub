@@ -42,7 +42,7 @@ class RetrievalEngine:
         self,
         store: LanceStore | None = None,
         embedder: RetrievalEmbedder | None = None,
-        db_path: str = "../data/lancedb",
+        db_path: str | None = None,
         table_name: str = "articles",
     ) -> None:
         """
@@ -51,9 +51,17 @@ class RetrievalEngine:
         Args:
             store: LanceStore 实例
             embedder: 检索向量化器
-            db_path: 数据库路径（相对于 backend/ 目录）
+            db_path: 数据库路径（默认自动检测）
             table_name: 表名
         """
+        # 自动检测 db_path：如果未指定，使用项目根目录的 data/lancedb
+        if db_path is None:
+            import pathlib
+
+            # 从 engine.py 的位置推断项目根目录
+            # engine.py -> retrieval -> backend -> 项目根
+            project_root = pathlib.Path(__file__).resolve().parents[2]
+            db_path = str(project_root / "data" / "lancedb")
         if store is None:
             # 确保 create_store 返回 LanceStore 实例
             store = create_store(db_path, table_name)
@@ -494,14 +502,14 @@ class RetrievalEngine:
 
 
 def create_engine(
-    db_path: str = "../data/lancedb",
+    db_path: str | None = None,
     table_name: str = "articles",
 ) -> RetrievalEngine:
     """
     创建检索引擎
 
     Args:
-        db_path: 数据库路径
+        db_path: 数据库路径（默认自动检测）
         table_name: 表名
 
     Returns:

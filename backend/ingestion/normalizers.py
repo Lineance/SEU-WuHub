@@ -213,8 +213,8 @@ def normalize_markdown(markdown: str) -> str:
                 # 标题、列表项、代码块保持原样
                 result_lines.append(line)
                 in_table = False
-            elif prev_ended_with_text and not stripped.startswith('|'):
-                # 上一行是非空文本，当前行非空且不是表格行 → 添加空行分隔
+            elif (prev_ended_with_text or prev_line_was_image) and not stripped.startswith('|'):
+                # 上一行是非空文本或是图片行，当前行非空且不是表格行 → 添加空行分隔
                 result_lines.append('')
                 result_lines.append(line)
                 in_table = False

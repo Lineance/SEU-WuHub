@@ -224,16 +224,21 @@ export function AIAssistant({ isOpen, onClose, sessionId, activeLayer = 'ai', on
         } else if (event.type === 'tool_response') {
           // 可以显示工具响应
         } else if (event.type === 'answer') {
-          assistantContent = event.content
-          assistantSources = event.sources || []
-        } else if (event.type === 'done') {
-          // Backend may emit sources on done event.
-          if (Array.isArray(event.sources) && event.sources.length > 0) {
-            assistantSources = event.sources.map((url: string) => ({ title: url, url }))
+          if (event.payload) {
+            assistantContent = event.payload.content || event.content || ""
+            assistantSources = event.payload.sources || event.sources || []
+          } else if (event.content !== undefined) {
+            assistantContent = event.content
+            assistantSources = event.sources || []
           }
-        } else if (event.type === 'delta') {
+        } else if (event.type === 'done') {
+          // normalizeEvent extracts sources to top level
+          if (event.sources?.length) {
+            assistantSources = event.sources as SourceReference[]
+          }
+        } else if (event.type === 'delta' && event.payload?.content) {
           // 流式输出
-          assistantContent += event.content
+          assistantContent += event.payload.content
 
           // 更新当前会话的消息
           setSessions(prev => prev.map(session => {
