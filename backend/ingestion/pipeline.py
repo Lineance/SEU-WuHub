@@ -447,22 +447,22 @@ class IngestionPipeline:
 
     def _match_tags(self, data: dict[str, Any]) -> dict[str, Any]:
         """
-        匹配内容标签
+        匹配内容标签 - 基于标题向量匹配
 
         Args:
-            data: 包含内容向量的数据
+            data: 包含标题向量的数据
 
         Returns:
             更新后的数据（包含匹配的标签）
         """
-        content_embedding = data.get(ArticleFields.CONTENT_EMBEDDING)
-        if not content_embedding:
-            logger.warning("Cannot match tags: content embedding is missing")
+        title_embedding = data.get(ArticleFields.TITLE_EMBEDDING)
+        if not title_embedding:
+            logger.warning("Cannot match tags: title embedding is missing")
             return data
 
         try:
-            # 使用标签匹配器查找相似标签
-            matched_tags = self._tag_matcher.match_tags(content_embedding)
+            # 使用标题向量匹配标签
+            matched_tags = self._tag_matcher.match_tags(title_embedding)
 
             if matched_tags:
                 # 合并现有标签和新匹配的标签（去重）

@@ -31,13 +31,13 @@ class TagMatchingConfig:
     """标签匹配配置"""
 
     # 严格匹配阈值 (0.75)
-    STRICT_THRESHOLD = 0.75
+    STRICT_THRESHOLD = 0.5
 
     # 宽松匹配阈值
     RELAXED_THRESHOLD = 0.5
 
     # 最大返回标签数
-    MAX_TAGS_PER_ARTICLE = 5
+    MAX_TAGS_PER_ARTICLE = 1
 
     # 相似度计算方法
     SIMILARITY_METHOD = "cosine"  # "cosine" 或 "euclidean"

@@ -458,6 +458,63 @@ export const aiApi = {
   },
 }
 
+// 标签 ID <-> 名称映射缓存
+let tagIdToNameCache: Map<string, string> | null = null
+let tagNameToIdCache: Map<string, string> | null = null
+let tagCachePromise: Promise<void> | null = null
+
+async function loadTagMappings(): Promise<void> {
+  if (tagCachePromise) return tagCachePromise
+
+  tagCachePromise = (async () => {
+    const idToName = new Map<string, string>()
+    const nameToId = new Map<string, string>()
+    try {
+      const response = await fetchApi<MetadataResponse>('/metadata')
+      // 处理特殊标签
+      if (response.tags?.special) {
+        for (const tag of response.tags.special) {
+          idToName.set(tag.id, tag.name)
+          nameToId.set(tag.name, tag.id)
+        }
+      }
+      // 处理分类标签
+      if (response.tags) {
+        for (const category of Object.values(response.tags)) {
+          if (Array.isArray(category)) {
+            for (const tag of category) {
+              idToName.set(tag.id, tag.name)
+              nameToId.set(tag.name, tag.id)
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch tag mapping:', e)
+    }
+    tagIdToNameCache = idToName
+    tagNameToIdCache = nameToId
+  })()
+
+  return tagCachePromise
+}
+
+async function getTagIdToNameMap(): Promise<Map<string, string>> {
+  await loadTagMappings()
+  return tagIdToNameCache!
+}
+
+function resolveTagNames(tagIds: string[]): string[] {
+  if (!tagIdToNameCache) return tagIds
+  return tagIds.map(id => tagIdToNameCache.get(id) || id)
+}
+
+// 将 tag 名称转换为 ID（如果传入的是名称而非 ID）
+function resolveTagIds(tagNamesOrIds: string[]): string[] {
+  if (!tagNameToIdCache) return tagNamesOrIds
+  return tagNamesOrIds.map(nameOrId => tagNameToIdCache.get(nameOrId) || nameOrId)
+}
+
 // 默认导出
 export const api = {
   article: articleApi,
@@ -466,6 +523,8 @@ export const api = {
   ai: aiApi,
   getCategories: categoriesApi.getCategories,
   getArticles: async (params: { source?: string; page?: number; page_size?: number }) => {
+    // 预加载标签映射
+    await getTagIdToNameMap()
     const response = await articleApi.list({ page: params.page, page_size: params.page_size, source: params.source ? decodeURIComponent(params.source) : undefined })
     const transformedItems = response.items.map(item => ({
       id: item.id,
@@ -473,7 +532,7 @@ export const api = {
       summary: item.summary || item.content?.slice(0, 200) || "",
       published_at: item.published_date,
       source: item.source,
-      tags: item.tags || [],
+      tags: resolveTagNames(item.tags || []),
       url: item.url,
     }))
     return {
@@ -486,7 +545,12 @@ export const api = {
     }
   },
   searchArticles: async (params: SearchArticlesParams) => {
-    const queryParams = buildSearchQueryParams(params)
+    // 预加载标签映射
+    await loadTagMappings()
+    // 将 tag 名称转换为 ID
+    const resolvedTags = params.tags ? resolveTagIds(params.tags.split(',').map(t => t.trim()).filter(Boolean)) : undefined
+    const resolvedParams = { ...params, tags: resolvedTags ? resolvedTags.join(',') : undefined }
+    const queryParams = buildSearchQueryParams(resolvedParams)
     const response = await searchApi.search(queryParams)
     const stripHtml = (html: string) => html ? html.replace(/<[^>]*>/g, '').slice(0, 200) : ''
     const data = response.results.map(r => ({
@@ -495,7 +559,7 @@ export const api = {
       summary: stripHtml(r.summary || ''),
       published_at: r.published_date,
       source: r.source,
-      tags: r.tags || [],
+      tags: resolveTagNames(r.tags || []),
       url: r.url,
     }))
     return {
@@ -508,6 +572,8 @@ export const api = {
     }
   },
   getArticleDetail: async (id: string) => {
+    // 预加载标签映射
+    await getTagIdToNameMap()
     const response = await articleApi.get(id)
     return {
       data: {
@@ -518,7 +584,7 @@ export const api = {
         published_at: response.published_date,
         source: response.source,
         source_url: response.url,
-        tags: response.tags || [],
+        tags: resolveTagNames(response.tags || []),
         url: response.url,
         attachments: (response as any).attachments || [],
       },

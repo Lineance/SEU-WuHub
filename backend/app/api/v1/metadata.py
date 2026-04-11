@@ -62,8 +62,8 @@ def get_tags_by_category(tags_data: dict[str, Any]) -> dict[str, list[dict[str, 
                 "priority": tag.get("priority", 2)
             })
     
-    manual_tags = tags_data.get("manual_tags", [])
-    for tag in manual_tags:
+    manual_tags = tags_data.get("manual_tags") or []
+    for tag in manual_tags or []:
         if isinstance(tag, dict):
             category = "special"
             if category not in tags_by_category:

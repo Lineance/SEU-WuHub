@@ -23,8 +23,8 @@ logger = logging.getLogger(__name__)
 # 向量维度常量 (与正文向量保持一致)
 # =============================================================================
 
-# 使用 BAAI/bge-large-zh 模型 (1024 维)
-TAG_EMBEDDING_DIM = 1024
+# 使用 sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2 模型 (384 维)
+TAG_EMBEDDING_DIM = 384
 
 # =============================================================================
 # 字段名常量

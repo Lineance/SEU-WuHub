@@ -12,11 +12,7 @@ categories:
   academic:
     name: "学术科研"
     description: "学术研究、科研成果、学术活动"
-    
-  campus_life:
-    name: "校园生活"
-    description: "学生活动、社团组织、校园服务"
-    
+
   administration:
     name: "行政通知"
     description: "学校通知、政策法规、管理规定"
@@ -24,11 +20,7 @@ categories:
   admissions:
     name: "招生就业"
     description: "招生信息、就业指导、招聘信息"
-    
-  department:
-    name: "院系动态"
-    description: "各院系新闻、专业发展、学科建设"
-    
+
   research:
     name: "学科竞赛"
     description: "学科竞赛、学科活动、学科比赛"
@@ -37,47 +29,10 @@ categories:
 tags:
   # 学术科研 category
   - id: "tag_academic_lecture"
-    name: "学术讲座"
-    description: "学术讲座、学术报告、专家讲坛"
+    name: "文化讲座"
+    description: "学术讲座、素质教育、专家讲坛"
     category: "academic"
     priority: 1
-    
-  - id: "tag_academic_conference"
-    name: "学术会议"
-    description: "学术会议、研讨会、论坛"
-    category: "academic"
-    priority: 1
-    
-  - id: "tag_research_project"
-    name: "科研项目"
-    description: "科研项目、课题研究、基金项目"
-    category: "academic"
-    priority: 1
-    
-  - id: "tag_paper_publication"
-    name: "论文发表"
-    description: "学术论文、期刊发表、科研成果"
-    category: "academic"
-    priority: 2
-    
-  # 校园生活 category
-  - id: "tag_student_activity"
-    name: "学生活动"
-    description: "学生活动、社团活动、文体比赛"
-    category: "campus_life"
-    priority: 1
-    
-  - id: "tag_campus_service"
-    name: "校园服务"
-    description: "后勤服务、校园设施、信息服务"
-    category: "campus_life"
-    priority: 2
-    
-  - id: "tag_art_culture"
-    name: "文化艺术"
-    description: "文化艺术活动、艺术展览、文艺演出"
-    category: "campus_life"
-    priority: 2
     
   # 行政通知 category
   - id: "tag_notification"
@@ -86,15 +41,15 @@ tags:
     category: "administration"
     priority: 1
     
-  - id: "tag_policy_announcement"
-    name: "政策发布"
-    description: "政策文件、管理规定、制度公告"
-    category: "administration"
-    priority: 1
-    
   - id: "tag_holiday_arrangement"
     name: "假期安排"
     description: "假期安排、调休通知、节假日安排"
+    category: "administration"
+    priority: 2
+
+  - id: "tag_international_exchange"
+    name: "国际交流"
+    description: "来访出访、海外学习、跨文化活动"
     category: "administration"
     priority: 2
     
@@ -103,43 +58,6 @@ tags:
     name: "招生信息"
     description: "本科招生、研究生招生、招生简章"
     category: "admissions"
-    priority: 1
-    
-  - id: "tag_employment"
-    name: "就业信息"
-    description: "招聘信息、就业指导、职业规划"
-    category: "admissions"
-    priority: 1
-    
-  - id: "tag_internship"
-    name: "实习机会"
-    description: "实习信息、实习岗位、实践机会"
-    category: "admissions"
-    priority: 2
-    
-  # 院系动态 category
-  - id: "tag_department_news"
-    name: "院系新闻"
-    description: "各院系动态、院系活动、专业建设"
-    category: "department"
-    priority: 1
-    
-  - id: "tag_major_development"
-    name: "专业发展"
-    description: "专业建设、课程设置、专业评估"
-    category: "department"
-    priority: 2
-    
-  - id: "tag_discipline_construction"
-    name: "学科建设"
-    description: "学科建设、学科评估、学科发展"
-    category: "department"
-    priority: 2
-
-  - id: "tag_lab_construction"
-    name: "实验室建设"
-    description: "实验室建设、实验设备、实验平台"
-    category: "research"
     priority: 1
     
   # 学科竞赛 category 
@@ -151,34 +69,12 @@ tags:
 
 # 手动标签 - 这些不进行向量匹配，而是手动分配
 manual_tags:
-  - id: "tag_urgent"
-    name: "紧急"
-    description: "紧急通知、重要紧急事项"
-    category: "administration"
-    priority: 0
-    
-  - id: "tag_important"
-    name: "重要"
-    description: "重要通知、重大事项"
-    category: "administration"
-    priority: 0
-    
-  - id: "tag_new"
-    name: "最新"
-    description: "最新消息、最新动态"
-    category: "general"
-    priority: 0
-    
-  - id: "tag_hot"
-    name: "热点"
-    description: "热点新闻、关注度高"
-    category: "general"
-    priority: 0
+
 
 # 标签匹配配置
 matching:
   # 严格模式阈值 (0.0-1.0)
-  strict_threshold: 0.75
+  strict_threshold: 0.8
   
   # 宽松模式阈值 (0.0-1.0)
   relaxed_threshold: 0.5

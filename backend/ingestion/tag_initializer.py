@@ -217,8 +217,8 @@ class TagInitializer:
                 # 为了提高匹配准确性，我们使用完整的标签描述
                 description_text = f"{tag_name}: {tag_description}"
 
-                # 生成向量嵌入（使用内容向量化模型）
-                embedding = self._embedder.embed_contents([description_text])[0]
+                # 生成向量嵌入（使用标题向量化模型，与文章标题向量维度一致）
+                embedding = self._embedder.embed_titles([description_text])[0]
 
                 # 创建时间戳
                 now = datetime.now()

@@ -236,12 +236,19 @@ class SQLGuard:
             elif isinstance(value, (int, float)):
                 clauses.append(f"{field} = {value}")
             elif isinstance(value, list):
-                # IN 查询
+                # 对于列表字段（如 tags），使用 array_contains
+                # 每个 tag 单独查询，用 AND 连接
+                tag_clauses = []
                 if all(isinstance(v, str) for v in value):
-                    safe_values = [f"'{self.sanitize_string(v)}'" for v in value]
+                    for v in value:
+                        safe_value = self.sanitize_string(v)
+                        tag_clauses.append(f"array_contains({field}, '{safe_value}')")
+                if tag_clauses:
+                    clauses.append("(" + " AND ".join(tag_clauses) + ")")
                 else:
+                    # Fallback for non-string lists
                     safe_values = [str(v) for v in value]
-                clauses.append(f"{field} IN ({', '.join(safe_values)})")
+                    clauses.append(f"{field} IN ({', '.join(safe_values)})")
             else:
                 raise ValueError(f"Unsupported value type for field '{field}'")
 

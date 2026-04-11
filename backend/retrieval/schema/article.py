@@ -289,8 +289,11 @@ class ArticleQuery(LanceModel):  # type: ignore[misc]
             conditions.append(f"author = '{self.author}'")
 
         if self.tags:
-            tags_str = ", ".join(f"'{tag}'" for tag in self.tags)
-            conditions.append(f"tags IN ({tags_str})")
+            # LanceDB list fields require array_contains for each tag, combined with AND
+            tag_clauses = []
+            for tag in self.tags:
+                tag_clauses.append(f"array_contains(tags, '{tag}')")
+            conditions.append("(" + " AND ".join(tag_clauses) + ")")
 
         if self.start_date:
             # 使用 ISO 格式让 LanceDB 能够解析
