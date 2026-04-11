@@ -93,14 +93,14 @@ export default function FavoritesPage() {
           {favorites.map((article) => (
             <div
               key={article.id}
-              className="relative cursor-pointer group"
+              className="relative cursor-pointer group h-full"
               onClick={() => handleArticleClick(article.id)}
             >
-              <div className="rounded-lg border-2 border-border bg-card p-4 transition-all hover:border-primary/30 hover:shadow-md">
-                <h3 className="mb-2 text-base font-semibold text-foreground line-clamp-2">
+              <div className="flex flex-col h-full rounded-lg border-2 border-border bg-card p-4 transition-all hover:border-primary/30 hover:shadow-md">
+                <h3 className="mb-2 text-base font-semibold text-foreground line-clamp-2 flex-1">
                   {article.title}
                 </h3>
-                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                <div className="flex items-center gap-3 text-sm text-muted-foreground mt-auto">
                   {article.source && (
                     <span className="rounded bg-secondary px-2 py-0.5">
                       {article.source}
