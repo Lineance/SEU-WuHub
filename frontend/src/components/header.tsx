@@ -416,7 +416,7 @@ export function Header({ onAIToggle }: HeaderProps) {
               size="icon"
               className="rounded-full"
               onClick={onAIToggle}
-              title="SEU Agent"
+              title="Agent"
             >
               <Bot className="h-5 w-5" />
               <span className="sr-only">AI 助手</span>
