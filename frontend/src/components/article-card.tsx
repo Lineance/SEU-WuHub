@@ -21,7 +21,7 @@ export function ArticleCard({ id, title, summary, time, source, tags }: ArticleC
   const [favorited, setFavorited] = useState(() => isFavorite(String(id)))
   return (
     <Card className="group flex h-full flex-col cursor-pointer border-border bg-card transition-all hover:border-primary/30 hover:shadow-md">
-      <CardHeader className="pb-2">
+      <CardHeader className="pb-1">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="flex-1 line-clamp-2 text-base font-semibold text-card-foreground group-hover:text-primary">
             {title}
@@ -49,7 +49,7 @@ export function ArticleCard({ id, title, summary, time, source, tags }: ArticleC
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col space-y-3">
+      <CardContent className="flex-1 flex flex-col space-y-2">
         <p className="line-clamp-2 text-sm text-muted-foreground">{summary}</p>
         <div className="flex flex-wrap gap-2">
           {tags.map((tag) => (
@@ -59,12 +59,12 @@ export function ArticleCard({ id, title, summary, time, source, tags }: ArticleC
             </Badge>
           ))}
         </div>
-        <div className="mt-auto flex items-center gap-4 pt-2 text-xs text-muted-foreground">
+        <div className="mt-auto flex items-center gap-2 pt-2 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
             <Clock className="h-3 w-3" />
             {time}
           </span>
-          <span className="rounded bg-secondary px-2 py-0.5">{source}</span>
+          <span className="rounded bg-secondary px-1 py-0.5">{source}</span>
         </div>
       </CardContent>
     </Card>

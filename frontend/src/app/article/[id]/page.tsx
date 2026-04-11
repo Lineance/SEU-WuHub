@@ -110,57 +110,62 @@ export default function ArticleDetailPage() {
   }
 
   return (
-    <div className="p-6">
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => router.back()}
-        className="mb-6 gap-2"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        返回
-      </Button>
+    <div className="p-3 md:p-6">
+      {/* 顶部操作栏：返回按钮与功能按钮组同宽分布 */}
+      <div className="mb-6 flex items-center justify-between">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.back()}
+          className="gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          返回
+        </Button>
+
+        <div className="flex gap-2">
+          <Button
+            variant={isFav ? "default" : "outline"}
+            size="icon"
+            onClick={handleToggleFavorite}
+            className="shrink-0"
+            title="收藏"
+          >
+            <Star className={`h-5 w-5 ${isFav ? 'fill-current' : ''}`} />
+          </Button>
+          <Button
+            variant={isReadingMode ? "default" : "outline"}
+            size="icon"
+            onClick={toggleReadingMode}
+            className="shrink-0"
+            title={isReadingMode ? "退出全屏" : "全屏模式"}
+          >
+            {isReadingMode ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleCopyLink}
+            className="shrink-0"
+            title="复制网址"
+          >
+            {copied ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
+          </Button>
+        </div>
+      </div>
 
       <article className={cn(
         "mx-auto transition-all duration-500",
         isReadingMode ? "max-w-6xl" : "max-w-4xl"
       )}>
         <header className="mb-8">
-          <div className="mb-4 flex items-start justify-between gap-4">
-            <h1 className="flex-1 text-3xl font-bold text-foreground">
+          <div className="mb-4">
+            <h1 className="text-3xl font-bold text-foreground">
               {article.title}
             </h1>
-            <div className="flex gap-2">
-              <Button
-                variant={isFav ? "default" : "outline"}
-                size="icon"
-                onClick={handleToggleFavorite}
-                className="shrink-0"
-                title="收藏"
-              >
-                <Star className={`h-5 w-5 ${isFav ? 'fill-current' : ''}`} />
-              </Button>
-              <Button
-                variant={isReadingMode ? "default" : "outline"}
-                size="icon"
-                onClick={toggleReadingMode}
-                className="shrink-0"
-                title={isReadingMode ? "退出全屏" : "全屏模式"}
-              >
-                {isReadingMode ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleCopyLink}
-                className="shrink-0"
-                title="复制网址"
-              >
-                {copied ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
-              </Button>
-            </div>
           </div>
 
+          {/* 元数据部分：日期、来源等 */}
           <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4" />
@@ -239,7 +244,7 @@ export default function ArticleDetailPage() {
                     }
                     // 普通链接
                     return (
-                      <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                      <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all">
                         {children}
                       </a>
                     )
