@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils"
 import { motion } from "framer-motion"
 import { Bot, ChevronLeft, ChevronRight, ExternalLink, RotateCcw, Send, Sparkles, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
+import { useRouter } from "next/navigation"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 
@@ -42,6 +43,7 @@ interface AIAssistantProps {
 const WIDTH_STEPS = [25, 40, 50, 60]
 
 export function AIAssistant({ isOpen, onClose, sessionId, activeLayer = 'ai', onLayerActivate }: AIAssistantProps) {
+  const router = useRouter()
   const [input, setInput] = useState("")
   const [sessions, setSessions] = useState<Session[]>([])
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
@@ -378,16 +380,20 @@ export function AIAssistant({ isOpen, onClose, sessionId, activeLayer = 'ai', on
       <div className="border-b border-border pb-4 relative z-20">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+            <div 
+              onClick={() => { 
+                router.push('/chat-history'); 
+                onClose(); 
+              }} 
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg bg-primary transition-transform hover:scale-105 active:scale-95 shadow-sm" 
+              title="查看历史对话" 
+            > 
               <Bot className="h-5 w-5 text-primary-foreground" />
             </div>
             <div className="flex flex-col">
-              <h3 className="text-base font-semibold text-card-foreground">AI 助手</h3>
-              {currentSession && (
-                <p className="text-xs text-muted-foreground truncate">{currentSession.title}</p>
-              )}
+              <h3 className="text-base font-semibold text-card-foreground leading-none">AI 助手</h3>
             </div>
-            <Sparkles className="h-4 w-4 text-accent" />
+            <Sparkles className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
           </div>
           <div className="flex items-center gap-2">
             <Button

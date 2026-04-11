@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
 import { Moon, Sun, MessageSquare, Send, ChevronRight, ArrowLeft, Trash2 } from "lucide-react"
@@ -12,7 +12,13 @@ import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 
 export function SettingsPage() {
-  const { theme, setTheme } = useTheme()
+  const { theme, setTheme, resolvedTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   const router = useRouter()
   const [feedbackType, setFeedbackType] = useState<"bug" | "feature" | "other">("bug")
   const [feedbackTitle, setFeedbackTitle] = useState("")
@@ -21,9 +27,19 @@ export function SettingsPage() {
 
   const handleSubmitFeedback = () => {
     if (feedbackTitle && feedbackContent) {
-      // 这里可以接入后端 API
-      console.log({ type: feedbackType, title: feedbackTitle, content: feedbackContent })
+      const repoUrl = "https://github.com/Lineance/SEU-WuHub/issues/new"
+      
+      const params = new URLSearchParams({
+        title: `[${feedbackType.toUpperCase()}] ${feedbackTitle}`,
+        body: `## 反馈内容\n${feedbackContent}\n\n---\n来自 SEU-WuHub 客户端设置页`,
+        labels: feedbackType === 'bug' ? 'bug' : 'enhancement'
+      })
+
+      window.open(`${repoUrl}?${params.toString()}`, '_blank')
+      
       setSubmitted(true)
+      toast.success('正在为您跳转至 GitHub 提交页面')
+      
       setTimeout(() => {
         setSubmitted(false)
         setFeedbackTitle("")
@@ -82,13 +98,14 @@ export function SettingsPage() {
           <div className="grid grid-cols-2 gap-2 sm:gap-3">
             {themeOptions.map((option) => {
               const Icon = option.icon
+              const isActive = mounted && (theme === option.value || (theme === 'system' && resolvedTheme === option.value))
               return (
                 <button
                   key={option.value}
                   onClick={() => setTheme(option.value)}
                   className={cn(
                     "flex items-center justify-center gap-1.5 sm:gap-3 rounded-xl border-2 px-2 py-4 sm:px-4 transition-all",
-                    theme === option.value
+                    isActive
                       ? "border-primary bg-primary/10"
                       : "border-border hover:border-primary/50 hover:bg-secondary"
                   )}
@@ -96,7 +113,7 @@ export function SettingsPage() {
                   <div
                     className={cn(
                       "flex h-10 w-10 items-center justify-center rounded-full",
-                      theme === option.value
+                      isActive
                         ? "bg-primary text-primary-foreground"
                         : "bg-muted text-muted-foreground"
                     )}
@@ -106,7 +123,7 @@ export function SettingsPage() {
                   <span
                     className={cn(
                       "text-sm sm:text-base font-medium",
-                      theme === option.value ? "text-primary" : "text-foreground"
+                      isActive ? "text-primary" : "text-foreground"
                     )}
                   >
                     {option.label}
