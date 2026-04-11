@@ -28,9 +28,9 @@ website:
   overrides:
     # List-page crawling stage overrides
     list_crawler:
-      cache_mode: "ENABLED"
-      check_cache_freshness: true
-      cache_validation_timeout: 3600
+      cache_mode: "DISABLED"
+      check_cache_freshness: false
+      cache_validation_timeout: 0
       word_count_threshold: 20
       page_timeout: 45000
       remove_overlay_elements: true

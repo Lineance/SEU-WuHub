@@ -64,6 +64,7 @@ class LanceStore:
         self._table = table
         self._repository = repository or get_article_repository()
         self._embedder = embedder or get_retrieval_embedder()
+        self._order_table = None
 
         if not self._table and db_path:
             self._initialize_table(db_path, table_name)
@@ -84,9 +85,57 @@ class LanceStore:
                 schema = Article.get_schema()
                 self._table = db.create_table(table_name, schema=schema)
                 logger.info(f"Created new table: {table_name}")
+
+            # 打开 article_order 表
+            order_table_name = "article_order"
+            if order_table_name in db.table_names():
+                self._order_table = db.open_table(order_table_name)
+                logger.info(f"Opened order table: {order_table_name}")
         except Exception as e:
             logger.error(f"Failed to initialize table: {e}")
-            raise
+
+    def _get_ordered_articles(self, limit: int, offset: int) -> list[dict[str, Any]]:
+        """使用 article_order 表获取按发布时间排序的文章"""
+        try:
+            if self._order_table is None:
+                # 尝试重新打开 order 表
+                import lancedb
+                db_path = self._table._conn.path if hasattr(self._table, '_conn') else None
+                if db_path:
+                    db = lancedb.connect(db_path)
+                    if "article_order" in db.table_names():
+                        self._order_table = db.open_table("article_order")
+
+            if self._order_table is not None:
+                # 从 order 表获取有序的 news_ids
+                order_df = self._order_table.to_pandas().sort_values(
+                    "publish_date", ascending=False
+                )
+                news_ids = order_df["news_id"].iloc[offset : offset + limit].tolist()
+
+                # 从主表获取完整的文章数据
+                if news_ids:
+                    # 构建 SQL where 子句
+                    news_id_list = ", ".join(f"'{nid}'" for nid in news_ids)
+                    results = (
+                        self._table.search()
+                        .where(f"news_id IN ({news_id_list})")
+                        .limit(limit)
+                        .to_list()
+                    )
+                    # 按 news_ids 的顺序重新排序结果
+                    news_id_to_result = {r.get("news_id"): r for r in results}
+                    ordered_results = [
+                        news_id_to_result[nid]
+                        for nid in news_ids
+                        if nid in news_id_to_result
+                    ]
+                    return ordered_results
+        except Exception as e:
+            logger.warning(f"Failed to get ordered articles: {e}")
+
+            # Fallback: 返回主表前 limit 条（无排序）
+            return self._table.search().limit(limit).to_list()
 
     # =========================================================================
     # 表操作
@@ -630,8 +679,8 @@ class LanceStore:
                 )
             except Exception as e:
                 logger.warning(f"Empty search order_by failed: {e}")
-                # Fallback: 返回前 limit 条
-                return self.table.search().limit(query_obj.limit).offset(query_obj.offset).to_list()
+                # Fallback: 使用 article_order 表获取有序文章
+                return self._get_ordered_articles(query_obj.limit, query_obj.offset)
 
         # 融合结果
         return self._fuse_results(
