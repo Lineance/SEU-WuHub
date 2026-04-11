@@ -279,14 +279,14 @@ export function SettingsPage() {
         <CardContent className="space-y-3">
           <div className="flex items-center justify-between rounded-lg bg-secondary/50 p-3">
             <span className="text-sm text-muted-foreground">版本</span>
-            <span className="text-sm font-medium text-foreground">v0.1.0 (Beta)</span>
+            <span className="text-sm font-medium text-foreground">v1.0.0</span>
           </div>
           <div className="flex items-center justify-between rounded-lg bg-secondary/50 p-3">
             <span className="text-sm text-muted-foreground">开发团队</span>
-            <span className="text-sm font-medium text-foreground">东南大学吴健雄学院学生</span>
+            <span className="text-sm font-medium text-foreground">东南大学吴健雄学院H4A团队</span>
           </div>
           <a
-            href="https://github.com"
+            href="https://github.com/Lineance/SEU-WuHub"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-between rounded-lg bg-secondary/50 p-3 transition-colors hover:bg-secondary"
