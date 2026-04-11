@@ -14,6 +14,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
 import { useReadingMode } from "@/components/reading-mode-provider"
+import { cn } from "@/lib/utils"
 
 export default function ArticleDetailPage() {
   const params = useParams()
@@ -120,7 +121,10 @@ export default function ArticleDetailPage() {
         返回
       </Button>
 
-      <article className="mx-auto max-w-4xl">
+      <article className={cn(
+        "mx-auto transition-all duration-500",
+        isReadingMode ? "max-w-6xl" : "max-w-4xl"
+      )}>
         <header className="mb-8">
           <div className="mb-4 flex items-start justify-between gap-4">
             <h1 className="flex-1 text-3xl font-bold text-foreground">

@@ -76,8 +76,8 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
           }}
         >
           <main className={cn(
-            "flex-1 overflow-auto bg-background p-4 md:p-6 transition-all duration-300", 
-            isReadingMode && "max-w-4xl mx-auto"
+            "flex-1 overflow-auto bg-background p-4 md:p-6", 
+            isReadingMode && "mx-auto w-full flex justify-center"
           )}>
             {children}
           </main>
