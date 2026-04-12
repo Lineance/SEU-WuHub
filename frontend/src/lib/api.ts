@@ -384,19 +384,20 @@ export const aiApi = {
       const payload = (raw.payload && typeof raw.payload === 'object') ? raw.payload : {}
 
       if (eventType === 'thought') {
-        return { type: 'thought', content: String(payload.message || '') }
+        return { type: 'thought', content: String(payload.message || ''), step: raw.step ?? 0 }
       }
       if (eventType === 'tool_call') {
-        return { type: 'tool_call', tool_name: String(payload.tool || '') }
+        return { type: 'tool_call', tool_name: String(payload.tool || ''), step: raw.step ?? 0 }
       }
       if (eventType === 'tool_result') {
-        return { type: 'tool_response', content: payload.result }
+        return { type: 'tool_response', content: payload.result, step: raw.step ?? 0 }
       }
       if (eventType === 'message') {
         return {
           type: 'answer',
           content: String(payload.content || ''),
           sources: Array.isArray(payload.sources) ? payload.sources : [],
+          step: raw.step ?? 0,
         }
       }
       if (eventType === 'done') {
@@ -404,6 +405,7 @@ export const aiApi = {
           type: 'done',
           reason: String(payload.reason || ''),
           sources: Array.isArray(payload.sources) ? payload.sources : [],
+          step: raw.step ?? 0,
         }
       }
 

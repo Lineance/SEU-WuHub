@@ -50,6 +50,7 @@ export function AIAssistant({ isOpen, onClose, sessionId, activeLayer = 'ai', on
   const [isLoading, setIsLoading] = useState(false)
   const [currentThought, setCurrentThought] = useState<string | null>(null)
   const [currentToolCall, setCurrentToolCall] = useState<string | null>(null)
+  const [currentStep, setCurrentStep] = useState<number | null>(null)
   const [sheetHeight, setSheetHeight] = useState(80)
   const [sizeIndex, setSizeIndex] = useState(0)
   const chatContainerRef = useRef<HTMLDivElement>(null)
@@ -203,6 +204,7 @@ export function AIAssistant({ isOpen, onClose, sessionId, activeLayer = 'ai', on
     setIsLoading(true)
     setCurrentThought(null)
     setCurrentToolCall(null)
+    setCurrentStep(null)
 
     try {
       // 获取最近 10 条历史记录
@@ -218,8 +220,10 @@ export function AIAssistant({ isOpen, onClose, sessionId, activeLayer = 'ai', on
 
       for await (const event of stream) {
         if (event.type === 'thought') {
+          setCurrentStep('step' in event ? (event as any).step : null)
           setCurrentThought(event.content)
         } else if (event.type === 'tool_call') {
+          setCurrentStep('step' in event ? (event as any).step : null)
           setCurrentToolCall(event.tool_name)
         } else if (event.type === 'tool_response') {
           // 可以显示工具响应
@@ -479,6 +483,11 @@ export function AIAssistant({ isOpen, onClose, sessionId, activeLayer = 'ai', on
         {currentThought && (
           <div className="mb-4 flex">
             <div className="max-w-[80%] rounded-lg bg-secondary p-3 text-sm text-secondary-foreground">
+              {currentStep !== null && (
+                <span className="mb-1 mr-2 inline-block rounded bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary">
+                  第 {currentStep} 步
+                </span>
+              )}
               <p className="italic">AI 正在思考：{currentThought}</p>
             </div>
           </div>
@@ -487,6 +496,11 @@ export function AIAssistant({ isOpen, onClose, sessionId, activeLayer = 'ai', on
         {currentToolCall && (
           <div className="mb-4 flex">
             <div className="max-w-[80%] rounded-lg bg-secondary p-3 text-sm text-secondary-foreground">
+              {currentStep !== null && (
+                <span className="mb-1 mr-2 inline-block rounded bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary">
+                  第 {currentStep} 步
+                </span>
+              )}
               <p>正在调用 [{currentToolCall}]...</p>
             </div>
           </div>
