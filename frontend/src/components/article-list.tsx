@@ -64,8 +64,8 @@ export function ArticleList() {
   }
 
   return (
-    <main className="flex-1 p-4 md:p-6">
-      <div className="mb-6">
+    <main className="flex-1 p-0 md:p-6">
+      <div className="mb-4">
         <h1 className="text-2xl font-bold text-foreground">最新动态</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           浏览校园最新通知、资源和经验分享
@@ -81,7 +81,7 @@ export function ArticleList() {
           暂无文章
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-1 md:grid-cols-2">
           {articles.map((article) => (
             <ArticleCard key={article.id} {...article} />
           ))}

@@ -343,29 +343,30 @@ class ReActAgent:
         return f"{tool_name} completed"
 
     @staticmethod
-    def _extract_sources(observations: list[dict[str, Any]]) -> list[str]:
-        sources: list[str] = []
+    def _extract_sources(observations: list[dict[str, Any]]) -> list[dict[str, str]]:
+        sources: list[dict[str, str]] = []
         seen: set[str] = set()
         for observation in observations:
             result = observation.get("result", {})
             if not isinstance(result, dict):
                 continue
-
             rows = result.get("results")
             if not isinstance(rows, list):
                 url = str(result.get("url", "")).strip()
+                title = str(result.get("title", url)).strip()
                 if url and url not in seen:
                     seen.add(url)
-                    sources.append(url)
+                    sources.append({"title": title, "url": url})
                 continue
             for row in rows:
                 if not isinstance(row, dict):
                     continue
                 url = str(row.get("url", "")).strip()
+                title = str(row.get("title", url)).strip()
                 if not url or url in seen:
                     continue
                 seen.add(url)
-                sources.append(url)
+                sources.append({"title": title, "url": url})
         return sources
 
     def _compose_answer(self, query: str, tool_name: str, tool_content: dict[str, Any]) -> str:
@@ -538,10 +539,11 @@ class ReActAgent:
 
                 self._memory.append(session_id, role="assistant", content=answer)
                 yield AgentEvent(type="message", step=step, payload={"content": answer})
+                extracted_sources = self._extract_sources(observations)
                 yield AgentEvent(
                     type="done",
                     step=step,
-                    payload={"reason": "completed", "sources": self._extract_sources(observations)},
+                    payload={"reason": "completed", "sources": extracted_sources},
                 )
                 return
 
