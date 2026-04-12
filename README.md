@@ -1,6 +1,6 @@
 # SEU-WuHub
 
-> 校园信息智能聚合问答平台
+> 基于多源数据整合的智能信息服务系统
 
 [中文](README.md) | [English](README.en.md)
 

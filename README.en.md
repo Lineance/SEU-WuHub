@@ -1,6 +1,6 @@
 # SEU-WuHub
 
-> Campus Information Aggregation & Intelligent QA Platform
+> Intelligent Information Service System Based on Multi‑Source Data Integration
 
 [English](README.en.md) | [中文](README.md)
 
